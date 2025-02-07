@@ -1,0 +1,35 @@
+name: Create release on tag
+
+on:
+    workflow_dispatch:
+    push:
+        tags:
+            - '*'
+        branches:
+            - backend/cdm
+
+jobs:
+    unix-like-os:
+        strategy:
+            matrix:
+                os: [ubuntu-latest]
+        runs-on: ${{ matrix.os }}
+
+        steps:
+            - name: Checkout repo
+              uses: actions/checkout@v4
+              with:
+                fetch-depth: 1
+            - name: Set up Clang
+              uses: egor-tensin/setup-clang@v1
+              with:
+                version: latest
+                platform: x64
+            - name: install cmake and ninja
+              uses: lukka/get-cmake@latest
+            - name: initialize cmake folder
+              run: cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD= -DLLVM_PARALLEL_LINK_JOBS=6 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CDM -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_DEFAULT_TARGET_TRIPLE=cdm
+            - name: build llvm
+              run: |
+                    cd build
+                    ninja clang
