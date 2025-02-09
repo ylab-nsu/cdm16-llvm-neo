@@ -3,17 +3,14 @@ name: Create release on tag
 on:
     workflow_dispatch:
     push:
-        # tags:
-        #     - '*'
-        # branches:
-        #     - backend/cdm
+        tags:
+            - '*----'
+        branches:
+            - backend/cdm
 
 jobs:
     unix-like-os:
-        strategy:
-            matrix:
-                os: [ubuntu-latest]
-        runs-on: ${{ matrix.os }}
+        runs-on: ubuntu-latest
 
         steps:
             - name: Checkout repo
@@ -33,3 +30,4 @@ jobs:
               run: |
                     cd build
                     ninja clang
+                    
