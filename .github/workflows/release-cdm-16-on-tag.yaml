@@ -3,15 +3,14 @@ name: Create release on tag
 on:
     workflow_dispatch:
     push:
-        tags:
-            - '*----'
-        branches:
-            - backend/cdm
+        # tags:
+        #     - '*'
+        # branches:
+        #     - cd-pipeline-work
 
 jobs:
-    unix-like-os:
+    linux:
         runs-on: ubuntu-latest
-
         steps:
             - name: Checkout repo
               uses: actions/checkout@v4
@@ -30,4 +29,31 @@ jobs:
               run: |
                     cd build
                     ninja clang
-                    
+            - name: upload artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                name: clang-cdm-linux
+                path: build/bin/clang-19
+
+    darwin-crosscompile:
+        runs-on: ubuntu-latest
+        container: anarcom/smth-ttt-www:latest
+        strategy:
+          matrix:
+           darwin_architecture: [x86_64, aarch64]
+        steps:
+            - name: Checkout repo
+              uses: actions/checkout@v4
+              with:
+                fetch-depth: 1
+            - name: Generate cmake files
+              run: | 
+                PATH=/toolchain/osxcross/target/bin:$PATH ${{ matrix.darwin_architecture }}-apple-darwin23-cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD= -DLLVM_PARALLEL_LINK_JOBS=6 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CDM -DLLVM_DEFAULT_TARGET_TRIPLE=cdm
+                cd build
+                ninja clang
+              
+            - name: upload artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                name: clang-cdm-darwin-${{ matrix.darwin_architecture }}
+                path: build/bin/clang-19                            
