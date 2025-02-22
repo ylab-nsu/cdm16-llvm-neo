@@ -3,10 +3,8 @@ name: Create release on tag
 on:
     workflow_dispatch:
     push:
-        # tags:
-        #     - '*'
-        # branches:
-        #     - cd-pipeline-work
+        tags:
+            - 'cdm-ver-*'
 
 jobs:
     linux:
@@ -57,4 +55,51 @@ jobs:
               uses: actions/upload-artifact@v4
               with:
                 name: clang-cdm-darwin-${{ matrix.darwin_architecture }}
-                path: build/bin/clang-19                            
+                path: build/bin/clang-19
+    win-crosscompile:
+        runs-on: ubuntu-latest
+        container: anarcom/smth-www-www:latest
+        steps:
+            - name: Checkout repo
+              uses: actions/checkout@v4
+              with:
+                fetch-depth: 1
+            - name: Generate cmake files
+              run: | 
+                cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD= -DLLVM_PARALLEL_LINK_JOBS=1 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CDM -DLLVM_DEFAULT_TARGET_TRIPLE=cdm -DCMAKE_TOOLCHAIN_FILE=/win.cmake
+                cd build
+                ninja clang
+            - name: upload artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                name: clang-cdm-win
+                path: build/bin/clang.exe
+
+    create-release:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Create subfolder
+          run: mkdir artifacts_download
+        - name: Download artifacts
+          uses: actions/download-artifact@v4
+          with:
+            path: ./artifacts_download
+        - name: Print files list
+          run: find .
+        - name: ls folder
+          run: ls -la ./artifacts_download
+        - name: zip artifacts_data
+          run: cd ./artifacts_download && for dir in */; do [ -d "$dir" ] && zip -r "${dir%/}.zip" "${dir%/}" && rm -r "${dir%/}"; done
+        - name: Print files list
+          run: find .
+        - name: ls folder
+          run: ls -la ./artifacts_download
+        - name: Create release
+          uses: softprops/action-gh-release@v2
+          with:
+            body: clang cdm-16 backend version ${{github.ref_name}}
+            draft: false
+            prerelease: false
+            token: ${{ secrets.GITHUB_TOKEN }}
+            files: |
+              ${{github.workspace}}/artifacts_download/*.zip
