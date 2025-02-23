@@ -60,6 +60,8 @@ jobs:
         runs-on: ubuntu-latest
         container: anarcom/smth-www-www:latest
         steps:
+            - name: Install zip file
+              run: pacman -S --noconfirm zip
             - name: Checkout repo
               uses: actions/checkout@v4
               with:
@@ -69,15 +71,14 @@ jobs:
                 cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD= -DLLVM_PARALLEL_LINK_JOBS=1 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CDM -DLLVM_DEFAULT_TARGET_TRIPLE=cdm -DCMAKE_TOOLCHAIN_FILE=/win.cmake
                 cd build
                 ninja clang
+            - name: Create zip file with folder
+              run: zip -j clang-cdm-win.zip ./build/bin/clang.exe /usr/x86_64-w64-mingw32/bin/libgcc_s_seh-1.dll /usr/x86_64-w64-mingw32/bin/libwinpthread-1.dll /usr/x86_64-w64-mingw32/bin/libstdc++-6.dll
             - name: upload artifacts
               uses: actions/upload-artifact@v4
               with:
                 name: clang-cdm-win
-                path: |
-                  build/bin/clang.exe
-                  /usr/x86_64-w64-mingw32/bin/libgcc_s_seh-1.dll
-                  /usr/x86_64-w64-mingw32/bin/libwinpthread-1.dll
-                  /usr/x86_64-w64-mingw32/bin/libstdc++-6.dll
+                path: clang-cdm-win.zip
+                  
 
     create-release:
       needs: [win-crosscompile, darwin-crosscompile, linux]
