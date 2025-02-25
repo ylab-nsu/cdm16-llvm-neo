@@ -33,14 +33,14 @@ jobs:
           name: clang-cdm-${{ matrix.os }}
           path: ./build/bin/clang-19          
   build_for_windows:
-    runs-on: windows-latest
+    runs-on: windows_latest
     steps:          
       - name: checkout repo
         uses: actions/checkout@v4
       - name: install ninja
         uses: seanmiddleditch/gha-setup-ninja@master
       - name: initialize cmake folder
-        run: cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD= -DLLVM_PARALLEL_LINK_JOBS=2 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CDM -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_DEFAULT_TARGET_TRIPLE=cdm
+        run: cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD= -DLLVM_PARALLEL_LINK_JOBS=2 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CDM -DLLVM_DEFAULT_TARGET_TRIPLE=cdm
       - name: build clang
         run: |
               cd build
