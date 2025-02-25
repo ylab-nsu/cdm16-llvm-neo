@@ -7,7 +7,7 @@ on:
             - 'cdm-ver-*'
 
 jobs:
-  example-matrix:
+  build-for-unix-like:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-13, macos-latest]
@@ -65,7 +65,7 @@ jobs:
           path: ./build/bin/clang.exe 
 
   create-release:
-    needs: [example-matrix, build-for-windows]
+    needs: [build-for-unix-like, build-for-windows]
     runs-on: ubuntu-latest
     steps:
       - name: Create subfolder
