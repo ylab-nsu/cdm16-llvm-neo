@@ -3,109 +3,59 @@ name: Create release on tag
 on:
     workflow_dispatch:
     push:
-        tags:
-            - 'cdm-ver-*'
 
 jobs:
-    linux:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout repo
-              uses: actions/checkout@v4
-              with:
-                fetch-depth: 1
-            - name: Set up Clang
-              uses: egor-tensin/setup-clang@v1
-              with:
-                version: latest
-                platform: x64
-            - name: install cmake and ninja
-              uses: lukka/get-cmake@latest
-            - name: initialize cmake folder
-              run: cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD= -DLLVM_PARALLEL_LINK_JOBS=6 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CDM -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_DEFAULT_TARGET_TRIPLE=cdm
-            - name: build llvm
-              run: |
-                    cd build
-                    ninja clang
-            - name: upload artifacts
-              uses: actions/upload-artifact@v4
-              with:
-                name: clang-cdm-linux
-                path: build/bin/clang-19
-
-    darwin-crosscompile:
-        runs-on: ubuntu-latest
-        container: anarcom/smth-ttt-www:latest
-        strategy:
-          matrix:
-           darwin_architecture: [x86_64, aarch64]
-        steps:
-            - name: Checkout repo
-              uses: actions/checkout@v4
-              with:
-                fetch-depth: 1
-            - name: Generate cmake files
-              run: | 
-                export PATH=/toolchain/osxcross/target/bin/:$PATH
-                ${{ matrix.darwin_architecture }}-apple-darwin23-cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD= -DLLVM_PARALLEL_LINK_JOBS=6 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CDM -DLLVM_DEFAULT_TARGET_TRIPLE=cdm
-                cd build
-                ninja clang
-              
-            - name: upload artifacts
-              uses: actions/upload-artifact@v4
-              with:
-                name: clang-cdm-darwin-${{ matrix.darwin_architecture }}
-                path: build/bin/clang-19
-    win-crosscompile:
-        runs-on: ubuntu-latest
-        container: anarcom/smth-www-www:latest
-        steps:
-            - name: Install zip file
-              run: pacman -S --noconfirm zip
-            - name: Checkout repo
-              uses: actions/checkout@v4
-              with:
-                fetch-depth: 1
-            - name: Generate cmake files
-              run: | 
-                cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD= -DLLVM_PARALLEL_LINK_JOBS=1 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CDM -DLLVM_DEFAULT_TARGET_TRIPLE=cdm -DCMAKE_TOOLCHAIN_FILE=/win.cmake
-                cd build
-                ninja clang
-            - name: Create zip file with folder
-              run: zip -j clang-cdm-win.zip ./build/bin/clang.exe /usr/x86_64-w64-mingw32/bin/libgcc_s_seh-1.dll /usr/x86_64-w64-mingw32/bin/libwinpthread-1.dll /usr/x86_64-w64-mingw32/bin/libstdc++-6.dll
-            - name: upload artifacts
-              uses: actions/upload-artifact@v4
-              with:
-                name: clang-cdm-win
-                path: clang-cdm-win.zip
-                  
-
-    create-release:
-      needs: [win-crosscompile, darwin-crosscompile, linux]
-      runs-on: ubuntu-latest
-      steps:
-        - name: Create subfolder
-          run: mkdir artifacts_download
-        - name: Download artifacts
-          uses: actions/download-artifact@v4
-          with:
-            path: ./artifacts_download
-        - name: Print files list
-          run: find .
-        - name: ls folder
-          run: ls -la ./artifacts_download
-        - name: zip artifacts_data
-          run: cd ./artifacts_download && for dir in */; do [ -d "$dir" ] && zip -r "${dir%/}.zip" "${dir%/}" && rm -r "${dir%/}"; done
-        - name: Print files list
-          run: find .
-        - name: ls folder
-          run: ls -la ./artifacts_download
-        - name: Create release
-          uses: softprops/action-gh-release@v2
-          with:
-            body: clang cdm-16 backend version ${{github.ref_name}}
-            draft: false
-            prerelease: false
-            token: ${{ secrets.GITHUB_TOKEN }}
-            files: |
-              ${{github.workspace}}/artifacts_download/*.zip
+  example_matrix:
+    strategy:
+      matrix:
+        os: [ubuntu_latest, macos-13, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: install clang
+        uses: egor-tensin/setup-clang@v1
+      - name: install cmake and ninja
+        uses: lukka/get-cmake@latest
+      - name: initialize cmake folder
+        run: cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD= -DLLVM_PARALLEL_LINK_JOBS=2 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CDM -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_DEFAULT_TARGET_TRIPLE=cdm
+      - name: build clang
+        run: |
+              cd build
+              ninja clang
+      - name: list folder recursivly
+        run: |
+              cd ./build/bin
+              find .
+      - name: upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: clang-cdm-${{ matrix.os }}
+          path: ./build/bin/clang-19          
+  build_for_windows:
+    runs-on: windows_latest
+    steps:
+      # Get-ChildItem -Recurse            
+      - name: checkout repo
+        uses: actions/checkout@v4
+      - name: install clang
+        uses: egor-tensin/setup-clang@v1
+      - name: install cmake and ninja
+        uses: lukka/get-cmake@latest
+      - name: initialize cmake folder
+        run: cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD= -DLLVM_PARALLEL_LINK_JOBS=2 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CDM -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_DEFAULT_TARGET_TRIPLE=cdm
+      - name: build clang
+        run: |
+              cd build
+              ninja clang
+      - name: list folder recursivly
+        run: |
+              cd ./build/bin
+              Get-ChildItem -Recurse
+      - name: upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: clang-cdm-windows
+          path: ./build/bin/clang.exe 
