@@ -11,12 +11,12 @@ jobs:
         os: [ubuntu-latest, macos-13, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: install ninja
-        uses: seanmiddleditch/gha-setup-ninja@master
       - name: checkout repo
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+      - name: install ninja
+        uses: seanmiddleditch/gha-setup-ninja@master
       - name: initialize cmake folder
         run: cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD= -DLLVM_PARALLEL_LINK_JOBS=2 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CDM -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_DEFAULT_TARGET_TRIPLE=cdm
       - name: build clang
@@ -34,11 +34,11 @@ jobs:
           path: ./build/bin/clang-19          
   build_for_windows:
     runs-on: windows-latest
-    steps:
-      - name: install ninja
-        uses: seanmiddleditch/gha-setup-ninja@master          
+    steps:          
       - name: checkout repo
         uses: actions/checkout@v4
+      - name: install ninja
+        uses: seanmiddleditch/gha-setup-ninja@master
       - name: initialize cmake folder
         run: cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD= -DLLVM_PARALLEL_LINK_JOBS=2 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CDM -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_DEFAULT_TARGET_TRIPLE=cdm
       - name: build clang
