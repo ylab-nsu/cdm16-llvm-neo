@@ -52,6 +52,14 @@ CDMISelLowering::CDMISelLowering(const CDMTargetMachine &TM,
 
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
   setOperationAction(ISD::JumpTable, MVT::i16, Custom);
+  
+  setOperationAction(ISD::MUL, MVT::i16, LibCall);
+  setOperationAction(ISD::SMUL_LOHI, MVT::i16, Expand);
+  setOperationAction(ISD::UMUL_LOHI, MVT::i16, Expand);
+  setOperationAction(ISD::SDIV, MVT::i16, LibCall);
+  setOperationAction(ISD::UDIV, MVT::i16, LibCall);
+  setOperationAction(ISD::SREM, MVT::i16, LibCall);
+  setOperationAction(ISD::UREM, MVT::i16, LibCall);
 }
 
 #include "CDMFunctionInfo.h"
@@ -217,7 +225,7 @@ CDMISelLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
 bool CDMISelLowering::CanLowerReturn(
     CallingConv::ID CallingConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context, const Type *RetTy) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallingConv, IsVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC_CDM);
@@ -281,7 +289,6 @@ SDValue CDMISelLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       Chain = DAG.getMemcpy(Chain, Loc, FIPtr, Arg, SizeNode, Alignment,
                             false,        // isVolatile,
                             (Size <= 16), // AlwaysInline if size <= 16,
-                            nullptr,
                             false,        // isTailCall
                             MachinePointerInfo(), MachinePointerInfo());
       ByValArgs.push_back(FIPtr);
@@ -430,6 +437,16 @@ SDValue CDMISelLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerJumpTable(Op, DAG);
   case ISD::VASTART:
     return lowerVASTART(Op, DAG);
+  /*case ISD::MUL:
+    return lowerMUL(Op, DAG);
+  case ISD::SDIV:
+    return lowerSDIV(Op, DAG);
+  case ISD::UDIV:
+    return lowerUDIV(Op, DAG);
+  case ISD::UREM:
+    return lowerUREM(Op, DAG);
+  case ISD::SREM:
+    return lowerSREM(Op, DAG);*/
   }
   return SDValue();
 }

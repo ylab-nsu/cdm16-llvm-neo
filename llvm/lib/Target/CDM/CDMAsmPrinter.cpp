@@ -175,7 +175,7 @@ void CDMAsmPrinter::emitFunctionHeader() {
 void CDMAsmPrinter::emitStartOfAsmFile(Module &Module) {
   collectAndEmitSourceFiles(Module);
 
-  OutStreamer->emitRawText("memset, memcpy: ext\n");
+  OutStreamer->emitRawText("memset, memcpy, memmove, __mulhi3, __divhi3, __udivhi3, __modhi3, __umodhi3: ext\n");
 
   auto FN = Module.getSourceFileName();
 
@@ -215,7 +215,7 @@ void CDMAsmTargetStreamer::emitLabel(MCSymbol *Symbol) {}
 
 void CDMAsmTargetStreamer::changeSection(const MCSection *CurSection,
                                          MCSection *Section,
-                                         uint32_t SubSection,
+                                         const MCExpr *SubSection,
                                          raw_ostream &OS) {
   // This is a stub. We don't have sections in cdm
   // Section->
