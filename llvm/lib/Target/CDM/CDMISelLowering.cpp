@@ -66,6 +66,34 @@ CDMISelLowering::CDMISelLowering(const CDMTargetMachine &TM,
 
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
   setOperationAction(ISD::JumpTable, MVT::i16, Custom);
+
+  setOperationAction(ISD::MUL, MVT::i16, LibCall);
+  setOperationAction(ISD::SMUL_LOHI, MVT::i16, Expand);
+  setOperationAction(ISD::UMUL_LOHI, MVT::i16, Expand);
+  setOperationAction(ISD::MULHS, MVT::i16, Expand);
+  setOperationAction(ISD::MULHU, MVT::i16, Expand);
+
+  setOperationAction(ISD::SDIV, MVT::i16, LibCall);
+  setOperationAction(ISD::UDIV, MVT::i16, LibCall);
+  setOperationAction(ISD::SDIVREM, MVT::i16, Expand);
+  setOperationAction(ISD::UDIVREM, MVT::i16, Expand);
+
+  setOperationAction(ISD::SREM, MVT::i16, LibCall);
+  setOperationAction(ISD::UREM, MVT::i16, LibCall);
+  
+  /*
+  setOperationAction(ISD::BSWAP, MVT::i16, Expand);
+  setOperationAction(ISD::CTLZ, MVT::i16, Expand);
+  setOperationAction(ISD::CTTZ, MVT::i16, Expand);
+  setOperationAction(ISD::CTPOP, MVT::i16, Expand);
+  
+  setOperationAction(ISD::ROTL, MVT::i16, Expand);
+  setOperationAction(ISD::ROTR, MVT::i16, Expand);
+
+  setOperationAction(ISD::SHL, MVT::i16, Custom);
+  setOperationAction(ISD::SRA, MVT::i16, Custom);
+  setOperationAction(ISD::SRL, MVT::i16, Custom);
+  */
 }
 
 #include "CDMFunctionInfo.h"
