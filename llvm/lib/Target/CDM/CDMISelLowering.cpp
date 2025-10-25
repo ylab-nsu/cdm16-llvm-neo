@@ -218,7 +218,8 @@ CDMISelLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
 bool CDMISelLowering::CanLowerReturn(
     CallingConv::ID CallingConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context, const Type *RetTy) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallingConv, IsVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC_CDM);
@@ -283,7 +284,7 @@ SDValue CDMISelLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                             false,        // isVolatile,
                             (Size <= 16), // AlwaysInline if size <= 16,
                             nullptr,
-                            false,        // isTailCall
+                            false, // isTailCall
                             MachinePointerInfo(), MachinePointerInfo());
       ByValArgs.push_back(FIPtr);
     } else {
@@ -450,41 +451,126 @@ SDValue CDMISelLowering::lowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(CDMISD::LOAD_SYM, Op, VT, TargetJumpTable);
 }
 
-// Thanks
-// https://github.com/llvm/llvm-project/commit/65385167fbb4d30fcdddf54102b08fcb1b497fed
+// Thanks, AVR
+MachineBasicBlock *CDMISelLowering::insertShift(MachineInstr &MI,
+                                                MachineBasicBlock *BB) const {
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &RI = MF->getRegInfo();
+  const CDMInstrInfo &TII =
+      *(const CDMInstrInfo *)BB->getParent()->getSubtarget().getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+  const BasicBlock *LLVM_BB = BB->getBasicBlock();
+
+  MachineFunction::iterator I;
+  for (I = BB->getIterator(); I != MF->end() && &(*I) != BB; ++I)
+    ;
+  if (I != MF->end())
+    ++I;
+
+  unsigned Opc;
+  switch (MI.getOpcode()) {
+  case CDM::SHL_VARAMT:
+    Opc = CDM::SHL_1_8;
+    break;
+  case CDM::SHRA_VARAMT:
+    Opc = CDM::SHRA_1_8;
+    break;
+  case CDM::SHR_VARAMT:
+    Opc = CDM::SHR_1_8;
+    break;
+  case CDM::ROL_VARAMT:
+    Opc = CDM::ROL_1_8;
+    break;
+  case CDM::ROR_VARAMT:
+    Opc = CDM::ROR_1_8;
+    break;
+  default:
+    llvm_unreachable("Unknown shift operation");
+  }
+
+  MachineBasicBlock *LoopBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *CheckBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *RemBB = MF->CreateMachineBasicBlock(LLVM_BB);
+
+  MF->insert(I, LoopBB);
+  MF->insert(I, CheckBB);
+  MF->insert(I, RemBB);
+
+  // Update machine-CFG edges by transferring all successors of the current
+  // block to the block containing instructions after shift.
+  RemBB->splice(RemBB->begin(), BB, std::next(MachineBasicBlock::iterator(MI)),
+                BB->end());
+  RemBB->transferSuccessorsAndUpdatePHIs(BB);
+
+  // Add edges BB => LoopBB => CheckBB => RemBB, CheckBB => LoopBB.
+  BB->addSuccessor(CheckBB);
+  LoopBB->addSuccessor(CheckBB);
+  CheckBB->addSuccessor(LoopBB);
+  CheckBB->addSuccessor(RemBB);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  Register ShAmtSrcReg = MI.getOperand(2).getReg();
+
+  Register ShiftReg = RI.createVirtualRegister(&CDM::CPURegsRegClass);
+  Register ShiftReg2 = RI.createVirtualRegister(&CDM::CPURegsRegClass);
+  Register ShiftAmtReg = RI.createVirtualRegister(&CDM::CPURegsRegClass);
+  Register ShiftAmtReg2 = RI.createVirtualRegister(&CDM::CPURegsRegClass);
+
+  BuildMI(BB, DL, TII.get(CDM::BR)).addMBB(CheckBB);
+
+  BuildMI(LoopBB, DL, TII.get(Opc), ShiftReg2).addReg(ShiftReg).addImm(1);
+
+  BuildMI(CheckBB, DL, TII.get(CDM::PHI), ShiftReg)
+      .addReg(SrcReg)
+      .addMBB(BB)
+      .addReg(ShiftReg2)
+      .addMBB(LoopBB);
+  BuildMI(CheckBB, DL, TII.get(CDM::PHI), ShiftAmtReg)
+      .addReg(ShAmtSrcReg)
+      .addMBB(BB)
+      .addReg(ShiftAmtReg2)
+      .addMBB(LoopBB);
+  BuildMI(CheckBB, DL, TII.get(CDM::PHI), DstReg)
+      .addReg(SrcReg)
+      .addMBB(BB)
+      .addReg(ShiftReg2)
+      .addMBB(LoopBB);
+
+  BuildMI(CheckBB, DL, TII.get(CDM::SUBI), ShiftAmtReg2)
+      .addReg(ShiftAmtReg)
+      .addImm(1);
+  BuildMI(CheckBB, DL, TII.get(CDM::BCond))
+      .addImm(CDMCOND::GT)
+      .addMBB(LoopBB)
+      ->bundleWithPred();
+
+  MI.eraseFromParent();
+
+  return RemBB;
+}
+
 MachineBasicBlock *
 CDMISelLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                              MachineBasicBlock *MBB) const {
-
   switch (MI.getOpcode()){
 	  default:
 		llvm_unreachable("Unexpected instr type to insert");
 	  case CDM::PseudoSelectCC:
 	  case CDM::PseudoSelectCCI:
 		return emitPseudoSelectCC(MI, MBB);
+      case CDM::SHL_VARAMT:
+      case CDM::SHRA_VARAMT:
+      case CDM::SHR_VARAMT:
+      case CDM::ROL_VARAMT:
+      case CDM::ROR_VARAMT:
+        return insertShift(MI, MBB);
   }
-
 }
-
-SDValue CDMISelLowering::lowerVASTART(SDValue Op, SelectionDAG &DAG) const {
-  MachineFunction &MF = DAG.getMachineFunction();
-  CDMFunctionInfo *FuncInfo = MF.getInfo<CDMFunctionInfo>();
-
-  SDLoc DL(Op);
-  SDValue FI = DAG.getFrameIndex(FuncInfo->getVarArgsFrameIndex(),
-                                 getPointerTy(DAG.getDataLayout()));
-
-  // vastart just stores the address of the VarArgsFrameIndex slot into the
-  // memory location argument.
-  const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
-  return DAG.getStore(Op.getOperand(0), DL, FI, Op.getOperand(1),
-                      MachinePointerInfo(SV));
-}
-
 
 MachineBasicBlock*
 CDMISelLowering::emitPseudoSelectCC(MachineInstr &MI,
-				    MachineBasicBlock *MBB) const {
+				                    MachineBasicBlock *MBB) const {
   const CDMInstrInfo &TII =
       *(const CDMInstrInfo *)MBB->getParent()->getSubtarget().getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
@@ -540,4 +626,19 @@ CDMISelLowering::emitPseudoSelectCC(MachineInstr &MI,
   MI.eraseFromParent();
 
   return TailMBB;
+}
+
+SDValue CDMISelLowering::lowerVASTART(SDValue Op, SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  CDMFunctionInfo *FuncInfo = MF.getInfo<CDMFunctionInfo>();
+
+  SDLoc DL(Op);
+  SDValue FI = DAG.getFrameIndex(FuncInfo->getVarArgsFrameIndex(),
+                                 getPointerTy(DAG.getDataLayout()));
+
+  // vastart just stores the address of the VarArgsFrameIndex slot into the
+  // memory location argument.
+  const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
+  return DAG.getStore(Op.getOperand(0), DL, FI, Op.getOperand(1),
+                      MachinePointerInfo(SV));
 }

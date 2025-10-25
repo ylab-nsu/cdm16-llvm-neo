@@ -109,7 +109,7 @@ def imm1_8 : ImmLeaf<i16, [{return (Imm >= 1) && (Imm <= 8);}]>;
 def imm9_16 : ImmLeaf<i16, [{return (Imm >= 9) && (Imm <= 16);}]>;
 
 // Shifts base class
-multiclass ShiftImm<string instr_asm, SDNode OpNode> {
+multiclass Shift<string instr_asm, SDNode OpNode> {
   let Defs = [PSR] in {
     def _1_8
         : CDMInst<(outs CPURegs:$rd), (ins CPURegs:$rs, shamt:$shamt),
@@ -121,14 +121,20 @@ multiclass ShiftImm<string instr_asm, SDNode OpNode> {
                   !strconcat(!strconcat(instr_asm, "\t$rs, $rd, 8\n\t"),
                              !strconcat(instr_asm, "\t$rd, $rd, $shamt-8")),
                   [(set CPURegs:$rd, (OpNode CPURegs:$rs, imm9_16:$shamt))]>;
+    def _VARAMT
+        : CDMPseudo<(outs CPURegs:$rd), (ins CPURegs:$rs, CPURegs:$shamt),
+                  !strconcat(!strconcat(!strconcat("!", instr_asm), "_VARAMT"), "\t$rs, $rd, $shamt"),
+                  [(set CPURegs:$rd, (OpNode CPURegs:$rs, CPURegs:$shamt))]> {
+      let usesCustomInserter = true;
+    }
   }
 }
 
-defm SHL : ShiftImm<"shl", shl>;
-defm SHRA : ShiftImm<"shra", sra>;
-defm SHR : ShiftImm<"shr", srl>;
-defm ROL : ShiftImm<"rol", rotl>;
-defm ROR : ShiftImm<"ror", rotr>;
+defm SHL : Shift<"shl", shl>;
+defm SHRA : Shift<"shra", sra>;
+defm SHR : Shift<"shr", srl>;
+defm ROL : Shift<"rol", rotl>;
+defm ROR : Shift<"ror", rotr>;
 
 // load
 class AlignedLoad<PatFrag Node> : PatFrag<(ops node:$ptr), (Node node:$ptr), [{
