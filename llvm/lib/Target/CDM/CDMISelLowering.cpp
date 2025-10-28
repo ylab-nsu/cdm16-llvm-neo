@@ -80,6 +80,19 @@ CDMISelLowering::CDMISelLowering(const CDMTargetMachine &TM,
 
   setOperationAction(ISD::SREM, MVT::i16, LibCall);
   setOperationAction(ISD::UREM, MVT::i16, LibCall);
+
+  setOperationAction(ISD::ATOMIC_SWAP, MVT::i16, Expand);
+  setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i16, Expand);
+  setOperationAction(ISD::ATOMIC_LOAD_ADD, MVT::i16, Expand);
+  setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i16, Expand);
+  setOperationAction(ISD::ATOMIC_LOAD_AND, MVT::i16, Expand);
+  setOperationAction(ISD::ATOMIC_LOAD_OR, MVT::i16, Expand);
+  setOperationAction(ISD::ATOMIC_LOAD_XOR, MVT::i16, Expand);
+  setOperationAction(ISD::ATOMIC_LOAD_NAND, MVT::i16, Expand);
+  setOperationAction(ISD::ATOMIC_LOAD_MAX, MVT::i16, Expand);
+  setOperationAction(ISD::ATOMIC_LOAD_MIN, MVT::i16, Expand);
+  setOperationAction(ISD::ATOMIC_LOAD_UMAX, MVT::i16, Expand);
+  setOperationAction(ISD::ATOMIC_LOAD_UMIN, MVT::i16, Expand);
   
   /*
   setOperationAction(ISD::BSWAP, MVT::i16, Expand);
