@@ -111,16 +111,17 @@ def imm9_16 : ImmLeaf<i16, [{return (Imm >= 9) && (Imm <= 16);}]>;
 // Shifts base class
 multiclass Shift<string instr_asm, SDNode OpNode> {
   let Defs = [PSR] in {
-    def _1_8
+    def ""
         : CDMInst<(outs CPURegs:$rd), (ins CPURegs:$rs, shamt:$shamt),
                   !strconcat(instr_asm, "\t$rs, $rd, $shamt"),
                   [(set CPURegs:$rd, (OpNode CPURegs:$rs, imm1_8:$shamt))]>;
 
-    def _9_16
-        : CDMInst<(outs CPURegs:$rd), (ins CPURegs:$rs, shamt:$shamt),
-                  !strconcat(!strconcat(instr_asm, "\t$rs, $rd, 8\n\t"),
-                             !strconcat(instr_asm, "\t$rd, $rd, $shamt-8")),
-                  [(set CPURegs:$rd, (OpNode CPURegs:$rs, imm9_16:$shamt))]>;
+    def _LARGEAMT
+        : CDMPseudo<(outs CPURegs:$rd), (ins CPURegs:$rs, shamt:$shamt),
+                  !strconcat(!strconcat(!strconcat("!", instr_asm), "_LARGEAMT"), "\t$rs, $rd, $shamt"),
+                  [(set CPURegs:$rd, (OpNode CPURegs:$rs, imm9_16:$shamt))]> {
+      let usesCustomInserter = true;
+    }
     def _VARAMT
         : CDMPseudo<(outs CPURegs:$rd), (ins CPURegs:$rs, CPURegs:$shamt),
                   !strconcat(!strconcat(!strconcat("!", instr_asm), "_VARAMT"), "\t$rs, $rd, $shamt"),

@@ -64,8 +64,10 @@ private:
                           SmallVectorImpl<SDValue> &InVals) const;
   SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVAARG(SDValue Op, SelectionDAG &DAG);
+  
   MachineBasicBlock *insertPseudoSelect(MachineInstr &MI, MachineBasicBlock *MBB) const;
-  MachineBasicBlock *insertShift(MachineInstr &MI, MachineBasicBlock *MBB) const;
+  MachineBasicBlock *insertShiftLargeAmt(MachineInstr &MI, MachineBasicBlock *MBB) const;
+  MachineBasicBlock *insertShiftVarAmt(MachineInstr &MI, MachineBasicBlock *MBB) const;
 
   MachineBasicBlock* emitPseudoSelectCC(MachineInstr &MI,
 		  			MachineBasicBlock *MBB) const;

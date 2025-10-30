@@ -451,8 +451,7 @@ SDValue CDMISelLowering::lowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(CDMISD::LOAD_SYM, Op, VT, TargetJumpTable);
 }
 
-// Thanks, AVR
-MachineBasicBlock *CDMISelLowering::insertShift(MachineInstr &MI,
+MachineBasicBlock *CDMISelLowering::insertShiftVarAmt(MachineInstr &MI,
                                                 MachineBasicBlock *BB) const {
   MachineFunction *MF = BB->getParent();
   MachineRegisterInfo &RI = MF->getRegInfo();
@@ -470,19 +469,19 @@ MachineBasicBlock *CDMISelLowering::insertShift(MachineInstr &MI,
   unsigned Opc;
   switch (MI.getOpcode()) {
   case CDM::SHL_VARAMT:
-    Opc = CDM::SHL_1_8;
+    Opc = CDM::SHL;
     break;
   case CDM::SHRA_VARAMT:
-    Opc = CDM::SHRA_1_8;
+    Opc = CDM::SHRA;
     break;
   case CDM::SHR_VARAMT:
-    Opc = CDM::SHR_1_8;
+    Opc = CDM::SHR;
     break;
   case CDM::ROL_VARAMT:
-    Opc = CDM::ROL_1_8;
+    Opc = CDM::ROL;
     break;
   case CDM::ROR_VARAMT:
-    Opc = CDM::ROR_1_8;
+    Opc = CDM::ROR;
     break;
   default:
     llvm_unreachable("Unknown shift operation");
@@ -550,6 +549,47 @@ MachineBasicBlock *CDMISelLowering::insertShift(MachineInstr &MI,
   return RemBB;
 }
 
+MachineBasicBlock *CDMISelLowering::insertShiftLargeAmt(MachineInstr &MI,
+                                                MachineBasicBlock *MBB) const {
+  MachineFunction *MF = MBB->getParent();
+  MachineRegisterInfo &RI = MF->getRegInfo();
+  const CDMInstrInfo &TII =
+      *(const CDMInstrInfo *)MBB->getParent()->getSubtarget().getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+
+  unsigned Opc;
+  switch (MI.getOpcode()) {
+  case CDM::SHL_LARGEAMT:
+    Opc = CDM::SHL;
+    break;
+  case CDM::SHRA_LARGEAMT:
+    Opc = CDM::SHRA;
+    break;
+  case CDM::SHR_LARGEAMT:
+    Opc = CDM::SHR;
+    break;
+  case CDM::ROL_LARGEAMT:
+    Opc = CDM::ROL;
+    break;
+  case CDM::ROR_LARGEAMT:
+    Opc = CDM::ROR;
+    break;
+  default:
+    assert(false && "Unknown shift operation");
+  }
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  int64_t ShAmt = MI.getOperand(2).getImm();
+  Register TmpReg = RI.createVirtualRegister(&CDM::CPURegsRegClass);
+
+  BuildMI(*MBB, MI.getIterator(), DL, TII.get(Opc), TmpReg).addReg(SrcReg).addImm(8);
+  BuildMI(*MBB, MI.getIterator(), DL, TII.get(Opc), DstReg).addReg(TmpReg).addImm(ShAmt - 8);
+  MI.eraseFromParent();
+
+  return MBB;
+}
+
 MachineBasicBlock *
 CDMISelLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                              MachineBasicBlock *MBB) const {
@@ -564,7 +604,13 @@ CDMISelLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       case CDM::SHR_VARAMT:
       case CDM::ROL_VARAMT:
       case CDM::ROR_VARAMT:
-        return insertShift(MI, MBB);
+        return insertShiftVarAmt(MI, MBB);
+      case CDM::SHL_LARGEAMT:
+      case CDM::SHRA_LARGEAMT:
+      case CDM::SHR_LARGEAMT:
+      case CDM::ROL_LARGEAMT:
+      case CDM::ROR_LARGEAMT:
+        return insertShiftLargeAmt(MI, MBB);
   }
 }
 
