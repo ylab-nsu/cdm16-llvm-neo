@@ -541,8 +541,7 @@ MachineBasicBlock *CDMISelLowering::insertShiftVarAmt(MachineInstr &MI,
       .addImm(1);
   BuildMI(CheckBB, DL, TII.get(CDM::BCond))
       .addImm(CDMCOND::GT)
-      .addMBB(LoopBB)
-      ->bundleWithPred();
+      .addMBB(LoopBB);
 
   MI.eraseFromParent();
 
