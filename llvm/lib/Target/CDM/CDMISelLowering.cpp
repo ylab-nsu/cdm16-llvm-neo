@@ -539,8 +539,10 @@ MachineBasicBlock *CDMISelLowering::insertShiftVarAmt(MachineInstr &MI,
   BuildMI(CheckBB, DL, TII.get(CDM::SUBI), ShiftAmtReg2)
       .addReg(ShiftAmtReg)
       .addImm(1);
-  BuildMI(CheckBB, DL, TII.get(CDM::BCond))
+  BuildMI(CheckBB, DL, TII.get(CDM::PseudoBCondRI))
       .addImm(CDMCOND::GT)
+      .addReg(ShiftAmtReg2)
+      .addImm(0)
       .addMBB(LoopBB);
 
   MI.eraseFromParent();
@@ -648,8 +650,10 @@ MachineBasicBlock *CDMISelLowering::insertShiftParts(MachineInstr &MI,
   BuildMI(CheckBB, DL, TII.get(CDM::SUBI), ShiftAmtReg2)
       .addReg(ShiftAmtReg)
       .addImm(1);
-  BuildMI(CheckBB, DL, TII.get(CDM::BCond))
+  BuildMI(CheckBB, DL, TII.get(CDM::PseudoBCondRI))
       .addImm(CDMCOND::GT)
+      .addReg(ShiftAmtReg2)
+      .addImm(0)
       .addMBB(LoopBB);
 
   MI.eraseFromParent();
