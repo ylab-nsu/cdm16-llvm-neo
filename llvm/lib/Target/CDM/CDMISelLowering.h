@@ -65,13 +65,10 @@ private:
   SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVAARG(SDValue Op, SelectionDAG &DAG);
   
-  MachineBasicBlock *insertPseudoSelect(MachineInstr &MI, MachineBasicBlock *MBB) const;
-  MachineBasicBlock *insertShiftLargeAmt(MachineInstr &MI, MachineBasicBlock *MBB) const;
-  MachineBasicBlock *insertShiftVarAmt(MachineInstr &MI, MachineBasicBlock *MBB) const;
-  MachineBasicBlock *insertShiftParts(MachineInstr &MI, MachineBasicBlock *MBB) const;
-
-  MachineBasicBlock* emitPseudoSelectCC(MachineInstr &MI,
-		  			MachineBasicBlock *MBB) const;
+  MachineBasicBlock *emitPseudoSelectCC(MachineInstr &MI, MachineBasicBlock *MBB) const;
+  MachineBasicBlock *emitShiftLargeAmt(MachineInstr &MI, MachineBasicBlock *MBB) const;
+  MachineBasicBlock *emitShiftVarAmt(MachineInstr &MI, MachineBasicBlock *MBB) const;
+  MachineBasicBlock *emitShiftParts(MachineInstr &MI, MachineBasicBlock *MBB) const;
 
   const CDMSubtarget &Subtarget;
   const unsigned StackReserved = 4 * 2u;

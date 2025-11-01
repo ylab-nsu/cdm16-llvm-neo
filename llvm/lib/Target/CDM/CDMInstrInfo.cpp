@@ -141,6 +141,8 @@ void CDMInstrInfo::expandShiftParts(MachineBasicBlock &MBB,
   unsigned HiOpc;
   bool LoFirst;
   switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unknown shift operation");
   case CDM::SHL_PARTS_1:
     LoOpc = CDM::SHL;
     HiOpc = CDM::RCL;
@@ -156,8 +158,6 @@ void CDMInstrInfo::expandShiftParts(MachineBasicBlock &MBB,
     HiOpc = CDM::SHRA;
     LoFirst = false;
     break;
-  default:
-    llvm_unreachable("unknown shift operation");
   }
 
   MIBundleBuilder Bundler = MIBundleBuilder(MBB, MI);

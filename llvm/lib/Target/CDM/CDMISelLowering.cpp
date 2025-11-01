@@ -32,13 +32,9 @@ CDMISelLowering::CDMISelLowering(const CDMTargetMachine &TM,
 
   setBooleanContents(ZeroOrOneBooleanContent);
 
-  //          setOperationAction(ISD::BR_CC, MVT::i16, Expand);
-
-  //          setOperationAction(ISD::SELECT_CC, MVT::i16, Expand);
   setOperationAction(ISD::SELECT, MVT::i16, Expand);
   setOperationAction(ISD::BRCOND, MVT::Other, Expand);
   setOperationAction(ISD::SETCC, MVT::i16, Expand);
-  //          setOperationAction(ISD::SELECT_CC, MVT::i16, Custom);
 
   setOperationAction(ISD::GlobalAddress, MVT::i16, Custom);
 
@@ -424,6 +420,7 @@ SDValue CDMISelLowering::lowerCallResult(
 
   return Chain;
 }
+
 SDValue CDMISelLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   case ISD::GlobalAddress:
@@ -435,6 +432,7 @@ SDValue CDMISelLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   }
   return SDValue();
 }
+
 SDValue CDMISelLowering::lowerGlobalAddress(SDValue Op,
                                             SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
@@ -443,6 +441,7 @@ SDValue CDMISelLowering::lowerGlobalAddress(SDValue Op,
       GlobalAddr->getGlobal(), Op, MVT::i16, GlobalAddr->getOffset());
   return DAG.getNode(CDMISD::LOAD_SYM, Op, VT, TargetAddr);
 }
+
 SDValue CDMISelLowering::lowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   JumpTableSDNode *N = cast<JumpTableSDNode>(Op);
@@ -451,23 +450,170 @@ SDValue CDMISelLowering::lowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(CDMISD::LOAD_SYM, Op, VT, TargetJumpTable);
 }
 
-MachineBasicBlock *CDMISelLowering::insertShiftVarAmt(MachineInstr &MI,
-                                                MachineBasicBlock *BB) const {
-  MachineFunction *MF = BB->getParent();
-  MachineRegisterInfo &RI = MF->getRegInfo();
+SDValue CDMISelLowering::lowerVASTART(SDValue Op, SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  CDMFunctionInfo *FuncInfo = MF.getInfo<CDMFunctionInfo>();
+
+  SDLoc DL(Op);
+  SDValue FI = DAG.getFrameIndex(FuncInfo->getVarArgsFrameIndex(),
+                                 getPointerTy(DAG.getDataLayout()));
+
+  // vastart just stores the address of the VarArgsFrameIndex slot into the
+  // memory location argument.
+  const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
+  return DAG.getStore(Op.getOperand(0), DL, FI, Op.getOperand(1),
+                      MachinePointerInfo(SV));
+}
+
+MachineBasicBlock *
+CDMISelLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
+                                             MachineBasicBlock *MBB) const {
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unknown instruction to emit with custom inserter");
+  case CDM::PseudoSelectCC:
+  case CDM::PseudoSelectCCI:
+    return emitPseudoSelectCC(MI, MBB);
+  case CDM::SHL_LARGEAMT:
+  case CDM::SHRA_LARGEAMT:
+  case CDM::SHR_LARGEAMT:
+  case CDM::ROL_LARGEAMT:
+  case CDM::ROR_LARGEAMT:
+    return emitShiftLargeAmt(MI, MBB);
+  case CDM::SHL_VARAMT:
+  case CDM::SHRA_VARAMT:
+  case CDM::SHR_VARAMT:
+  case CDM::ROL_VARAMT:
+  case CDM::ROR_VARAMT:
+    return emitShiftVarAmt(MI, MBB);
+  case CDM::SHL_PARTS:
+  case CDM::SRL_PARTS:
+  case CDM::SRA_PARTS:
+    return emitShiftParts(MI, MBB);
+  }
+}
+
+MachineBasicBlock *
+CDMISelLowering::emitPseudoSelectCC(MachineInstr &MI,
+                                    MachineBasicBlock *MBB) const {
   const CDMInstrInfo &TII =
-      *(const CDMInstrInfo *)BB->getParent()->getSubtarget().getInstrInfo();
+      *(const CDMInstrInfo *)MBB->getParent()->getSubtarget().getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
-  const BasicBlock *LLVM_BB = BB->getBasicBlock();
+
+  auto Dst = MI.getOperand(0);
+  auto LHS = MI.getOperand(1);
+  auto RHS = MI.getOperand(2);
+  auto TrueVal = MI.getOperand(3);
+  auto FalseVal = MI.getOperand(4);
+  auto CondCode = static_cast<CDMCOND::CondOp>(MI.getOperand(5).getImm());
+
+  const BasicBlock *BB = MBB->getBasicBlock();
+
+  MachineBasicBlock *HeadMBB = MBB;
+  MachineFunction *F = MBB->getParent();
+  MachineBasicBlock *TailMBB = F->CreateMachineBasicBlock(BB);
+  MachineBasicBlock *IfFalseMBB = F->CreateMachineBasicBlock(BB);
+
+  MachineFunction::iterator I = ++MBB->getIterator();
+
+  F->insert(I, IfFalseMBB);
+  F->insert(I, TailMBB);
+
+  TailMBB->splice(TailMBB->begin(), HeadMBB,
+                  std::next(MachineBasicBlock::iterator(MI)), HeadMBB->end());
+
+  TailMBB->transferSuccessorsAndUpdatePHIs(HeadMBB);
+  HeadMBB->addSuccessor(IfFalseMBB);
+  HeadMBB->addSuccessor(TailMBB);
+  IfFalseMBB->addSuccessor(TailMBB);
+
+  if (MI.getOpcode() == CDM::PseudoSelectCC) {
+    BuildMI(HeadMBB, DL, TII.get(CDM::PseudoBCondRR))
+        .addImm(CondCode)
+        .addReg(LHS.getReg())
+        .addReg(RHS.getReg())
+        .addMBB(TailMBB);
+  } else {
+    BuildMI(HeadMBB, DL, TII.get(CDM::PseudoBCondRI))
+        .addImm(CondCode)
+        .addReg(LHS.getReg())
+        .addImm(RHS.getImm())
+        .addMBB(TailMBB);
+  }
+
+  BuildMI(*TailMBB, TailMBB->begin(), DL, TII.get(CDM::PHI), Dst.getReg())
+      .addReg(TrueVal.getReg())
+      .addMBB(HeadMBB)
+      .addReg(FalseVal.getReg())
+      .addMBB(IfFalseMBB);
+
+  MI.eraseFromParent();
+
+  return TailMBB;
+}
+
+MachineBasicBlock *
+CDMISelLowering::emitShiftLargeAmt(MachineInstr &MI,
+                                   MachineBasicBlock *MBB) const {
+  MachineFunction &MF = *MBB->getParent();
+  MachineRegisterInfo &RI = MF.getRegInfo();
+  const CDMInstrInfo &TII =
+      *(const CDMInstrInfo *)MF.getSubtarget().getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+
+  unsigned Opc;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unknown shift operation");
+  case CDM::SHL_LARGEAMT:
+    Opc = CDM::SHL;
+    break;
+  case CDM::SHRA_LARGEAMT:
+    Opc = CDM::SHRA;
+    break;
+  case CDM::SHR_LARGEAMT:
+    Opc = CDM::SHR;
+    break;
+  case CDM::ROL_LARGEAMT:
+    Opc = CDM::ROL;
+    break;
+  case CDM::ROR_LARGEAMT:
+    Opc = CDM::ROR;
+    break;
+  }
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  int64_t ShAmt = MI.getOperand(2).getImm();
+  Register TmpReg = RI.createVirtualRegister(&CDM::CPURegsRegClass);
+
+  BuildMI(*MBB, MI, DL, TII.get(Opc), TmpReg).addReg(SrcReg).addImm(8);
+  BuildMI(*MBB, MI, DL, TII.get(Opc), DstReg).addReg(TmpReg).addImm(ShAmt - 8);
+  MI.eraseFromParent();
+
+  return MBB;
+}
+
+MachineBasicBlock *
+CDMISelLowering::emitShiftVarAmt(MachineInstr &MI,
+                                 MachineBasicBlock *MBB) const {
+  MachineFunction &MF = *MBB->getParent();
+  MachineRegisterInfo &RI = MF.getRegInfo();
+  const CDMInstrInfo &TII =
+      *(const CDMInstrInfo *)MF.getSubtarget().getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+  const BasicBlock *BB = MBB->getBasicBlock();
 
   MachineFunction::iterator I;
-  for (I = BB->getIterator(); I != MF->end() && &(*I) != BB; ++I)
+  for (I = MBB->getIterator(); I != MF.end() && &(*I) != MBB; ++I)
     ;
-  if (I != MF->end())
+  if (I != MF.end())
     ++I;
 
   unsigned Opc;
   switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unknown shift operation");
   case CDM::SHL_VARAMT:
     Opc = CDM::SHL;
     break;
@@ -483,26 +629,21 @@ MachineBasicBlock *CDMISelLowering::insertShiftVarAmt(MachineInstr &MI,
   case CDM::ROR_VARAMT:
     Opc = CDM::ROR;
     break;
-  default:
-    llvm_unreachable("Unknown shift operation");
   }
 
-  MachineBasicBlock *LoopBB = MF->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *CheckBB = MF->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *RemBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *LoopBB = MF.CreateMachineBasicBlock(BB);
+  MachineBasicBlock *CheckBB = MF.CreateMachineBasicBlock(BB);
+  MachineBasicBlock *RemBB = MF.CreateMachineBasicBlock(BB);
 
-  MF->insert(I, LoopBB);
-  MF->insert(I, CheckBB);
-  MF->insert(I, RemBB);
+  MF.insert(I, LoopBB);
+  MF.insert(I, CheckBB);
+  MF.insert(I, RemBB);
 
-  // Update machine-CFG edges by transferring all successors of the current
-  // block to the block containing instructions after shift.
-  RemBB->splice(RemBB->begin(), BB, std::next(MachineBasicBlock::iterator(MI)),
-                BB->end());
-  RemBB->transferSuccessorsAndUpdatePHIs(BB);
+  RemBB->splice(RemBB->begin(), MBB, std::next(MachineBasicBlock::iterator(MI)),
+                MBB->end());
+  RemBB->transferSuccessorsAndUpdatePHIs(MBB);
 
-  // Add edges BB => LoopBB => CheckBB => RemBB, CheckBB => LoopBB.
-  BB->addSuccessor(CheckBB);
+  MBB->addSuccessor(CheckBB);
   LoopBB->addSuccessor(CheckBB);
   CheckBB->addSuccessor(LoopBB);
   CheckBB->addSuccessor(RemBB);
@@ -516,23 +657,23 @@ MachineBasicBlock *CDMISelLowering::insertShiftVarAmt(MachineInstr &MI,
   Register ShiftAmtReg = RI.createVirtualRegister(&CDM::CPURegsRegClass);
   Register ShiftAmtReg2 = RI.createVirtualRegister(&CDM::CPURegsRegClass);
 
-  BuildMI(BB, DL, TII.get(CDM::BR)).addMBB(CheckBB);
+  BuildMI(MBB, DL, TII.get(CDM::BR)).addMBB(CheckBB);
 
   BuildMI(LoopBB, DL, TII.get(Opc), ShiftReg2).addReg(ShiftReg).addImm(1);
 
   BuildMI(CheckBB, DL, TII.get(CDM::PHI), ShiftReg)
       .addReg(SrcReg)
-      .addMBB(BB)
+      .addMBB(MBB)
       .addReg(ShiftReg2)
       .addMBB(LoopBB);
   BuildMI(CheckBB, DL, TII.get(CDM::PHI), ShiftAmtReg)
       .addReg(ShAmtSrcReg)
-      .addMBB(BB)
+      .addMBB(MBB)
       .addReg(ShiftAmtReg2)
       .addMBB(LoopBB);
   BuildMI(CheckBB, DL, TII.get(CDM::PHI), DstReg)
       .addReg(SrcReg)
-      .addMBB(BB)
+      .addMBB(MBB)
       .addReg(ShiftReg2)
       .addMBB(LoopBB);
 
@@ -550,23 +691,26 @@ MachineBasicBlock *CDMISelLowering::insertShiftVarAmt(MachineInstr &MI,
   return RemBB;
 }
 
-MachineBasicBlock *CDMISelLowering::insertShiftParts(MachineInstr &MI,
-                                                MachineBasicBlock *BB) const {
-  MachineFunction *MF = BB->getParent();
-  MachineRegisterInfo &RI = MF->getRegInfo();
+MachineBasicBlock *
+CDMISelLowering::emitShiftParts(MachineInstr &MI,
+                                MachineBasicBlock *MBB) const {
+  MachineFunction &MF = *MBB->getParent();
+  MachineRegisterInfo &RI = MF.getRegInfo();
   const CDMInstrInfo &TII =
-      *(const CDMInstrInfo *)BB->getParent()->getSubtarget().getInstrInfo();
+      *(const CDMInstrInfo *)MF.getSubtarget().getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
-  const BasicBlock *LLVM_BB = BB->getBasicBlock();
+  const BasicBlock *BB = MBB->getBasicBlock();
 
   MachineFunction::iterator I;
-  for (I = BB->getIterator(); I != MF->end() && &(*I) != BB; ++I)
+  for (I = MBB->getIterator(); I != MF.end() && &(*I) != MBB; ++I)
     ;
-  if (I != MF->end())
+  if (I != MF.end())
     ++I;
 
   unsigned Opc;
   switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unknown shift operation");
   case CDM::SHL_PARTS:
     Opc = CDM::SHL_PARTS_1;
     break;
@@ -576,26 +720,21 @@ MachineBasicBlock *CDMISelLowering::insertShiftParts(MachineInstr &MI,
   case CDM::SRA_PARTS:
     Opc = CDM::SRA_PARTS_1;
     break;
-  default:
-    llvm_unreachable("Unknown shift operation");
   }
 
-  MachineBasicBlock *LoopBB = MF->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *CheckBB = MF->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *RemBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *LoopBB = MF.CreateMachineBasicBlock(BB);
+  MachineBasicBlock *CheckBB = MF.CreateMachineBasicBlock(BB);
+  MachineBasicBlock *RemBB = MF.CreateMachineBasicBlock(BB);
 
-  MF->insert(I, LoopBB);
-  MF->insert(I, CheckBB);
-  MF->insert(I, RemBB);
+  MF.insert(I, LoopBB);
+  MF.insert(I, CheckBB);
+  MF.insert(I, RemBB);
 
-  // Update machine-CFG edges by transferring all successors of the current
-  // block to the block containing instructions after shift.
-  RemBB->splice(RemBB->begin(), BB, std::next(MachineBasicBlock::iterator(MI)),
-                BB->end());
-  RemBB->transferSuccessorsAndUpdatePHIs(BB);
+  RemBB->splice(RemBB->begin(), MBB, std::next(MachineBasicBlock::iterator(MI)),
+                MBB->end());
+  RemBB->transferSuccessorsAndUpdatePHIs(MBB);
 
-  // Add edges BB => LoopBB => CheckBB => RemBB, CheckBB => LoopBB.
-  BB->addSuccessor(CheckBB);
+  MBB->addSuccessor(CheckBB);
   LoopBB->addSuccessor(CheckBB);
   CheckBB->addSuccessor(LoopBB);
   CheckBB->addSuccessor(RemBB);
@@ -613,7 +752,7 @@ MachineBasicBlock *CDMISelLowering::insertShiftParts(MachineInstr &MI,
   Register ShiftAmtReg = RI.createVirtualRegister(&CDM::CPURegsRegClass);
   Register ShiftAmtReg2 = RI.createVirtualRegister(&CDM::CPURegsRegClass);
 
-  BuildMI(BB, DL, TII.get(CDM::BR)).addMBB(CheckBB);
+  BuildMI(MBB, DL, TII.get(CDM::BR)).addMBB(CheckBB);
 
   BuildMI(LoopBB, DL, TII.get(Opc))
       .addReg(ShiftLoReg2, RegState::Define)
@@ -623,27 +762,27 @@ MachineBasicBlock *CDMISelLowering::insertShiftParts(MachineInstr &MI,
 
   BuildMI(CheckBB, DL, TII.get(CDM::PHI), ShiftLoReg)
       .addReg(SrcLoReg)
-      .addMBB(BB)
+      .addMBB(MBB)
       .addReg(ShiftLoReg2)
       .addMBB(LoopBB);
   BuildMI(CheckBB, DL, TII.get(CDM::PHI), ShiftHiReg)
       .addReg(SrcHiReg)
-      .addMBB(BB)
+      .addMBB(MBB)
       .addReg(ShiftHiReg2)
       .addMBB(LoopBB);
   BuildMI(CheckBB, DL, TII.get(CDM::PHI), ShiftAmtReg)
       .addReg(ShAmtSrcReg)
-      .addMBB(BB)
+      .addMBB(MBB)
       .addReg(ShiftAmtReg2)
       .addMBB(LoopBB);
   BuildMI(CheckBB, DL, TII.get(CDM::PHI), DstLoReg)
       .addReg(SrcLoReg)
-      .addMBB(BB)
+      .addMBB(MBB)
       .addReg(ShiftLoReg2)
       .addMBB(LoopBB);
   BuildMI(CheckBB, DL, TII.get(CDM::PHI), DstHiReg)
       .addReg(SrcHiReg)
-      .addMBB(BB)
+      .addMBB(MBB)
       .addReg(ShiftHiReg2)
       .addMBB(LoopBB);
 
@@ -659,148 +798,4 @@ MachineBasicBlock *CDMISelLowering::insertShiftParts(MachineInstr &MI,
   MI.eraseFromParent();
 
   return RemBB;
-}
-
-MachineBasicBlock *CDMISelLowering::insertShiftLargeAmt(MachineInstr &MI,
-                                                MachineBasicBlock *MBB) const {
-  MachineFunction *MF = MBB->getParent();
-  MachineRegisterInfo &RI = MF->getRegInfo();
-  const CDMInstrInfo &TII =
-      *(const CDMInstrInfo *)MBB->getParent()->getSubtarget().getInstrInfo();
-  DebugLoc DL = MI.getDebugLoc();
-
-  unsigned Opc;
-  switch (MI.getOpcode()) {
-  case CDM::SHL_LARGEAMT:
-    Opc = CDM::SHL;
-    break;
-  case CDM::SHRA_LARGEAMT:
-    Opc = CDM::SHRA;
-    break;
-  case CDM::SHR_LARGEAMT:
-    Opc = CDM::SHR;
-    break;
-  case CDM::ROL_LARGEAMT:
-    Opc = CDM::ROL;
-    break;
-  case CDM::ROR_LARGEAMT:
-    Opc = CDM::ROR;
-    break;
-  default:
-    assert(false && "Unknown shift operation");
-  }
-
-  Register DstReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(1).getReg();
-  int64_t ShAmt = MI.getOperand(2).getImm();
-  Register TmpReg = RI.createVirtualRegister(&CDM::CPURegsRegClass);
-
-  BuildMI(*MBB, MI.getIterator(), DL, TII.get(Opc), TmpReg).addReg(SrcReg).addImm(8);
-  BuildMI(*MBB, MI.getIterator(), DL, TII.get(Opc), DstReg).addReg(TmpReg).addImm(ShAmt - 8);
-  MI.eraseFromParent();
-
-  return MBB;
-}
-
-MachineBasicBlock *
-CDMISelLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
-                                             MachineBasicBlock *MBB) const {
-  switch (MI.getOpcode()){
-	  default:
-		llvm_unreachable("Unexpected instr type to insert");
-	  case CDM::PseudoSelectCC:
-	  case CDM::PseudoSelectCCI:
-		return emitPseudoSelectCC(MI, MBB);
-      case CDM::SHL_LARGEAMT:
-      case CDM::SHRA_LARGEAMT:
-      case CDM::SHR_LARGEAMT:
-      case CDM::ROL_LARGEAMT:
-      case CDM::ROR_LARGEAMT:
-        return insertShiftLargeAmt(MI, MBB);
-      case CDM::SHL_VARAMT:
-      case CDM::SHRA_VARAMT:
-      case CDM::SHR_VARAMT:
-      case CDM::ROL_VARAMT:
-      case CDM::ROR_VARAMT:
-        return insertShiftVarAmt(MI, MBB);
-      case CDM::SHL_PARTS:
-      case CDM::SRL_PARTS:
-      case CDM::SRA_PARTS:
-        return insertShiftParts(MI, MBB);
-  }
-}
-
-MachineBasicBlock*
-CDMISelLowering::emitPseudoSelectCC(MachineInstr &MI,
-				                    MachineBasicBlock *MBB) const {
-  const CDMInstrInfo &TII =
-      *(const CDMInstrInfo *)MBB->getParent()->getSubtarget().getInstrInfo();
-  DebugLoc DL = MI.getDebugLoc();
-
-  auto Dst = MI.getOperand(0);
-  auto LHS = MI.getOperand(1);
-  auto RHS = MI.getOperand(2);
-  auto TrueVal = MI.getOperand(3);
-  auto FalseVal = MI.getOperand(4);
-  auto CondCode = static_cast<CDMCOND::CondOp>(MI.getOperand(5).getImm());
-
-  const BasicBlock *LLVM_BB = MBB->getBasicBlock();
-
-  MachineBasicBlock *HeadMBB = MBB;
-  MachineFunction *F = MBB->getParent();
-  MachineBasicBlock *TailMBB = F->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *IfFalseMBB = F->CreateMachineBasicBlock(LLVM_BB);
-
-  MachineFunction::iterator I = ++MBB->getIterator();
-
-  F->insert(I, IfFalseMBB);
-  F->insert(I, TailMBB);
-
-  TailMBB->splice(TailMBB->begin(), HeadMBB,
-                  std::next(MachineBasicBlock::iterator(MI)), HeadMBB->end());
-
-  TailMBB->transferSuccessorsAndUpdatePHIs(HeadMBB);
-  HeadMBB->addSuccessor(IfFalseMBB);
-  HeadMBB->addSuccessor(TailMBB);
-  IfFalseMBB->addSuccessor(TailMBB);
-
-  if (MI.getOpcode() == CDM::PseudoSelectCC){
-	  BuildMI(HeadMBB, DL, TII.get(CDM::PseudoBCondRR))
-					.addImm(CondCode)
-					.addReg(LHS.getReg())
-					.addReg(RHS.getReg())
-					.addMBB(TailMBB);
-  }
-  else{
-	  BuildMI(HeadMBB, DL, TII.get(CDM::PseudoBCondRI))
-					.addImm(CondCode)
-					.addReg(LHS.getReg())
-					.addImm(RHS.getImm())
-					.addMBB(TailMBB);
-  }
-
-  BuildMI(*TailMBB, TailMBB->begin(), DL, TII.get(CDM::PHI), Dst.getReg())
-      .addReg(TrueVal.getReg())
-      .addMBB(HeadMBB)
-      .addReg(FalseVal.getReg())
-      .addMBB(IfFalseMBB);
-
-  MI.eraseFromParent();
-
-  return TailMBB;
-}
-
-SDValue CDMISelLowering::lowerVASTART(SDValue Op, SelectionDAG &DAG) const {
-  MachineFunction &MF = DAG.getMachineFunction();
-  CDMFunctionInfo *FuncInfo = MF.getInfo<CDMFunctionInfo>();
-
-  SDLoc DL(Op);
-  SDValue FI = DAG.getFrameIndex(FuncInfo->getVarArgsFrameIndex(),
-                                 getPointerTy(DAG.getDataLayout()));
-
-  // vastart just stores the address of the VarArgsFrameIndex slot into the
-  // memory location argument.
-  const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
-  return DAG.getStore(Op.getOperand(0), DL, FI, Op.getOperand(1),
-                      MachinePointerInfo(SV));
 }
