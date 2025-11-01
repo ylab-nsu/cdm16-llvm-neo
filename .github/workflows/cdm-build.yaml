@@ -4,13 +4,16 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - 'cdm-ver-*'
+      - 'ver-*'
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build_posix:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-13, macos-latest]
+        os: [ubuntu-24.04,  macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - name: checkout repo
@@ -22,18 +25,13 @@ jobs:
       - name: initialize cmake folder
         run: cmake -S llvm -B llvm/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD= -DLLVM_PARALLEL_LINK_JOBS=2 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CDM -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_DEFAULT_TARGET_TRIPLE=cdm
       - name: build clang
-        run: |
-              cd ./llvm/build
-              ninja clang
+        run: cmake --build ./llvm/build
       - name: list folder recursivly
         run: |
-              cd ./llvm/build/bin
+              cd ./llvm/build
               find .
-      - name: install python
-        if: ${{ !contains(matrix.os, 'macos') }}
-        uses: actions/setup-python@v5
       - name: run tests
-        if: ${{ !contains(matrix.os, 'macos') }}
+        if: ${{ contains(matrix.os, 'ubuntu') }}
         run: |
               pip install pytest pytest-xdist six
               cd ./llvm/test_cdm
@@ -42,40 +40,19 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: clang-cdm-${{ matrix.os }}
-          path: ./llvm/build/bin/clang-19
-
-  build_for_windows:
-    runs-on: windows-latest
-    steps:          
-      - name: checkout repo
-        uses: actions/checkout@v4
-      - uses: ilammy/msvc-dev-cmd@v1
-      - name: install ninja
-        uses: seanmiddleditch/gha-setup-ninja@master
-      - name: initialize cmake folder
-        run: cmake -S llvm -B llvm/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_PARALLEL_LINK_JOBS=2 -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CDM -DLLVM_DEFAULT_TARGET_TRIPLE=cdm
-      - name: build clang
-        run: |
-              cd ./llvm/build
-              ninja clang
-      - name: list folders
-        run: ls
-      - name: list folder recursivly
-        run: |
-              cd ./llvm/build/bin
-              Get-ChildItem -Recurse
-      - name: upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: clang-cdm-windows
-          path: ./llvm/build/bin/clang.exe
+          path: |
+            ./llvm/build/bin
+            ./llvm/build/include
+            ./llvm/build/lib
+            ./llvm/build/libexec
+            ./llvm/build/share
 
   create-release:
-    needs: [build_posix, build_for_windows]
+    needs: [build_posix]
     permissions:
       contents: write
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/cdm-ver-') }}  
+    runs-on: ubuntu-24.04
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/ver-') }}  
     steps:
       - name: Create subfolder
         run: mkdir artifacts_download
@@ -96,7 +73,7 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          body: Clang CdM-16 backend version ${{github.ref_name}}, macos-13 is x86
+          body: clang CdM-16 version ${{github.ref_name}}
           draft: false
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
