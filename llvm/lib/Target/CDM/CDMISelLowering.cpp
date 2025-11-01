@@ -548,6 +548,115 @@ MachineBasicBlock *CDMISelLowering::insertShiftVarAmt(MachineInstr &MI,
   return RemBB;
 }
 
+MachineBasicBlock *CDMISelLowering::insertShiftParts(MachineInstr &MI,
+                                                MachineBasicBlock *BB) const {
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &RI = MF->getRegInfo();
+  const CDMInstrInfo &TII =
+      *(const CDMInstrInfo *)BB->getParent()->getSubtarget().getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+  const BasicBlock *LLVM_BB = BB->getBasicBlock();
+
+  MachineFunction::iterator I;
+  for (I = BB->getIterator(); I != MF->end() && &(*I) != BB; ++I)
+    ;
+  if (I != MF->end())
+    ++I;
+
+  unsigned Opc;
+  switch (MI.getOpcode()) {
+  case CDM::SHL_PARTS:
+    Opc = CDM::SHL_PARTS_1;
+    break;
+  case CDM::SRL_PARTS:
+    Opc = CDM::SRL_PARTS_1;
+    break;
+  case CDM::SRA_PARTS:
+    Opc = CDM::SRA_PARTS_1;
+    break;
+  default:
+    llvm_unreachable("Unknown shift operation");
+  }
+
+  MachineBasicBlock *LoopBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *CheckBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *RemBB = MF->CreateMachineBasicBlock(LLVM_BB);
+
+  MF->insert(I, LoopBB);
+  MF->insert(I, CheckBB);
+  MF->insert(I, RemBB);
+
+  // Update machine-CFG edges by transferring all successors of the current
+  // block to the block containing instructions after shift.
+  RemBB->splice(RemBB->begin(), BB, std::next(MachineBasicBlock::iterator(MI)),
+                BB->end());
+  RemBB->transferSuccessorsAndUpdatePHIs(BB);
+
+  // Add edges BB => LoopBB => CheckBB => RemBB, CheckBB => LoopBB.
+  BB->addSuccessor(CheckBB);
+  LoopBB->addSuccessor(CheckBB);
+  CheckBB->addSuccessor(LoopBB);
+  CheckBB->addSuccessor(RemBB);
+
+  Register DstLoReg = MI.getOperand(0).getReg();
+  Register DstHiReg = MI.getOperand(1).getReg();
+  Register SrcLoReg = MI.getOperand(2).getReg();
+  Register SrcHiReg = MI.getOperand(3).getReg();
+  Register ShAmtSrcReg = MI.getOperand(4).getReg();
+
+  Register ShiftLoReg = RI.createVirtualRegister(&CDM::CPURegsRegClass);
+  Register ShiftHiReg = RI.createVirtualRegister(&CDM::CPURegsRegClass);
+  Register ShiftLoReg2 = RI.createVirtualRegister(&CDM::CPURegsRegClass);
+  Register ShiftHiReg2 = RI.createVirtualRegister(&CDM::CPURegsRegClass);
+  Register ShiftAmtReg = RI.createVirtualRegister(&CDM::CPURegsRegClass);
+  Register ShiftAmtReg2 = RI.createVirtualRegister(&CDM::CPURegsRegClass);
+
+  BuildMI(BB, DL, TII.get(CDM::BR)).addMBB(CheckBB);
+
+  BuildMI(LoopBB, DL, TII.get(Opc))
+      .addReg(ShiftLoReg2, RegState::Define)
+      .addReg(ShiftHiReg2, RegState::Define)
+      .addReg(ShiftLoReg)
+      .addReg(ShiftHiReg);
+
+  BuildMI(CheckBB, DL, TII.get(CDM::PHI), ShiftLoReg)
+      .addReg(SrcLoReg)
+      .addMBB(BB)
+      .addReg(ShiftLoReg2)
+      .addMBB(LoopBB);
+  BuildMI(CheckBB, DL, TII.get(CDM::PHI), ShiftHiReg)
+      .addReg(SrcHiReg)
+      .addMBB(BB)
+      .addReg(ShiftHiReg2)
+      .addMBB(LoopBB);
+  BuildMI(CheckBB, DL, TII.get(CDM::PHI), ShiftAmtReg)
+      .addReg(ShAmtSrcReg)
+      .addMBB(BB)
+      .addReg(ShiftAmtReg2)
+      .addMBB(LoopBB);
+  BuildMI(CheckBB, DL, TII.get(CDM::PHI), DstLoReg)
+      .addReg(SrcLoReg)
+      .addMBB(BB)
+      .addReg(ShiftLoReg2)
+      .addMBB(LoopBB);
+  BuildMI(CheckBB, DL, TII.get(CDM::PHI), DstHiReg)
+      .addReg(SrcHiReg)
+      .addMBB(BB)
+      .addReg(ShiftHiReg2)
+      .addMBB(LoopBB);
+
+  BuildMI(CheckBB, DL, TII.get(CDM::SUBI), ShiftAmtReg2)
+      .addReg(ShiftAmtReg)
+      .addImm(1);
+  BuildMI(CheckBB, DL, TII.get(CDM::BCond))
+      .addImm(CDMCOND::GT)
+      .addMBB(LoopBB);
+
+  MI.eraseFromParent();
+
+  return RemBB;
+}
+
 MachineBasicBlock *CDMISelLowering::insertShiftLargeAmt(MachineInstr &MI,
                                                 MachineBasicBlock *MBB) const {
   MachineFunction *MF = MBB->getParent();
@@ -598,18 +707,22 @@ CDMISelLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 	  case CDM::PseudoSelectCC:
 	  case CDM::PseudoSelectCCI:
 		return emitPseudoSelectCC(MI, MBB);
-      case CDM::SHL_VARAMT:
-      case CDM::SHRA_VARAMT:
-      case CDM::SHR_VARAMT:
-      case CDM::ROL_VARAMT:
-      case CDM::ROR_VARAMT:
-        return insertShiftVarAmt(MI, MBB);
       case CDM::SHL_LARGEAMT:
       case CDM::SHRA_LARGEAMT:
       case CDM::SHR_LARGEAMT:
       case CDM::ROL_LARGEAMT:
       case CDM::ROR_LARGEAMT:
         return insertShiftLargeAmt(MI, MBB);
+      case CDM::SHL_VARAMT:
+      case CDM::SHRA_VARAMT:
+      case CDM::SHR_VARAMT:
+      case CDM::ROL_VARAMT:
+      case CDM::ROR_VARAMT:
+        return insertShiftVarAmt(MI, MBB);
+      case CDM::SHL_PARTS:
+      case CDM::SRL_PARTS:
+      case CDM::SRA_PARTS:
+        return insertShiftParts(MI, MBB);
   }
 }
 

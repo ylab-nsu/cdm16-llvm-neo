@@ -108,20 +108,26 @@ def shamt : Operand<i16>;
 def imm1_8 : ImmLeaf<i16, [{return (Imm >= 1) && (Imm <= 8);}]>;
 def imm9_16 : ImmLeaf<i16, [{return (Imm >= 9) && (Imm <= 16);}]>;
 
-// Shifts base class
+// Class for basic shift instructions.
 multiclass Shift<string instr_asm, SDNode OpNode> {
   let Defs = [PSR] in {
+    // The shift amount is constant, and is between 1 and 8.
     def ""
         : CDMInst<(outs CPURegs:$rd), (ins CPURegs:$rs, shamt:$shamt),
                   !strconcat(instr_asm, "\t$rs, $rd, $shamt"),
                   [(set CPURegs:$rd, (OpNode CPURegs:$rs, imm1_8:$shamt))]>;
 
+    // The shift amount is constant, and is greater than 8.
+    // Needs to be expanded into two "regular" (amount between 1 and 8) instructions.
     def _LARGEAMT
         : CDMPseudo<(outs CPURegs:$rd), (ins CPURegs:$rs, shamt:$shamt),
                   !strconcat(!strconcat(!strconcat("!", instr_asm), "_LARGEAMT"), "\t$rs, $rd, $shamt"),
                   [(set CPURegs:$rd, (OpNode CPURegs:$rs, imm9_16:$shamt))]> {
       let usesCustomInserter = true;
     }
+
+    // The shift amount is stored in a register.
+    // Expanded into an inline loop.
     def _VARAMT
         : CDMPseudo<(outs CPURegs:$rd), (ins CPURegs:$rs, CPURegs:$shamt),
                   !strconcat(!strconcat(!strconcat("!", instr_asm), "_VARAMT"), "\t$rs, $rd, $shamt"),
@@ -131,11 +137,44 @@ multiclass Shift<string instr_asm, SDNode OpNode> {
   }
 }
 
+// Class for "rotate with carry" CdM instructions.
+class ShiftCarry<string instr_asm> 
+    : CDMInst<(outs CPURegs:$rd), (ins CPURegs:$rs, shamt:$shamt),
+          !strconcat(instr_asm, "\t$rs, $rd, $shamt"), []>;
+
+// Class for multi-word integer shift LLVM instructions.
+multiclass ShiftParts<string name, SDNode OpNode> {
+  let Defs = [PSR] in {
+    // The shift amount is stored in a register.
+    // Expanded into an inline loop.
+    def "" : CDMPseudo<(outs CPURegs:$rdlo, CPURegs:$rdhi), (ins CPURegs:$rslo, CPURegs:$rshi, CPURegs:$shamt),
+        !strconcat(!strconcat("!", name), "\t$rslo:$rshi, $rdlo:$rdhi, $shamt"),
+        [(set CPURegs:$rdlo, CPURegs:$rdhi, (OpNode CPURegs:$rslo, CPURegs:$rshi, CPURegs:$shamt))]> {
+      let usesCustomInserter = true;
+    }
+    
+    // The shift amount is always 1.
+    // Emmited as a part of the inline loop, expanded post-RA.
+    def "_1" : CDMPseudo<(outs CPURegs:$rdlo, CPURegs:$rdhi), (ins CPURegs:$rslo, CPURegs:$rshi),
+        !strconcat(!strconcat("!", name), "\t$rslo:$rshi, $rdlo:$rdhi"), []>;
+  }
+}
+
+// Basic shifts
 defm SHL : Shift<"shl", shl>;
 defm SHRA : Shift<"shra", sra>;
 defm SHR : Shift<"shr", srl>;
 defm ROL : Shift<"rol", rotl>;
 defm ROR : Shift<"ror", rotr>;
+
+// Shifts with carry-in
+def RCL : ShiftCarry<"rcl">;
+def RCR : ShiftCarry<"rcr">;
+
+// SHIFT_PARTS pseudos
+defm SHL_PARTS : ShiftParts<"shl_parts", shl_parts>;
+defm SRL_PARTS : ShiftParts<"srl_parts", srl_parts>;
+defm SRA_PARTS : ShiftParts<"sra_parts", sra_parts>;
 
 // load
 class AlignedLoad<PatFrag Node> : PatFrag<(ops node:$ptr), (Node node:$ptr), [{

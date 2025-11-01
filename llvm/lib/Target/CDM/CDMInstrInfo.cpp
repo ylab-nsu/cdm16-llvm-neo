@@ -77,14 +77,19 @@ bool CDMInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case CDM::PseudoBCondRI:
   case CDM::PseudoBCondRR:
     expandBCond(MBB, MI);
+    break;
+  case CDM::SHL_PARTS_1:
+  case CDM::SRL_PARTS_1:
+  case CDM::SRA_PARTS_1:
+    expandShiftParts(MBB, MI);
+    break;
   }
 
   MBB.erase(MI);
   return true;
 }
 
-void CDMInstrInfo::expandRet(MachineBasicBlock &MBB,
-                             MachineInstr &MI) const {
+void CDMInstrInfo::expandRet(MachineBasicBlock &MBB, MachineInstr &MI) const {
   auto Opcode = CDM::rts;
   if (MBB.getParent()->getFunction().getCallingConv() == CallingConv::CdmIsr) {
     Opcode = CDM::rti;
@@ -92,8 +97,7 @@ void CDMInstrInfo::expandRet(MachineBasicBlock &MBB,
   BuildMI(MBB, MI, MI.getDebugLoc(), get(Opcode));
 }
 
-void CDMInstrInfo::expandBCond(MachineBasicBlock &MBB,
-                             MachineInstr &MI) const {
+void CDMInstrInfo::expandBCond(MachineBasicBlock &MBB, MachineInstr &MI) const {
 
   DebugLoc DL = MI.getDebugLoc();
 
@@ -104,31 +108,74 @@ void CDMInstrInfo::expandBCond(MachineBasicBlock &MBB,
 
   // TODO: Implement optimizations
 
-  MIBundleBuilder Bundler = MIBundleBuilder(MBB, MI); 
+  MIBundleBuilder Bundler = MIBundleBuilder(MBB, MI);
 
-  if (MI.getOpcode() == CDM::PseudoBCondRR){
-	  Bundler.append(BuildMI(*MBB.getParent(), DL, get(CDM::CMP))
-				.addReg(LHS.getReg())
-				.addReg(RHS.getReg()));
-  }
-  else{
-	  Bundler.append(BuildMI(*MBB.getParent(), DL, get(CDM::CMPI))
-				.addReg(LHS.getReg())
-				.addImm(RHS.getImm()));
+  if (MI.getOpcode() == CDM::PseudoBCondRR) {
+    Bundler.append(BuildMI(*MBB.getParent(), DL, get(CDM::CMP))
+                       .addReg(LHS.getReg())
+                       .addReg(RHS.getReg()));
+  } else {
+    Bundler.append(BuildMI(*MBB.getParent(), DL, get(CDM::CMPI))
+                       .addReg(LHS.getReg())
+                       .addImm(RHS.getImm()));
   }
 
   Bundler.append(BuildMI(*MBB.getParent(), DL, get(CDM::BCond))
-		  	.addImm(CondCode)
-			.addMBB(Target.getMBB()));
+                     .addImm(CondCode)
+                     .addMBB(Target.getMBB()));
 
   finalizeBundle(MBB, Bundler.begin(), Bundler.end());
 }
 
+void CDMInstrInfo::expandShiftParts(MachineBasicBlock &MBB,
+                                    MachineInstr &MI) const {
+  MachineFunction &MF = *MBB.getParent();
+  DebugLoc DL = MI.getDebugLoc();
+
+  Register DstLo = MI.getOperand(0).getReg();
+  Register DstHi = MI.getOperand(1).getReg();
+  Register SrcLo = MI.getOperand(2).getReg();
+  Register SrcHi = MI.getOperand(3).getReg();
+
+  unsigned LoOpc;
+  unsigned HiOpc;
+  bool LoFirst;
+  switch (MI.getOpcode()) {
+  case CDM::SHL_PARTS_1:
+    LoOpc = CDM::SHL;
+    HiOpc = CDM::RCL;
+    LoFirst = true;
+    break;
+  case CDM::SRL_PARTS_1:
+    LoOpc = CDM::RCR;
+    HiOpc = CDM::SHR;
+    LoFirst = false;
+    break;
+  case CDM::SRA_PARTS_1:
+    LoOpc = CDM::RCR;
+    HiOpc = CDM::SHRA;
+    LoFirst = false;
+    break;
+  default:
+    llvm_unreachable("unknown shift operation");
+  }
+
+  MIBundleBuilder Bundler = MIBundleBuilder(MBB, MI);
+  if (LoFirst) {
+    Bundler.append(BuildMI(MF, DL, get(LoOpc), DstLo).addReg(SrcLo).addImm(1));
+    Bundler.append(BuildMI(MF, DL, get(HiOpc), DstHi).addReg(SrcHi).addImm(1));
+  } else {
+    Bundler.append(BuildMI(MF, DL, get(HiOpc), DstHi).addReg(SrcHi).addImm(1));
+    Bundler.append(BuildMI(MF, DL, get(LoOpc), DstLo).addReg(SrcLo).addImm(1));
+  }
+  finalizeBundle(MBB, Bundler.begin(), Bundler.end());
+}
+
 void CDMInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MI, const DebugLoc &DL,
-                           Register DestReg, Register SrcReg, bool KillSrc,
-                           bool RenamableDest,
-                           bool RenamableSrc) const {
+                               MachineBasicBlock::iterator MI,
+                               const DebugLoc &DL, Register DestReg,
+                               Register SrcReg, bool KillSrc,
+                               bool RenamableDest, bool RenamableSrc) const {
   //  TargetInstrInfo::copyPhysReg(MBB, MI, DL, DestReg, SrcReg, KillSrc);
   if (SrcReg == CDM::SP) {
     MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, get(CDM::LDSP));
@@ -143,6 +190,7 @@ void CDMInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   MIB.addReg(DestReg);
   MIB.addReg(SrcReg, getKillRegState(KillSrc));
 }
+
 void CDMInstrInfo::adjustStackPtr(int64_t Amount, MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
                                   const DebugLoc &DL) const {

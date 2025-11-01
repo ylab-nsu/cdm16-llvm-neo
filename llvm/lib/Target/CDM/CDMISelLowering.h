@@ -68,6 +68,7 @@ private:
   MachineBasicBlock *insertPseudoSelect(MachineInstr &MI, MachineBasicBlock *MBB) const;
   MachineBasicBlock *insertShiftLargeAmt(MachineInstr &MI, MachineBasicBlock *MBB) const;
   MachineBasicBlock *insertShiftVarAmt(MachineInstr &MI, MachineBasicBlock *MBB) const;
+  MachineBasicBlock *insertShiftParts(MachineInstr &MI, MachineBasicBlock *MBB) const;
 
   MachineBasicBlock* emitPseudoSelectCC(MachineInstr &MI,
 		  			MachineBasicBlock *MBB) const;
