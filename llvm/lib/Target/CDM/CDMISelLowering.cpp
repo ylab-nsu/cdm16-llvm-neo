@@ -839,7 +839,7 @@ CDMISelLowering::emitShiftLoop(MachineInstr &MI, MachineBasicBlock *MBB) const {
       .addReg(ShiftAmtReg)
       .addImm(1);
   BuildMI(CheckBB, DL, TII.get(CDM::PseudoBCondRI))
-      .addImm(CDMCOND::GT)
+      .addImm(CDMCOND::GE)
       .addReg(ShiftAmtReg2)
       .addImm(0)
       .addMBB(LoopBB);
