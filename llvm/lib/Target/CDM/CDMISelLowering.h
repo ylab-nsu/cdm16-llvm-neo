@@ -24,6 +24,14 @@ enum NodeType {
   Call,
 
   LOAD_SYM,
+  
+  // Extended shifts
+  SHL_EXT32,
+  SRL_EXT32,
+  SRA_EXT32,
+  SHL_EXT64,
+  SRL_EXT64,
+  SRA_EXT64,
 };
 } // namespace CDMISD
 
@@ -49,6 +57,8 @@ public:
   const char *getTargetNodeName(unsigned int Opcode) const override;
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
+  void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                          SelectionDAG &DAG) const override;
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
@@ -64,11 +74,11 @@ private:
                           SmallVectorImpl<SDValue> &InVals) const;
   SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVAARG(SDValue Op, SelectionDAG &DAG);
+  SDValue lowerShifts(SDValue Op, SelectionDAG &DAG) const;
   
   MachineBasicBlock *emitPseudoSelectCC(MachineInstr &MI, MachineBasicBlock *MBB) const;
   MachineBasicBlock *emitShiftLargeAmt(MachineInstr &MI, MachineBasicBlock *MBB) const;
-  MachineBasicBlock *emitShiftVarAmt(MachineInstr &MI, MachineBasicBlock *MBB) const;
-  MachineBasicBlock *emitShiftParts(MachineInstr &MI, MachineBasicBlock *MBB) const;
+  MachineBasicBlock *emitShiftLoop(MachineInstr &MI, MachineBasicBlock *MBB) const;
 
   const CDMSubtarget &Subtarget;
   const unsigned StackReserved = 4 * 2u;

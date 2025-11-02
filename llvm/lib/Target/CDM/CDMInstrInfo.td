@@ -97,10 +97,6 @@ def SUBI : arithLogicRi<"sub", sub>;
 def : Pat<(add i16:$src1, imm6_neg:$src2), (SUBI i16:$src1,
                                                (imm16_neg_XFORM imm:$src2))>;
 
-// def: Pat <(i16 (extloadi8 addr:$src)), (ldb addr:$src)>;
-
-// def : Pattern<(i16 (load_sym tglobaladdr:$addr)),  [(ldi $addr)]>;
-
 // Shift amount
 def shamt : Operand<i16>;
 
@@ -128,35 +124,12 @@ multiclass Shift<string instr_asm, SDNode OpNode> {
 
     // The shift amount is stored in a register.
     // Expanded into an inline loop.
-    def _VARAMT
+    def _LOOP
         : CDMPseudo<(outs CPURegs:$rd), (ins CPURegs:$rs, CPURegs:$shamt),
                   !strconcat(!strconcat(!strconcat("!", instr_asm), "_VARAMT"), "\t$rs, $rd, $shamt"),
                   [(set CPURegs:$rd, (OpNode CPURegs:$rs, CPURegs:$shamt))]> {
       let usesCustomInserter = true;
     }
-  }
-}
-
-// Class for "rotate with carry" CdM instructions.
-class ShiftCarry<string instr_asm> 
-    : CDMInst<(outs CPURegs:$rd), (ins CPURegs:$rs, shamt:$shamt),
-          !strconcat(instr_asm, "\t$rs, $rd, $shamt"), []>;
-
-// Class for multi-word integer shift LLVM instructions.
-multiclass ShiftParts<string name, SDNode OpNode> {
-  let Defs = [PSR] in {
-    // The shift amount is stored in a register.
-    // Expanded into an inline loop.
-    def "" : CDMPseudo<(outs CPURegs:$rdlo, CPURegs:$rdhi), (ins CPURegs:$rslo, CPURegs:$rshi, CPURegs:$shamt),
-        !strconcat(!strconcat("!", name), "\t$rslo:$rshi, $rdlo:$rdhi, $shamt"),
-        [(set CPURegs:$rdlo, CPURegs:$rdhi, (OpNode CPURegs:$rslo, CPURegs:$rshi, CPURegs:$shamt))]> {
-      let usesCustomInserter = true;
-    }
-    
-    // The shift amount is always 1.
-    // Emmited as a part of the inline loop, expanded post-RA.
-    def "_1" : CDMPseudo<(outs CPURegs:$rdlo, CPURegs:$rdhi), (ins CPURegs:$rslo, CPURegs:$rshi),
-        !strconcat(!strconcat("!", name), "\t$rslo:$rshi, $rdlo:$rdhi"), []>;
   }
 }
 
@@ -167,14 +140,76 @@ defm SHR : Shift<"shr", srl>;
 defm ROL : Shift<"rol", rotl>;
 defm ROR : Shift<"ror", rotr>;
 
-// Shifts with carry-in
-def RCL : ShiftCarry<"rcl">;
-def RCR : ShiftCarry<"rcr">;
+// Class for rotate through carry instrctions
+class RotateCarry<string instr_asm> 
+    : CDMInst<(outs CPURegs:$rd), (ins CPURegs:$rs, shamt:$shamt),
+          !strconcat(instr_asm, "\t$rs, $rd, $shamt"), []>;
 
-// SHIFT_PARTS pseudos
-defm SHL_PARTS : ShiftParts<"shl_parts", shl_parts>;
-defm SRL_PARTS : ShiftParts<"srl_parts", srl_parts>;
-defm SRA_PARTS : ShiftParts<"sra_parts", sra_parts>;
+// Rotate through carry instructions
+def RCL : RotateCarry<"rcl">;
+def RCR : RotateCarry<"rcr">;
+
+// Extended shift node types.
+def SDTIntShiftQuadOp : SDTypeProfile<4, 5, [
+  SDTCisInt<0>, SDTCisSameAs<1, 0>,
+  SDTCisSameAs<2, 0>, SDTCisSameAs<3, 0>,
+  SDTCisSameAs<4, 0>, SDTCisSameAs<5, 0>,
+  SDTCisSameAs<6, 0>, SDTCisSameAs<7, 0>, SDTCisInt<8>
+]>;
+
+def shl_ext32 : SDNode<"CDMISD::SHL_EXT32", SDTIntShiftPairOp>;
+def srl_ext32 : SDNode<"CDMISD::SRL_EXT32", SDTIntShiftPairOp>;
+def sra_ext32 : SDNode<"CDMISD::SRA_EXT32", SDTIntShiftPairOp>;
+def shl_ext64 : SDNode<"CDMISD::SHL_EXT64", SDTIntShiftQuadOp>;
+def srl_ext64 : SDNode<"CDMISD::SRL_EXT64", SDTIntShiftQuadOp>;
+def sra_ext64 : SDNode<"CDMISD::SRA_EXT64", SDTIntShiftQuadOp>;
+
+// Classes for extended shift operations.
+multiclass ShiftExt32<SDNode OpNode> {
+  let Defs = [PSR] in {
+    // The shift amount is stored in a register.
+    // Expanded into an inline loop.
+    def "_LOOP" : CDMPseudo<(outs CPURegs:$rdlo, CPURegs:$rdhi), (ins CPURegs:$rslo, CPURegs:$rshi, CPURegs:$shamt), "",
+        [(set CPURegs:$rdlo, CPURegs:$rdhi, (OpNode CPURegs:$rslo, CPURegs:$rshi, CPURegs:$shamt))]> {
+      let usesCustomInserter = true;
+    }
+    
+    // The shift amount is always 1.
+    // Expanded post-RA into a shift-rotate chain.
+    def "" : CDMPseudo<(outs CPURegs:$rdlo, CPURegs:$rdhi), (ins CPURegs:$rslo, CPURegs:$rshi), "",
+      [(set CPURegs:$rdlo, CPURegs:$rdhi, (OpNode CPURegs:$rslo, CPURegs:$rshi, 1))]>;
+  }
+}
+
+multiclass ShiftExt64<SDNode OpNode> {
+  let Defs = [PSR] in {
+    // The shift amount is stored in a register.
+    // Expanded into an inline loop.
+    def "_LOOP" : CDMPseudo<
+      (outs CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3), 
+      (ins CPURegs:$rs0, CPURegs:$rs1, CPURegs:$rs2, CPURegs:$rs3, CPURegs:$shamt), "",
+      [(set CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3, 
+        (OpNode CPURegs:$rs0, CPURegs:$rs1, CPURegs:$rs2, CPURegs:$rs3, CPURegs:$shamt))]> {
+      let usesCustomInserter = true;
+    }
+    
+    // The shift amount is always 1.
+    // Expanded post-RA into a shift-rotate chain.
+    def "" : CDMPseudo<
+      (outs CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3), 
+      (ins CPURegs:$rs0, CPURegs:$rs1, CPURegs:$rs2, CPURegs:$rs3), "",
+      [(set CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3, 
+        (OpNode CPURegs:$rs0, CPURegs:$rs1, CPURegs:$rs2, CPURegs:$rs3, 1))]>;
+  }
+}
+
+// Extended shift pseudos
+defm SHL_EXT32 : ShiftExt32<shl_ext32>;
+defm SHR_EXT32 : ShiftExt32<srl_ext32>;
+defm SHRA_EXT32 : ShiftExt32<sra_ext32>;
+defm SHL_EXT64 : ShiftExt64<shl_ext64>;
+defm SHR_EXT64 : ShiftExt64<srl_ext64>;
+defm SHRA_EXT64 : ShiftExt64<sra_ext64>;
 
 // load
 class AlignedLoad<PatFrag Node> : PatFrag<(ops node:$ptr), (Node node:$ptr), [{

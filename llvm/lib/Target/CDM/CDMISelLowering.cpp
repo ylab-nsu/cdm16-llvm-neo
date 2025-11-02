@@ -11,6 +11,7 @@
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -39,6 +40,18 @@ CDMISelLowering::CDMISelLowering(const CDMTargetMachine &TM,
   setOperationAction(ISD::GlobalAddress, MVT::i16, Custom);
 
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
+
+  // 32-bit and 64-bit shifts are expanded into shift-rotate chains
+  // or loops if the shift amount is variable.
+  setOperationAction(ISD::SHL, MVT::i32, Custom);
+  setOperationAction(ISD::SRL, MVT::i32, Custom);
+  setOperationAction(ISD::SRA, MVT::i32, Custom);
+  setOperationAction(ISD::SHL, MVT::i64, Custom);
+  setOperationAction(ISD::SRL, MVT::i64, Custom);
+  setOperationAction(ISD::SRA, MVT::i64, Custom);
+  setOperationAction(ISD::SHL_PARTS, MVT::i16, Expand);
+  setOperationAction(ISD::SRL_PARTS, MVT::i16, Expand);
+  setOperationAction(ISD::SRA_PARTS, MVT::i16, Expand);
 
   // Custom lowering
   setOperationAction(ISD::VASTART, MVT::Other, Custom);
@@ -421,6 +434,28 @@ SDValue CDMISelLowering::lowerCallResult(
   return Chain;
 }
 
+void CDMISelLowering::ReplaceNodeResults(SDNode *N,
+                                         SmallVectorImpl<SDValue> &Results,
+                                         SelectionDAG &DAG) const {
+  switch (N->getOpcode()) {
+  case ISD::SHL:
+  case ISD::SRL:
+  case ISD::SRA:
+    // Use the default lowering for non-1 constant amount shifts,
+    // as it's more efficient.
+    if (isa<ConstantSDNode>(N->getOperand(1)) &&
+        N->getConstantOperandVal(1) != 1) {
+      break;
+    }
+    [[fallthrough]];
+  default:
+    SDLoc DL(N);
+    SDValue Res = LowerOperation(SDValue(N, 0), DAG);
+    for (unsigned I = 0, E = Res->getNumValues(); I != E; ++I)
+      Results.push_back(Res.getValue(I));
+  }
+}
+
 SDValue CDMISelLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   case ISD::GlobalAddress:
@@ -429,6 +464,10 @@ SDValue CDMISelLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerJumpTable(Op, DAG);
   case ISD::VASTART:
     return lowerVASTART(Op, DAG);
+  case ISD::SHL:
+  case ISD::SRL:
+  case ISD::SRA:
+    return lowerShifts(Op, DAG);
   }
   return SDValue();
 }
@@ -465,6 +504,74 @@ SDValue CDMISelLowering::lowerVASTART(SDValue Op, SelectionDAG &DAG) const {
                       MachinePointerInfo(SV));
 }
 
+// Transforms 32-bit and 64-bit shift DAG nodes
+// into custom shift_EXT32 and shift_EXT64 nodes.
+SDValue CDMISelLowering::lowerShifts(SDValue Op, SelectionDAG &DAG) const {
+  const SDNode *N = Op.getNode();
+  EVT VT = Op.getValueType();
+  SDLoc DL(N);
+
+  int VTSize = VT.getFixedSizeInBits();
+  if (VTSize != 32 && VTSize != 64) {
+      llvm_unreachable("Unsupported shift value size");
+  }
+
+  SmallVector<EVT, 4> ResTypeElements;
+  for (int I = 0; I < VTSize; I++) {
+    ResTypeElements.push_back(MVT::i16);
+  }
+  SDVTList ResTys = DAG.getVTList(ResTypeElements);
+
+  SmallVector<SDValue, 5> Operands;
+  if (VTSize == 64) {
+    auto [Lo32, Hi32] =
+        DAG.SplitScalar(Op.getOperand(0), DL, MVT::i32, MVT::i32);
+    auto [Op0, Op1] = DAG.SplitScalar(Lo32, DL, MVT::i16, MVT::i16);
+    auto [Op2, Op3] = DAG.SplitScalar(Hi32, DL, MVT::i16, MVT::i16);
+    Operands.append({Op0, Op1, Op2, Op3});
+  } else {
+    auto [Lo, Hi] = DAG.SplitScalar(Op.getOperand(0), DL, MVT::i16, MVT::i16);
+    Operands.append({Lo, Hi});
+  }
+  Operands.push_back(Op.getOperand(1));
+  unsigned Opc;
+  switch (Op.getOpcode()) {
+  default:
+    llvm_unreachable("Unknown shift operation");
+  case ISD::SHL:
+    if (VTSize == 64) {
+      Opc = CDMISD::SHL_EXT64;
+    } else {
+      Opc = CDMISD::SHL_EXT32;
+    }
+    break;
+  case ISD::SRL:
+    if (VTSize == 64) {
+      Opc = CDMISD::SRL_EXT64;
+    } else {
+      Opc = CDMISD::SRL_EXT32;
+    }
+    break;
+  case ISD::SRA:
+    if (VTSize == 64) {
+      Opc = CDMISD::SRA_EXT64;
+    } else {
+      Opc = CDMISD::SRA_EXT32;
+    }
+    break;
+  }
+  SDValue Result = DAG.getNode(Opc, DL, ResTys, Operands);
+  if (VTSize == 64) {
+    SDValue Lo32 = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i32,
+                               Result.getValue(0), Result.getValue(1));
+    SDValue Hi32 = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i32,
+                               Result.getValue(0), Result.getValue(1));
+    return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo32, Hi32);
+  }
+  return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i32, Result.getValue(0),
+                     Result.getValue(1));
+}
+
 MachineBasicBlock *
 CDMISelLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                              MachineBasicBlock *MBB) const {
@@ -480,16 +587,18 @@ CDMISelLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case CDM::ROL_LARGEAMT:
   case CDM::ROR_LARGEAMT:
     return emitShiftLargeAmt(MI, MBB);
-  case CDM::SHL_VARAMT:
-  case CDM::SHRA_VARAMT:
-  case CDM::SHR_VARAMT:
-  case CDM::ROL_VARAMT:
-  case CDM::ROR_VARAMT:
-    return emitShiftVarAmt(MI, MBB);
-  case CDM::SHL_PARTS:
-  case CDM::SRL_PARTS:
-  case CDM::SRA_PARTS:
-    return emitShiftParts(MI, MBB);
+  case CDM::SHL_LOOP:
+  case CDM::SHRA_LOOP:
+  case CDM::SHR_LOOP:
+  case CDM::ROL_LOOP:
+  case CDM::ROR_LOOP:
+  case CDM::SHL_EXT32_LOOP:
+  case CDM::SHR_EXT32_LOOP:
+  case CDM::SHRA_EXT32_LOOP:
+  case CDM::SHL_EXT64_LOOP:
+  case CDM::SHR_EXT64_LOOP:
+  case CDM::SHRA_EXT64_LOOP:
+    return emitShiftLoop(MI, MBB);
   }
 }
 
@@ -594,9 +703,9 @@ CDMISelLowering::emitShiftLargeAmt(MachineInstr &MI,
   return MBB;
 }
 
+// Replaces shift_LOOP pseudos with inline loops.
 MachineBasicBlock *
-CDMISelLowering::emitShiftVarAmt(MachineInstr &MI,
-                                 MachineBasicBlock *MBB) const {
+CDMISelLowering::emitShiftLoop(MachineInstr &MI, MachineBasicBlock *MBB) const {
   MachineFunction &MF = *MBB->getParent();
   MachineRegisterInfo &RI = MF.getRegInfo();
   const CDMInstrInfo &TII =
@@ -611,23 +720,53 @@ CDMISelLowering::emitShiftVarAmt(MachineInstr &MI,
     ++I;
 
   unsigned Opc;
+  int RegCount;
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unknown shift operation");
-  case CDM::SHL_VARAMT:
+  case CDM::SHL_LOOP:
     Opc = CDM::SHL;
+    RegCount = 1;
     break;
-  case CDM::SHRA_VARAMT:
+  case CDM::SHRA_LOOP:
     Opc = CDM::SHRA;
+    RegCount = 1;
     break;
-  case CDM::SHR_VARAMT:
+  case CDM::SHR_LOOP:
     Opc = CDM::SHR;
+    RegCount = 1;
     break;
-  case CDM::ROL_VARAMT:
+  case CDM::ROL_LOOP:
     Opc = CDM::ROL;
+    RegCount = 1;
     break;
-  case CDM::ROR_VARAMT:
+  case CDM::ROR_LOOP:
     Opc = CDM::ROR;
+    RegCount = 1;
+    break;
+  case CDM::SHL_EXT32_LOOP:
+    Opc = CDM::SHL_EXT32;
+    RegCount = 2;
+    break;
+  case CDM::SHR_EXT32_LOOP:
+    Opc = CDM::SHR_EXT32;
+    RegCount = 2;
+    break;
+  case CDM::SHRA_EXT32_LOOP:
+    Opc = CDM::SHRA_EXT32;
+    RegCount = 2;
+    break;
+  case CDM::SHL_EXT64_LOOP:
+    Opc = CDM::SHL_EXT64;
+    RegCount = 4;
+    break;
+  case CDM::SHR_EXT64_LOOP:
+    Opc = CDM::SHR_EXT64;
+    RegCount = 4;
+    break;
+  case CDM::SHRA_EXT64_LOOP:
+    Opc = CDM::SHRA_EXT64;
+    RegCount = 4;
     break;
   }
 
@@ -648,142 +787,52 @@ CDMISelLowering::emitShiftVarAmt(MachineInstr &MI,
   CheckBB->addSuccessor(LoopBB);
   CheckBB->addSuccessor(RemBB);
 
-  Register DstReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(1).getReg();
-  Register ShAmtSrcReg = MI.getOperand(2).getReg();
+  SmallVector<Register, 4> DstRegs;
+  SmallVector<Register, 4> SrcRegs;
+  for (int OpIndex = 0; OpIndex < RegCount; OpIndex++) {
+    DstRegs.push_back(MI.getOperand(OpIndex).getReg());
+    SrcRegs.push_back(MI.getOperand(RegCount + OpIndex).getReg());
+  }
+  Register ShAmtSrcReg = MI.getOperand(RegCount * 2).getReg();
 
-  Register ShiftReg = RI.createVirtualRegister(&CDM::CPURegsRegClass);
-  Register ShiftReg2 = RI.createVirtualRegister(&CDM::CPURegsRegClass);
+  SmallVector<Register, 4> ShiftRegs;
+  SmallVector<Register, 4> ShiftRegs2;
   Register ShiftAmtReg = RI.createVirtualRegister(&CDM::CPURegsRegClass);
   Register ShiftAmtReg2 = RI.createVirtualRegister(&CDM::CPURegsRegClass);
-
-  BuildMI(MBB, DL, TII.get(CDM::BR)).addMBB(CheckBB);
-
-  BuildMI(LoopBB, DL, TII.get(Opc), ShiftReg2).addReg(ShiftReg).addImm(1);
-
-  BuildMI(CheckBB, DL, TII.get(CDM::PHI), ShiftReg)
-      .addReg(SrcReg)
-      .addMBB(MBB)
-      .addReg(ShiftReg2)
-      .addMBB(LoopBB);
-  BuildMI(CheckBB, DL, TII.get(CDM::PHI), ShiftAmtReg)
-      .addReg(ShAmtSrcReg)
-      .addMBB(MBB)
-      .addReg(ShiftAmtReg2)
-      .addMBB(LoopBB);
-  BuildMI(CheckBB, DL, TII.get(CDM::PHI), DstReg)
-      .addReg(SrcReg)
-      .addMBB(MBB)
-      .addReg(ShiftReg2)
-      .addMBB(LoopBB);
-
-  BuildMI(CheckBB, DL, TII.get(CDM::SUBI), ShiftAmtReg2)
-      .addReg(ShiftAmtReg)
-      .addImm(1);
-  BuildMI(CheckBB, DL, TII.get(CDM::PseudoBCondRI))
-      .addImm(CDMCOND::GT)
-      .addReg(ShiftAmtReg2)
-      .addImm(0)
-      .addMBB(LoopBB);
-
-  MI.eraseFromParent();
-
-  return RemBB;
-}
-
-MachineBasicBlock *
-CDMISelLowering::emitShiftParts(MachineInstr &MI,
-                                MachineBasicBlock *MBB) const {
-  MachineFunction &MF = *MBB->getParent();
-  MachineRegisterInfo &RI = MF.getRegInfo();
-  const CDMInstrInfo &TII =
-      *(const CDMInstrInfo *)MF.getSubtarget().getInstrInfo();
-  DebugLoc DL = MI.getDebugLoc();
-  const BasicBlock *BB = MBB->getBasicBlock();
-
-  MachineFunction::iterator I;
-  for (I = MBB->getIterator(); I != MF.end() && &(*I) != MBB; ++I)
-    ;
-  if (I != MF.end())
-    ++I;
-
-  unsigned Opc;
-  switch (MI.getOpcode()) {
-  default:
-    llvm_unreachable("Unknown shift operation");
-  case CDM::SHL_PARTS:
-    Opc = CDM::SHL_PARTS_1;
-    break;
-  case CDM::SRL_PARTS:
-    Opc = CDM::SRL_PARTS_1;
-    break;
-  case CDM::SRA_PARTS:
-    Opc = CDM::SRA_PARTS_1;
-    break;
+  for (int RegIndex = 0; RegIndex < RegCount; RegIndex++) {
+    ShiftRegs.push_back(RI.createVirtualRegister(&CDM::CPURegsRegClass));
+    ShiftRegs2.push_back(RI.createVirtualRegister(&CDM::CPURegsRegClass));
   }
 
-  MachineBasicBlock *LoopBB = MF.CreateMachineBasicBlock(BB);
-  MachineBasicBlock *CheckBB = MF.CreateMachineBasicBlock(BB);
-  MachineBasicBlock *RemBB = MF.CreateMachineBasicBlock(BB);
-
-  MF.insert(I, LoopBB);
-  MF.insert(I, CheckBB);
-  MF.insert(I, RemBB);
-
-  RemBB->splice(RemBB->begin(), MBB, std::next(MachineBasicBlock::iterator(MI)),
-                MBB->end());
-  RemBB->transferSuccessorsAndUpdatePHIs(MBB);
-
-  MBB->addSuccessor(CheckBB);
-  LoopBB->addSuccessor(CheckBB);
-  CheckBB->addSuccessor(LoopBB);
-  CheckBB->addSuccessor(RemBB);
-
-  Register DstLoReg = MI.getOperand(0).getReg();
-  Register DstHiReg = MI.getOperand(1).getReg();
-  Register SrcLoReg = MI.getOperand(2).getReg();
-  Register SrcHiReg = MI.getOperand(3).getReg();
-  Register ShAmtSrcReg = MI.getOperand(4).getReg();
-
-  Register ShiftLoReg = RI.createVirtualRegister(&CDM::CPURegsRegClass);
-  Register ShiftHiReg = RI.createVirtualRegister(&CDM::CPURegsRegClass);
-  Register ShiftLoReg2 = RI.createVirtualRegister(&CDM::CPURegsRegClass);
-  Register ShiftHiReg2 = RI.createVirtualRegister(&CDM::CPURegsRegClass);
-  Register ShiftAmtReg = RI.createVirtualRegister(&CDM::CPURegsRegClass);
-  Register ShiftAmtReg2 = RI.createVirtualRegister(&CDM::CPURegsRegClass);
-
   BuildMI(MBB, DL, TII.get(CDM::BR)).addMBB(CheckBB);
 
-  BuildMI(LoopBB, DL, TII.get(Opc))
-      .addReg(ShiftLoReg2, RegState::Define)
-      .addReg(ShiftHiReg2, RegState::Define)
-      .addReg(ShiftLoReg)
-      .addReg(ShiftHiReg);
+  auto ShiftOp = BuildMI(LoopBB, DL, TII.get(Opc));
+  for (int RegIndex = 0; RegIndex < RegCount; RegIndex++) {
+    ShiftOp.addReg(ShiftRegs2[RegIndex], RegState::Define);
+  }
+  for (int RegIndex = 0; RegIndex < RegCount; RegIndex++) {
+    ShiftOp.addReg(ShiftRegs[RegIndex]);
+  }
+  if (RegCount == 1) {
+    ShiftOp.addImm(1);
+  }
 
-  BuildMI(CheckBB, DL, TII.get(CDM::PHI), ShiftLoReg)
-      .addReg(SrcLoReg)
-      .addMBB(MBB)
-      .addReg(ShiftLoReg2)
-      .addMBB(LoopBB);
-  BuildMI(CheckBB, DL, TII.get(CDM::PHI), ShiftHiReg)
-      .addReg(SrcHiReg)
-      .addMBB(MBB)
-      .addReg(ShiftHiReg2)
-      .addMBB(LoopBB);
+  for (int RegIndex = 0; RegIndex < RegCount; RegIndex++) {
+    BuildMI(CheckBB, DL, TII.get(CDM::PHI), ShiftRegs[RegIndex])
+        .addReg(SrcRegs[RegIndex])
+        .addMBB(MBB)
+        .addReg(ShiftRegs2[RegIndex])
+        .addMBB(LoopBB);
+    BuildMI(CheckBB, DL, TII.get(CDM::PHI), DstRegs[RegIndex])
+        .addReg(SrcRegs[RegIndex])
+        .addMBB(MBB)
+        .addReg(ShiftRegs2[RegIndex])
+        .addMBB(LoopBB);
+  }
   BuildMI(CheckBB, DL, TII.get(CDM::PHI), ShiftAmtReg)
       .addReg(ShAmtSrcReg)
       .addMBB(MBB)
       .addReg(ShiftAmtReg2)
-      .addMBB(LoopBB);
-  BuildMI(CheckBB, DL, TII.get(CDM::PHI), DstLoReg)
-      .addReg(SrcLoReg)
-      .addMBB(MBB)
-      .addReg(ShiftLoReg2)
-      .addMBB(LoopBB);
-  BuildMI(CheckBB, DL, TII.get(CDM::PHI), DstHiReg)
-      .addReg(SrcHiReg)
-      .addMBB(MBB)
-      .addReg(ShiftHiReg2)
       .addMBB(LoopBB);
 
   BuildMI(CheckBB, DL, TII.get(CDM::SUBI), ShiftAmtReg2)

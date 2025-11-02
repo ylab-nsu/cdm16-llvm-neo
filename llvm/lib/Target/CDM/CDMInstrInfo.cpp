@@ -78,10 +78,13 @@ bool CDMInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case CDM::PseudoBCondRR:
     expandBCond(MBB, MI);
     break;
-  case CDM::SHL_PARTS_1:
-  case CDM::SRL_PARTS_1:
-  case CDM::SRA_PARTS_1:
-    expandShiftParts(MBB, MI);
+  case CDM::SHL_EXT32:
+  case CDM::SHR_EXT32:
+  case CDM::SHRA_EXT32:
+  case CDM::SHL_EXT64:
+  case CDM::SHR_EXT64:
+  case CDM::SHRA_EXT64:
+    expandShiftExt(MBB, MI);
     break;
   }
 
@@ -127,46 +130,85 @@ void CDMInstrInfo::expandBCond(MachineBasicBlock &MBB, MachineInstr &MI) const {
   finalizeBundle(MBB, Bundler.begin(), Bundler.end());
 }
 
-void CDMInstrInfo::expandShiftParts(MachineBasicBlock &MBB,
+// Expands shift_EXT pseudos into shift-rotate chains
+void CDMInstrInfo::expandShiftExt(MachineBasicBlock &MBB,
                                     MachineInstr &MI) const {
   MachineFunction &MF = *MBB.getParent();
   DebugLoc DL = MI.getDebugLoc();
 
-  Register DstLo = MI.getOperand(0).getReg();
-  Register DstHi = MI.getOperand(1).getReg();
-  Register SrcLo = MI.getOperand(2).getReg();
-  Register SrcHi = MI.getOperand(3).getReg();
-
-  unsigned LoOpc;
-  unsigned HiOpc;
-  bool LoFirst;
+  unsigned HeadOpc;
+  unsigned TailOpc;
+  int RegCount;
+  bool HeadIsLo;
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unknown shift operation");
-  case CDM::SHL_PARTS_1:
-    LoOpc = CDM::SHL;
-    HiOpc = CDM::RCL;
-    LoFirst = true;
+  case CDM::SHL_EXT32:
+    HeadOpc = CDM::SHL;
+    TailOpc = CDM::RCL;
+    RegCount = 2;
+    HeadIsLo = true;
     break;
-  case CDM::SRL_PARTS_1:
-    LoOpc = CDM::RCR;
-    HiOpc = CDM::SHR;
-    LoFirst = false;
+  case CDM::SHR_EXT32:
+    HeadOpc = CDM::SHR;
+    TailOpc = CDM::RCR;
+    RegCount = 2;
+    HeadIsLo = false;
     break;
-  case CDM::SRA_PARTS_1:
-    LoOpc = CDM::RCR;
-    HiOpc = CDM::SHRA;
-    LoFirst = false;
+  case CDM::SHRA_EXT32:
+    HeadOpc = CDM::SHRA;
+    TailOpc = CDM::RCR;
+    RegCount = 2;
+    HeadIsLo = false;
+    break;
+  case CDM::SHL_EXT64:
+    HeadOpc = CDM::SHL;
+    TailOpc = CDM::RCL;
+    RegCount = 4;
+    HeadIsLo = true;
+    break;
+  case CDM::SHR_EXT64:
+    HeadOpc = CDM::SHR;
+    TailOpc = CDM::RCR;
+    RegCount = 4;
+    HeadIsLo = false;
+    break;
+  case CDM::SHRA_EXT64:
+    HeadOpc = CDM::SHRA;
+    TailOpc = CDM::RCR;
+    RegCount = 4;
+    HeadIsLo = false;
     break;
   }
 
+  SmallVector<Register, 4> DstRegs;
+  SmallVector<Register, 4> SrcRegs;
+  for (int I = 0; I < RegCount; I++) {
+    DstRegs.push_back(MI.getOperand(I).getReg());
+  }
+  for (int I = 0; I < RegCount; I++) {
+    SrcRegs.push_back(MI.getOperand(RegCount + I).getReg());
+  }
+
+  // Bundle up the chain because a move inserted between its elements may break it.
   MIBundleBuilder Bundler = MIBundleBuilder(MBB, MI);
-  if (LoFirst) {
-    Bundler.append(BuildMI(MF, DL, get(LoOpc), DstLo).addReg(SrcLo).addImm(1));
-    Bundler.append(BuildMI(MF, DL, get(HiOpc), DstHi).addReg(SrcHi).addImm(1));
+  if (HeadIsLo) {
+    Bundler.append(
+        BuildMI(MF, DL, get(HeadOpc), DstRegs[0]).addReg(SrcRegs[0]).addImm(1));
+    for (int I = 1; I < RegCount; I++) {
+      Bundler.append(BuildMI(MF, DL, get(TailOpc), DstRegs[I])
+                         .addReg(SrcRegs[I])
+                         .addImm(1));
+    }
   } else {
-    Bundler.append(BuildMI(MF, DL, get(HiOpc), DstHi).addReg(SrcHi).addImm(1));
-    Bundler.append(BuildMI(MF, DL, get(LoOpc), DstLo).addReg(SrcLo).addImm(1));
+    Bundler.append(BuildMI(MF, DL, get(HeadOpc), DstRegs[RegCount - 1])
+                       .addReg(SrcRegs[RegCount - 1])
+                       .addImm(1));
+    for (int I = RegCount - 2; I >= 0; I--) {
+      Bundler.append(BuildMI(MF, DL, get(TailOpc), DstRegs[I])
+                         .addReg(SrcRegs[I])
+                         .addImm(1));
+    }
   }
   finalizeBundle(MBB, Bundler.begin(), Bundler.end());
 }

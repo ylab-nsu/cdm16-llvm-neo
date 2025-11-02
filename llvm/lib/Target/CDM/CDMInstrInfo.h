@@ -72,7 +72,7 @@ private:
   
   void expandRet(MachineBasicBlock &MBB, MachineInstr &MI) const;
   void expandBCond(MachineBasicBlock &MBB, MachineInstr &MI) const;
-  void expandShiftParts(MachineBasicBlock &MBB, MachineInstr &MI) const;
+  void expandShiftExt(MachineBasicBlock &MBB, MachineInstr &MI) const;
 };
 
 } // namespace llvm
