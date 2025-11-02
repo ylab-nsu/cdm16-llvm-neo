@@ -804,6 +804,23 @@ CDMISelLowering::emitShiftLoop(MachineInstr &MI, MachineBasicBlock *MBB) const {
     ShiftRegs2.push_back(RI.createVirtualRegister(&CDM::CPURegsRegClass));
   }
 
+  // MBB:
+  // ...
+  // br CheckBB
+  //
+  // LoopBB:
+  // ShiftRegs2 = shift ShiftRegs
+  // ShiftAmtReg2 = sub ShiftAmtReg, 1
+  //
+  // CheckBB:
+  // ShiftRegs = phi (SrcRegs, MBB), (ShiftRegs2, LoopBB)
+  // DstRegs = phi (SrcRegs, MBB), (ShiftRegs2, LoopBB)
+  // ShiftAmtReg = phi (ShiftAmtSrcReg, MBB), (ShiftAmtReg2, LoopBB)
+  // BCond (ShiftAmtReg > 0), LoopBB
+  //
+  // RemBB:
+  // ...
+
   BuildMI(MBB, DL, TII.get(CDM::BR)).addMBB(CheckBB);
 
   auto ShiftOp = BuildMI(LoopBB, DL, TII.get(Opc));
@@ -813,9 +830,14 @@ CDMISelLowering::emitShiftLoop(MachineInstr &MI, MachineBasicBlock *MBB) const {
   for (int RegIndex = 0; RegIndex < RegCount; RegIndex++) {
     ShiftOp.addReg(ShiftRegs[RegIndex]);
   }
+  // Native 16-bit shifts have a constant amount operand,
+  // extended shifts don't
   if (RegCount == 1) {
     ShiftOp.addImm(1);
   }
+  BuildMI(LoopBB, DL, TII.get(CDM::SUBI), ShiftAmtReg2)
+      .addReg(ShiftAmtReg)
+      .addImm(1);
 
   for (int RegIndex = 0; RegIndex < RegCount; RegIndex++) {
     BuildMI(CheckBB, DL, TII.get(CDM::PHI), ShiftRegs[RegIndex])
@@ -834,13 +856,9 @@ CDMISelLowering::emitShiftLoop(MachineInstr &MI, MachineBasicBlock *MBB) const {
       .addMBB(MBB)
       .addReg(ShiftAmtReg2)
       .addMBB(LoopBB);
-
-  BuildMI(CheckBB, DL, TII.get(CDM::SUBI), ShiftAmtReg2)
-      .addReg(ShiftAmtReg)
-      .addImm(1);
   BuildMI(CheckBB, DL, TII.get(CDM::PseudoBCondRI))
-      .addImm(CDMCOND::GE)
-      .addReg(ShiftAmtReg2)
+      .addImm(CDMCOND::GT)
+      .addReg(ShiftAmtReg)
       .addImm(0)
       .addMBB(LoopBB);
 
