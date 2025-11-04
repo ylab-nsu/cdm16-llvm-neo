@@ -565,7 +565,7 @@ SDValue CDMISelLowering::lowerShifts(SDValue Op, SelectionDAG &DAG) const {
     SDValue Lo32 = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i32,
                                Result.getValue(0), Result.getValue(1));
     SDValue Hi32 = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i32,
-                               Result.getValue(0), Result.getValue(1));
+                               Result.getValue(2), Result.getValue(3));
     return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo32, Hi32);
   }
   return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i32, Result.getValue(0),
