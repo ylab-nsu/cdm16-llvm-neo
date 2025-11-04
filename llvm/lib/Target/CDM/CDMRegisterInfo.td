@@ -48,10 +48,10 @@ let Namespace = "CDM" in {
 //===----------------------------------------------------------------------===//
 
 def CPURegs
-    : RegisterClass<"CDM", [i16], 8, (add R0, R1, R2, R3, R4, R5, R6, FP)>;
+    : RegisterClass<"CDM", [i16], 16, (add R0, R1, R2, R3, R4, R5, R6, FP)>;
 
 //@Status Registers class
-def SPECIAL : RegisterClass<"CDM", [i16], 8, (add PC, PSR, SP)>;
+def SPECIAL : RegisterClass<"CDM", [i16], 16, (add PC, PSR, SP)>;
 
 def SR : RegisterClass<"CDM", [i16], 16, (add PSR)>;
 
