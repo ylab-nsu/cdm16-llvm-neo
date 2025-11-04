@@ -177,7 +177,9 @@ multiclass ShiftExt32<SDNode OpNode> {
     // The shift amount is always 1.
     // Expanded post-RA into a shift-rotate chain.
     def "" : CDMPseudo<(outs CPURegs:$rdlo, CPURegs:$rdhi), (ins CPURegs:$rslo, CPURegs:$rshi), "",
-      [(set CPURegs:$rdlo, CPURegs:$rdhi, (OpNode CPURegs:$rslo, CPURegs:$rshi, 1))]>;
+      [(set CPURegs:$rdlo, CPURegs:$rdhi, (OpNode CPURegs:$rslo, CPURegs:$rshi, 1))]> {
+      let Constraints = "$rdlo = $rslo,$rdhi = $rshi,@earlyclobber $rdlo,@earlyclobber $rdhi";
+    }
   }
 }
 
@@ -199,9 +201,14 @@ multiclass ShiftExt64<SDNode OpNode> {
       (outs CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3), 
       (ins CPURegs:$rs0, CPURegs:$rs1, CPURegs:$rs2, CPURegs:$rs3), "",
       [(set CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3, 
-        (OpNode CPURegs:$rs0, CPURegs:$rs1, CPURegs:$rs2, CPURegs:$rs3, 1))]>;
+        (OpNode CPURegs:$rs0, CPURegs:$rs1, CPURegs:$rs2, CPURegs:$rs3, 1))]> {
+      let Constraints = "$rd0 = $rs0,$rd1 = $rs1,$rd2 = $rs2,$rd3 = $rs3,@earlyclobber $rd0,@earlyclobber $rd1,@earlyclobber $rd2,@earlyclobber $rd3";
+    }
   }
 }
+
+// The outputs are tied to the corresponding inputs are prohibited from overlapping in 1-bit shifts,
+// so that it doesn't try to swap the values at the same time as shifting them.
 
 // Extended shift pseudos
 defm SHL_EXT32 : ShiftExt32<shl_ext32>;
