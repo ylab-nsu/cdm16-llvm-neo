@@ -242,6 +242,12 @@ const char *CDMISelLowering::getTargetNodeName(unsigned int Opcode) const {
     NODE_NAME(Ret);
     NODE_NAME(Call);
     NODE_NAME(LOAD_SYM);
+    NODE_NAME(SHL_EXT32);
+    NODE_NAME(SRL_EXT32);
+    NODE_NAME(SRA_EXT32);
+    NODE_NAME(SHL_EXT64);
+    NODE_NAME(SRL_EXT64);
+    NODE_NAME(SRA_EXT64);
   default:
     return NULL;
   }
@@ -517,7 +523,7 @@ SDValue CDMISelLowering::lowerShifts(SDValue Op, SelectionDAG &DAG) const {
   }
 
   SmallVector<EVT, 4> ResTypeElements;
-  for (int I = 0; I < VTSize; I++) {
+  for (int I = 0; I < VTSize / 16; I++) {
     ResTypeElements.push_back(MVT::i16);
   }
   SDVTList ResTys = DAG.getVTList(ResTypeElements);
