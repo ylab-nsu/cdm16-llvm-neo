@@ -45,6 +45,8 @@ public:
                     "f64:16-f128:16-m:C-n16");
   }
 
+  bool allowsLargerPreferedTypeAlignment() const override { return false; }
+
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override {
     return {};
   }
