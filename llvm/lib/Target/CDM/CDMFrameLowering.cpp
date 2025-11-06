@@ -68,6 +68,7 @@ void CDMFrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   if (hasFP(MF)) {
+    BuildMI(MBB, MBBI, DL, TII.get(CDM::STSP)).addReg(CDM::FP);
     BuildMI(MBB, MBBI, DL, TII.get(CDM::POP)).addReg(CDM::FP);
   }
 }
