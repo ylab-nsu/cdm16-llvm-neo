@@ -30,8 +30,12 @@ CDMISelLowering::CDMISelLowering(const CDMTargetMachine &TM,
   addRegisterClass(MVT::i16, &CDM::CPURegsRegClass);
 
   computeRegisterProperties(Subtarget.getRegisterInfo());
-
   setBooleanContents(ZeroOrOneBooleanContent);
+
+  setStackPointerRegisterToSaveRestore(CDM::SP);
+  setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
+  setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
+  setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i16, Expand);
 
   setOperationAction(ISD::SELECT, MVT::i16, Expand);
   setOperationAction(ISD::BRCOND, MVT::Other, Expand);

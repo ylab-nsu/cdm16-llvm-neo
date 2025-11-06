@@ -533,6 +533,10 @@ def LDSP : CDMInst<(outs CPURegs:$rd), (ins), "ldsp\t$rd", []> {
   let Uses = [SP];
 }
 
+def STSP : CDMInst<(outs), (ins CPURegs:$rd), "stsp\t$rd", []> {
+  let Defs = [SP];
+}
+
 def ADDSP : CDMInst<(outs), (ins simm16:$imm), "addsp\t$imm", []> {
   let Uses = [SP];
   let Defs = [SP];

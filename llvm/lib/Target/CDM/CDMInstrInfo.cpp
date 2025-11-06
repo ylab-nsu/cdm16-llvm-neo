@@ -132,7 +132,7 @@ void CDMInstrInfo::expandBCond(MachineBasicBlock &MBB, MachineInstr &MI) const {
 
 // Expands shift_EXT pseudos into shift-rotate chains
 void CDMInstrInfo::expandShiftExt(MachineBasicBlock &MBB,
-                                    MachineInstr &MI) const {
+                                  MachineInstr &MI) const {
   MachineFunction &MF = *MBB.getParent();
   DebugLoc DL = MI.getDebugLoc();
 
@@ -190,7 +190,8 @@ void CDMInstrInfo::expandShiftExt(MachineBasicBlock &MBB,
     SrcRegs.push_back(MI.getOperand(RegCount + I).getReg());
   }
 
-  // Bundle up the chain because a move inserted between its elements may break it.
+  // Bundle up the chain because a move inserted between its elements may break
+  // it.
   MIBundleBuilder Bundler = MIBundleBuilder(MBB, MI);
   if (HeadIsLo) {
     Bundler.append(
@@ -218,16 +219,26 @@ void CDMInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                const DebugLoc &DL, Register DestReg,
                                Register SrcReg, bool KillSrc,
                                bool RenamableDest, bool RenamableSrc) const {
-  //  TargetInstrInfo::copyPhysReg(MBB, MI, DL, DestReg, SrcReg, KillSrc);
   if (SrcReg == CDM::SP) {
+    assert(CDM::CPURegsRegClass.contains(DestReg) &&
+           "Cannot copy SP to special register");
+
     MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, get(CDM::LDSP));
     MIB.addReg(DestReg, RegState::Define);
     return;
   }
+  if (DestReg == CDM::SP) {
+    assert(CDM::CPURegsRegClass.contains(SrcReg) &&
+           "Cannot copy a special register to SP");
+
+    MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, get(CDM::STSP));
+    MIB.addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
   assert(CDM::CPURegsRegClass.contains(SrcReg) &&
          CDM::CPURegsRegClass.contains(DestReg) &&
-         "Can only copy General purpose regs");
-  // TODO: check order
+         "Impossible reg-to-reg copy");
   MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, get(CDM::MOVE));
   MIB.addReg(DestReg);
   MIB.addReg(SrcReg, getKillRegState(KillSrc));
