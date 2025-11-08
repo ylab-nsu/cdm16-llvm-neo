@@ -73,13 +73,6 @@ CDMISelLowering::CDMISelLowering(const CDMTargetMachine &TM,
   setOperationAction(ISD::MULHS, MVT::i16, Expand);
   setOperationAction(ISD::MULHU, MVT::i16, Expand);
 
-  setOperationAction(ISD::MUL, MVT::i32, Expand);
-  setOperationAction(ISD::MUL, MVT::i64, Expand);
-  setOperationAction(ISD::SMUL_LOHI, MVT::i32, Expand);
-  setOperationAction(ISD::UMUL_LOHI, MVT::i32, Expand);
-  setOperationAction(ISD::SMUL_LOHI, MVT::i64, Expand);
-  setOperationAction(ISD::UMUL_LOHI, MVT::i64, Expand);
-
   setOperationAction(ISD::SDIV, MVT::i16, LibCall);
   setOperationAction(ISD::UDIV, MVT::i16, LibCall);
   setOperationAction(ISD::SDIVREM, MVT::i16, Expand);
