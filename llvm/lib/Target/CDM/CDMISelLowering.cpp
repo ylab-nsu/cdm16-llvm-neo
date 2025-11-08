@@ -28,22 +28,29 @@ CDMISelLowering::CDMISelLowering(const CDMTargetMachine &TM,
                                  const CDMSubtarget &ST)
     : TargetLowering(TM), Subtarget(ST) {
   addRegisterClass(MVT::i16, &CDM::CPURegsRegClass);
-
   computeRegisterProperties(Subtarget.getRegisterInfo());
   setBooleanContents(ZeroOrOneBooleanContent);
 
+  setOperationAction(ISD::BR_JT, MVT::Other, Expand);
+  setOperationAction(ISD::JumpTable, MVT::i16, Custom);
+  setOperationAction(ISD::GlobalAddress, MVT::i16, Custom);
+
+  setOperationAction(ISD::VASTART, MVT::Other, Custom);
+  setOperationAction(ISD::VAARG, MVT::Other, Expand);
+  setOperationAction(ISD::VACOPY, MVT::Other, Expand);
+  setOperationAction(ISD::VAEND, MVT::Other, Expand);
+  
   setStackPointerRegisterToSaveRestore(CDM::SP);
   setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
   setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i16, Expand);
 
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
+
+  // Conditional operations are expanded to BR_CC
   setOperationAction(ISD::SELECT, MVT::i16, Expand);
   setOperationAction(ISD::BRCOND, MVT::Other, Expand);
   setOperationAction(ISD::SETCC, MVT::i16, Expand);
-
-  setOperationAction(ISD::GlobalAddress, MVT::i16, Custom);
-
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
 
   // 32-bit and 64-bit shifts are expanded into shift-rotate chains
   // or loops if the shift amount is variable.
@@ -57,35 +64,26 @@ CDMISelLowering::CDMISelLowering(const CDMTargetMachine &TM,
   setOperationAction(ISD::SRL_PARTS, MVT::i16, Expand);
   setOperationAction(ISD::SRA_PARTS, MVT::i16, Expand);
 
-  // Custom lowering
-  setOperationAction(ISD::VASTART, MVT::Other, Custom);
-  // Default lowering
-  setOperationAction(ISD::VAARG, MVT::Other, Custom);
-  setOperationAction(ISD::VACOPY, MVT::Other, Custom);
-  setOperationAction(ISD::VAEND, MVT::Other, Custom);
-
-  setOperationAction(ISD::BR_JT, MVT::Other, Expand);
-  setOperationAction(ISD::JumpTable, MVT::i16, Custom);
-
+  // We don't support multiplication/division natively, 
+  // so they are lowered to libcalls.
   setOperationAction(ISD::MUL, MVT::i16, LibCall);
   setOperationAction(ISD::SMUL_LOHI, MVT::i16, Expand);
   setOperationAction(ISD::UMUL_LOHI, MVT::i16, Expand);
   setOperationAction(ISD::MULHS, MVT::i16, Expand);
   setOperationAction(ISD::MULHU, MVT::i16, Expand);
-
   setOperationAction(ISD::SDIV, MVT::i16, LibCall);
   setOperationAction(ISD::UDIV, MVT::i16, LibCall);
   setOperationAction(ISD::SDIVREM, MVT::i16, Expand);
   setOperationAction(ISD::UDIVREM, MVT::i16, Expand);
-
   setOperationAction(ISD::SREM, MVT::i16, LibCall);
   setOperationAction(ISD::UREM, MVT::i16, LibCall);
 
+  // Expand other ops
   setOperationAction(ISD::BSWAP, MVT::i16, Expand);
   setOperationAction(ISD::CTLZ, MVT::i16, Expand);
   setOperationAction(ISD::CTTZ, MVT::i16, Expand);
   setOperationAction(ISD::CTPOP, MVT::i16, Expand);
-  
+
   setOperationAction(ISD::ATOMIC_SWAP, MVT::i16, Expand);
   setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i16, Expand);
   setOperationAction(ISD::ATOMIC_LOAD_ADD, MVT::i16, Expand);
@@ -555,7 +553,7 @@ SDValue CDMISelLowering::lowerShifts(SDValue Op, SelectionDAG &DAG) const {
 
   int VTSize = VT.getFixedSizeInBits();
   if (VTSize != 32 && VTSize != 64) {
-      llvm_unreachable("Unsupported shift value size");
+    llvm_unreachable("Unsupported shift value size");
   }
 
   SmallVector<EVT, 4> ResTypeElements;
