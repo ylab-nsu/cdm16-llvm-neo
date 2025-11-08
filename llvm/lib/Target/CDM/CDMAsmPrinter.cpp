@@ -181,7 +181,7 @@ void CDMAsmPrinter::emitFunctionHeader() {
 void CDMAsmPrinter::emitStartOfAsmFile(Module &Module) {
   collectAndEmitSourceFiles(Module);
 
-  OutStreamer->emitRawText("memset, memcpy, memmove, __mulhi3, __divhi3, __udivhi3, __modhi3, __umodhi3: ext\n");
+  OutStreamer->emitRawText("memset, memcpy, memmove, __mulhi3, __divhi3, __udivhi3, __modhi3, __umodhi3, __mulsi3, __divsi3, __udivsi3, __modsi3, __umodsi3, __muldi3, __divdi3, __udivdi3, __moddi3, __umoddi3: ext\n");
 
   auto FN = Module.getSourceFileName();
 
