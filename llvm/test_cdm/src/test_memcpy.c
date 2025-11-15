@@ -4,6 +4,7 @@ struct S {
   int A[10];
 };
 
+__attribute__((noinline))
 int sum(struct S V) {
   int Sum = 0;
   for (int I = 0; I < 10; I++) {

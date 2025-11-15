@@ -1,5 +1,6 @@
 typedef int (*volatile FuncT)(int);
 
+__attribute__((noinline))
 int fib(int n) {
   if (n <= 1)
     return n;

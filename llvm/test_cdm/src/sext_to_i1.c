@@ -1,3 +1,4 @@
+__attribute__((noinline))
 int foo(int a) {
     if (a & 1) {
         return a;

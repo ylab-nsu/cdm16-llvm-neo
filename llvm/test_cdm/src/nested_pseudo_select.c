@@ -1,3 +1,4 @@
+__attribute__((noinline))
 int foo(int a, int b, int c, int d){
 	if (((a == b) == c) == d){
 		return a + b + c + d;
