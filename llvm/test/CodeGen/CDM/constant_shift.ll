@@ -4,10 +4,9 @@ target datalayout = "e-S16-p:16:16-i8:8-i16:16-i32:16-i64:16-f16:16-f32:16-f64:1
 
 ; Constant shift larger when 8 bits
 
-; Function Attrs: noinline nounwind optnone
 define i16 @shl16(i16 %a) #0 {
 entry:
-; CHECK-LABEL: shl16_big>
+; CHECK-LABEL: shl16>
 ; CHECK: shl r0, r0, 7
   %shl = shl i16 %a, 7
   ret i16 %shl
@@ -43,8 +42,8 @@ entry:
 define i32 @shra32_1(i32 %a) #0 {
 entry:
 ; CHECK-LABEL: shra32_1>
-; CHECK: shra r0, r0, 1
-; CHECK-NEXT: rcl r1, r1, 1
+; CHECK: shra r1, r1, 1
+; CHECK-NEXT: rcr r0, r0, 1
   %shra = ashr i32 %a, 1
   ret i32 %shra
 }
@@ -52,9 +51,9 @@ entry:
 define i32 @shl32_const(i32 %a) #0 {
 entry:
 ; CHECK-LABEL: shl32_const>
-; CHECK: shl r1, r1, 2
-; CHECK-NEXT: shr r0, r2, 8
+; CHECK: shr r0, r2, 8
 ; CHECK-NEXT: shr r2, r2, 6
+; CHECK-NEXT: shl r1, r1, 2
 ; CHECK-NEXT: or r1, r2, r1
 ; CHECK-NEXT: shl r0, r0, 2
   %shl = shl i32 %a, 2
@@ -64,9 +63,9 @@ entry:
 define i32 @shra32_const(i32 %a) #0 {
 entry:
 ; CHECK-LABEL: shra32_const>
-; CHECK: shr r0, r0, 2
-; CHECK-NEXT: shl r1, r2, 8
+; CHECK: shl r1, r2, 8
 ; CHECK-NEXT: shl r2, r2, 6
+; CHECK-NEXT: shr r0, r0, 2
 ; CHECK-NEXT: or r0, r2, r0
 ; CHECK-NEXT: shra r1, r1, 2
   %shra = ashr i32 %a, 2
@@ -120,17 +119,17 @@ entry:
 define i64 @shra64_const(i64 %a) #0 {
 entry:
 ; CHECK-LABEL: shra64_const>
-; CHECK: shr r0, r0, 2
-; CHECK-NEXT: shl r1, r4, 8
+; CHECK: shl r1, r4, 8
 ; CHECK-NEXT: shl r4, r4, 6
+; CHECK-NEXT: shr r0, r0, 2
 ; CHECK-NEXT: or r0, r4, r0
-; CHECK-NEXT: shr r1, r1, 2
 ; CHECK-NEXT: shl r2, r4, 8
 ; CHECK-NEXT: shl r4, r4, 6
+; CHECK-NEXT: shr r1, r1, 2
 ; CHECK-NEXT: or r1, r4, r1
-; CHECK-NEXT: shr r2, r2, 2
 ; CHECK-NEXT: shl r3, r4, 8
 ; CHECK-NEXT: shl r4, r4, 6
+; CHECK-NEXT: shr r2, r2, 2
 ; CHECK-NEXT: or r2, r4, r2
 ; CHECK-NEXT: shra r3, r3, 2
   %shra = ashr i64 %a, 2
