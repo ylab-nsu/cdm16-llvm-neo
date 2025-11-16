@@ -30,10 +30,10 @@ define i32 @add32_reg_reg(i32 %a, i32 %b) #0 {
 ; CHECK-NEXT: add r4, r2, r0
 ; CHECK-NEXT: ldi r2, 1
 ; CHECK-NEXT: cmp r0, r4
-; CHECK-NEXT: blo __LBB3_2
+; CHECK-NEXT: blo [[LABEL:.*]]
 ; CHECK-NEXT: # %bb.1:
 ; CHECK-NEXT: ldi r2, 0
-; CHECK-NEXT: __LBB3_2:
+; CHECK-NEXT: [[LABEL]]:
 ; CHECK-NEXT: add r1, r3, r1
 ; CHECK-NEXT: add r1, r2, r1
     %result = add i32 %a, %b

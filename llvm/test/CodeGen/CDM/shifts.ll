@@ -9,13 +9,13 @@ entry:
 ; CHECK-NEXT: # %bb.0:
 ; CHECK-NEXT: push fp
 ; CHECK-NEXT: ldsp fp
-; CHECK-NEXT: br __LBB0_2
-; CHECK-NEXT: __LBB0_1
+; CHECK-NEXT: br [[LABEL2:.*]]
+; CHECK-NEXT: [[LABEL1:.*]]:
 ; CHECK: shra r0, r0, 1
 ; CHECK-NEXT: sub r1, 1
-; CHECK-NEXT: __LBB0_2
+; CHECK-NEXT: [[LABEL2]]:
 ; CHECK: cmp r1, 0
-; CHECK-NEXT: bgt __LBB0_1
+; CHECK-NEXT: bgt [[LABEL1]]
 ; CHECK-NEXT: # %bb.3:
 ; CHECK-NEXT: stsp fp
 ; CHECK-NEXT: pop fp
@@ -34,13 +34,13 @@ entry:
 ; CHECK-NEXT: # %bb.0:
 ; CHECK-NEXT: push fp
 ; CHECK-NEXT: ldsp fp
-; CHECK-NEXT: br __LBB1_2
-; CHECK-NEXT: __LBB1_1
+; CHECK-NEXT: br [[LABEL2:.*]]
+; CHECK-NEXT: [[LABEL1:.*]]:
 ; CHECK: shra r0, r0, 1
 ; CHECK-NEXT: sub r1, 1
-; CHECK-NEXT: __LBB1_2
+; CHECK-NEXT: [[LABEL2]]:
 ; CHECK: cmp r1, 0
-; CHECK-NEXT: bgt __LBB1_1
+; CHECK-NEXT: bgt [[LABEL1]]
 ; CHECK-NEXT: # %bb.3:
 ; CHECK-NEXT: stsp fp
 ; CHECK-NEXT: pop fp
@@ -56,14 +56,14 @@ entry:
 ; CHECK-NEXT: # %bb.0:
 ; CHECK-NEXT: push fp
 ; CHECK-NEXT: ldsp fp
-; CHECK-NEXT: br __LBB2_2
-; CHECK-NEXT: __LBB2_1
+; CHECK-NEXT: br [[LABEL2:.*]]
+; CHECK-NEXT: [[LABEL1:.*]]:
 ; CHECK: shra r1, r1, 1
 ; CHECK-NEXT: rcr r0, r0, 1
 ; CHECK-NEXT: sub r2, 1
-; CHECK-NEXT: __LBB2_2
+; CHECK-NEXT: [[LABEL2]]:
 ; CHECK: cmp r2, 0
-; CHECK-NEXT: bgt __LBB2_1
+; CHECK-NEXT: bgt [[LABEL1]]
 ; CHECK-NEXT: # %bb.3:
 ; CHECK-NEXT: stsp fp
 ; CHECK-NEXT: pop fp
@@ -82,16 +82,16 @@ entry:
 ; CHECK-NEXT: addsp -2
 ; CHECK-NEXT: ssw r4, -2
 ; CHECK-NEXT: lsw r4, 12
-; CHECK-NEXT: br __LBB3_2
-; CHECK-NEXT: __LBB3_1
+; CHECK-NEXT: br [[LABEL2:.*]]
+; CHECK-NEXT: [[LABEL1:.*]]:
 ; CHECK: shra r3, r3, 1
 ; CHECK-NEXT: rcr r2, r2, 1
 ; CHECK-NEXT: rcr r1, r1, 1
 ; CHECK-NEXT: rcr r0, r0, 1
 ; CHECK-NEXT: sub r4, 1
-; CHECK-NEXT: __LBB3_2
+; CHECK-NEXT: [[LABEL2]]:
 ; CHECK: cmp r4, 0
-; CHECK-NEXT: bgt __LBB3_1
+; CHECK-NEXT: bgt [[LABEL1]]
 ; CHECK-NEXT: # %bb.3:
 ; CHECK-NEXT: lsw r4, -2
 ; CHECK-NEXT: addsp 2

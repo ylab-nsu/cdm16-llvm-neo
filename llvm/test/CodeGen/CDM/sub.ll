@@ -44,10 +44,10 @@ entry:
 ; CHECK-NEXT: ssw r4, -2
 ; CHECK-NEXT: ldi r4, 1
 ; CHECK-NEXT: cmp r0, r2
-; CHECK-NEXT: blo __LBB2_2
+; CHECK-NEXT: blo [[LABEL:.*]]
 ; CHECK-NEXT: # %bb.1:
 ; CHECK-NEXT: ldi r4, 0
-; CHECK-NEXT: __LBB2_2
+; CHECK-NEXT: [[LABEL]]:
 ; CHECK-NEXT: sub r1, r3, r1
 ; CHECK-NEXT: sub r1, r4, r1
 ; CHECK-NEXT: sub r0, r2, r0
