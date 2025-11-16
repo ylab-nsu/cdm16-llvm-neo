@@ -9,19 +9,13 @@ entry:
 ; CHECK-NEXT: # %bb.0:
 ; CHECK-NEXT: push fp
 ; CHECK-NEXT: ldsp fp
-; CHECK-NEXT: move r0, r2
-; CHECK-NEXT: add r0, 2
-; CHECK-NEXT: ldi r3, 1
-; CHECK-NEXT: cmp r0, r2
-; CHECK-NEXT: blo __LBB0_2
-; CHECK-NEXT:  %bb.1:
-; CHECK-NEXT: ldi r3, 0
-; CHECK-NEXT: _LBB0_2:
-; CHECK-NEXT: add r1, r3, r1
+; CHECK-NEXT: ldi r1, 2
+; CHECK-NEXT: and r0, r1, r0
+; CHECK-NEXT: ldi r1, 0
 ; CHECK-NEXT: stsp fp
 ; CHECK-NEXT: pop fp
 ; CHECK-NEXT: rts
-  %add = add nsw i32 %a, 2
+  %add = and i32 %a, 2
   ret i32 %add
 }
 
