@@ -88,7 +88,7 @@ LLVM_ABI MCStreamer *
 createAsmStreamer(MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> OS,
                   std::unique_ptr<MCInstPrinter> InstPrint,
                   std::unique_ptr<MCCodeEmitter> CE,
-                  std::unique_ptr<MCAsmBackend> TAB, bool IsCDM);
+                  std::unique_ptr<MCAsmBackend> TAB);
 
 LLVM_ABI MCStreamer *createELFStreamer(MCContext &Ctx,
                                        std::unique_ptr<MCAsmBackend> &&TAB,

@@ -59,7 +59,6 @@ class MCAsmStreamer final : public MCStreamer {
   bool IsVerboseAsm = false;
   bool ShowInst = false;
   bool UseDwarfDirectory = false;
-  bool IsCDM;
 
   void EmitRegisterName(int64_t Register);
   void PrintQuotedString(StringRef Data, raw_ostream &OS) const;
@@ -76,15 +75,14 @@ public:
   MCAsmStreamer(MCContext &Context, std::unique_ptr<formatted_raw_ostream> os,
                 std::unique_ptr<MCInstPrinter> printer,
                 std::unique_ptr<MCCodeEmitter> emitter,
-                std::unique_ptr<MCAsmBackend> asmbackend, bool isCDM)
+                std::unique_ptr<MCAsmBackend> asmbackend)
       : MCStreamer(Context), OSOwner(std::move(os)), OS(*OSOwner),
         MAI(Context.getAsmInfo()), InstPrinter(std::move(printer)),
         Assembler(std::make_unique<MCAssembler>(
             Context, std::move(asmbackend), std::move(emitter),
             (asmbackend) ? asmbackend->createObjectWriter(NullStream)
                          : nullptr)),
-        CommentStream(CommentToEmit),
-        IsCDM(isCDM) {
+        CommentStream(CommentToEmit) {
     assert(InstPrinter);
     if (Assembler->getBackendPtr())
       setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
@@ -575,11 +573,7 @@ void MCAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
     Symbol->setOffset(0);
 
   Symbol->print(OS, MAI);
-  if(IsCDM){
-    OS << (Symbol->isExternal() ? ">" : ":");
-  } else{
-    OS << MAI->getLabelSuffix();
-  }
+  OS << MAI->getLabelSuffix();
 
   EmitEOL();
 }
@@ -2677,8 +2671,7 @@ MCStreamer *llvm::createAsmStreamer(MCContext &Context,
                                     std::unique_ptr<formatted_raw_ostream> OS,
                                     std::unique_ptr<MCInstPrinter> IP,
                                     std::unique_ptr<MCCodeEmitter> CE,
-                                    std::unique_ptr<MCAsmBackend> MAB,
-                                    bool IsCDM) {
+                                    std::unique_ptr<MCAsmBackend> TAB) {
   return new MCAsmStreamer(Context, std::move(OS), std::move(IP), std::move(CE),
-                           std::move(MAB), IsCDM);
+                           std::move(TAB));
 }

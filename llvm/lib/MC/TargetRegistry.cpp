@@ -92,8 +92,7 @@ MCStreamer *Target::createAsmStreamer(MCContext &Ctx,
                           std::move(TAB));
   else
     S = llvm::createAsmStreamer(
-        Ctx, std::move(OS), std::move(IP), std::move(CE), std::move(TAB),
-        strcmp(getName(), "cdm") == 0); // TODO: Do not use string comparison
+        Ctx, std::move(OS), std::move(IP), std::move(CE), std::move(TAB));
 
   createAsmTargetStreamer(*S, OSRef, Printer);
   return S;
