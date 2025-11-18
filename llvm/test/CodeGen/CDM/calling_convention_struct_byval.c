@@ -1,4 +1,4 @@
-// RUN: clang -target cdm -O1 -S -emit-llvm -o /dev/stdout %s | llc -mtriple=cdm | FileCheck %s
+// RUN: clang -target cdm -O1 -S -o /dev/stdout %s | FileCheck %s
 
 // Test for struct by val passing
 

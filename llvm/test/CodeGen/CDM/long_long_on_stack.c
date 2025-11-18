@@ -1,15 +1,23 @@
-// RUN: clang -target cdm -O0 -S -emit-llvm -o /dev/stdout %s | llc -mtriple=cdm | FileCheck %s
+// RUN: clang -target cdm -O0 -S -o /dev/stdout %s | FileCheck %s
 
 long long foo(long long value) {
 // CHECK-LABEL: foo>
-// CHECK: ldi r4, -12
-// CHECK-NEXT: add r4, fp, r4
-// CHECK-NEXT: ldi r5, 6
-// CHECK-NEXT: stw r4, r5, r3
-// CHECK-NEXT: ldi r3, 4
-// CHECK-NEXT: stw r4, r3, r2
-// CHECK-NEXT: ldi r2, 2
-// CHECK-NEXT: stw r4, r2, r1
-// CHECK-NEXT: ssw r0, -12
+//
+// CHECK-DAG: lsw [[RS1:r[0-6]]], -16
+// CHECK-DAG: move r1, [[RS3:r[0-6]]]
+// CHECK-DAG: lsw [[RS2:r[0-6]]], -14
+// CHECK-DAG: move r0, [[RS4:r[0-6]]]
+//
+// CHECK-DAG: ldi [[RD1:r[0-6]]], -12
+// CHECK-NEXT: add [[RD1]], fp, [[RD1]]
+// CHECK-DAG: ldi [[RD21:r[0-6]]], 6
+//
+// CHECK: stw [[RD1]], [[RD21]], [[RS1]]
+// CHECK-DAG: ldi [[RD22:r[0-6]]], 4
+// CHECK: stw [[RD1]], [[RD22]], [[RS2]]
+// CHECK-DAG: ldi [[RD23:r[0-6]]], 2
+// CHECK: stw [[RD1]], [[RD23]], [[RS3]]
+// CHECK: ssw [[RS4]], -12
+
     return value;
 }
