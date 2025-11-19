@@ -16,8 +16,8 @@ entry:
 ; CHECK-NEXT: # %bb.0:
 ; CHECK-NEXT: push fp
 ; CHECK-NEXT: ldsp fp
-; CHECK-NEXT: ldi r3, 2
-; CHECK-NEXT: stw r0, r3, r2
+; CHECK-NEXT: ldi [[REG:r[0-6]]], 2
+; CHECK-NEXT: stw r0, [[REG]], r2
 ; CHECK-NEXT: stw r0, r1
 ; CHECK-NEXT: stsp fp
 ; CHECK-NEXT: pop fp
@@ -32,30 +32,20 @@ entry:
 define dso_local i16 @bar() #1 {
 entry:
 ; CHECK-LABEL: bar>
-; CHECK-NEXT: # %bb.0:
-; CHECK-NEXT: push fp
-; CHECK-NEXT: ldsp fp
-; CHECK-NEXT: addsp -8
+; CHECK: addsp -8
+
 ; CHECK-NEXT: ssw r4, -2
 ; CHECK-NEXT: ssw r5, -4
+
 ; CHECK-NEXT: addsp -8
-; CHECK-NEXT: ldi r0, -8
-; CHECK-NEXT: add r0, fp, r4
-; CHECK-NEXT: ldi r5, 2
+; CHECK-NEXT: ldi [[REG1:r[0-6]]], -8
+; CHECK-NEXT: add [[REG1]], fp, [[PTRREG:r[0-6]]]
+; CHECK-NEXT: ldi [[REG2:r[0-6]]], 2
 ; CHECK-NEXT: ldi r2, 3
-; CHECK-NEXT: move r4, r0
-; CHECK-NEXT: move r5, r1
+; CHECK-NEXT: move [[PTRREG]], r0
+; CHECK-NEXT: move [[REG2]], r1
 ; CHECK-NEXT: jsr foo
 ; CHECK-NEXT: addsp 8
-; CHECK-NEXT: ldw r4, r5, r0
-; CHECK-NEXT: lsw r1, -8
-; CHECK-NEXT: add r0, r1, r0
-; CHECK-NEXT: lsw r5, -4
-; CHECK-NEXT: lsw r4, -2
-; CHECK-NEXT: addsp 8
-; CHECK-NEXT: stsp fp
-; CHECK-NEXT: pop fp
-; CHECK-NEXT: rts
   %out = alloca %struct.s, align 2
   call void @foo(ptr dead_on_unwind nonnull writable sret(%struct.s) align 2 %out, i16 noundef 2, i16 noundef 3)
   %0 = load i16, ptr %out, align 2

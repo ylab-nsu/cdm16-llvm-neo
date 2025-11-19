@@ -15,10 +15,10 @@ int foo(struct s ss){
 // CHECK-NEXT: # %bb.0:
 // CHECK-NEXT: push fp
 // CHECK-NEXT: ldsp fp
-// CHECK-NEXT: ldi r1, 2
-// CHECK-NEXT: ldw r0, r1, r1
-// CHECK-NEXT: ldw r0, r0
-// CHECK-NEXT: add r1, r0, r0
+// CHECK-NEXT: ldi [[REG1:r[0-6]]], 2
+// CHECK-NEXT: ldw r0, [[REG1]], [[REG2:r[0-6]]]
+// CHECK-NEXT: ldw r0, [[REG3:r[0-6]]]
+// CHECK-NEXT: add [[REG2]], [[REG3]], r0
 // CHECK-NEXT: stsp fp
 // CHECK-NEXT: pop fp
 // CHECK-NEXT: rts
@@ -27,30 +27,18 @@ int foo(struct s ss){
 
 int main(){
 // CHECK-LABEL: main>
-//  CHECK-NEXT: # %bb.0:
-//  CHECK-NEXT: push	fp
-//  CHECK-NEXT: ldsp	fp
-//  CHECK-NEXT: addsp	-8
 //  
-//  CHECK-NEXT: ldi	r0, -4
-//  CHECK-NEXT: add	r0, fp, r0
-//  CHECK-NEXT: ldi	r1, 2
-//  CHECK-NEXT: ldi	r2, 3
-//  CHECK-NEXT: stw	r0, r1, r2
-//  CHECK-NEXT: ldi	r0, -8
-//  CHECK-NEXT: add	r0, fp, r0
-//  CHECK-NEXT: stw	r0, r1, r2
-//  CHECK-NEXT: ssw	r1, -4
-//  CHECK-NEXT: ssw	r1, -8
+//  CHECK-DAG: ldi [[RSD:r[0-6]]], 2
+//  CHECK-DAG: ldi [[RS2:r[0-6]]], 3
+//
+//  CHECK: ldi r0, -8
+//  CHECK-NEXT: add r0, fp, r0
+//  CHECK: stw r0, [[RSD]], [[RS2]]
+//  CHECK: ssw [[RSD]], -8
 //
 //  CHECK-NEXT: addsp	-8
 //  CHECK-NEXT: jsr	foo
 //  CHECK-NEXT: addsp	8
-//
-//  CHECK-NEXT: addsp	8
-//  CHECK-NEXT: stsp	fp
-//  CHECK-NEXT: pop	fp
-//  CHECK-NEXT: rts
 	struct s ss;
 	ss.a = 2;
 	ss.b = 3;

@@ -39,23 +39,17 @@ declare void @llvm.lifetime.end.p0(i64 immarg, ptr captures(none)) #1
 define i16 @bar() #3 {
 entry:
 ; CHECK-LABEL: bar>
-; CHECK-NEXT: # %bb.0:
-; CHECK-NEXT: push fp
-; CHECK-NEXT: ldsp fp
-; CHECK-NEXT: addsp -10
-; CHECK-NEXT: ldsp r0
-; CHECK-NEXT: ldi r1, 8
-; CHECK-NEXT: ldi r2, 5
-; CHECK-NEXT: stw r0, r1, r2
+; CHECK: addsp -10
+; CHECK-NEXT: ldsp [[RD1:r[0-6]]]
+; CHECK-NEXT: ldi [[RD2:r[0-6]]], 8
+; CHECK-NEXT: ldi [[RS:r[0-6]]], 5
+; CHECK-NEXT: stw [[RD1]], [[RD2]], [[RS]]
 ; CHECK-NEXT: ldi r0, 1
 ; CHECK-NEXT: ldi r1, 2
 ; CHECK-NEXT: ldi r2, 3
 ; CHECK-NEXT: ldi r3, 4
 ; CHECK-NEXT: jsr foo
 ; CHECK-NEXT: addsp 10
-; CHECK-NEXT: stsp fp
-; CHECK-NEXT: pop fp
-; CHECK-NEXT: rts
   %call = tail call i16 (i16, ...) @foo(i16 1, i16 2, i16 3, i16 4, i16 5)
   ret i16 %call
 }

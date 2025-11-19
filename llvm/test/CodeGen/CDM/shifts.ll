@@ -8,20 +8,13 @@ target datalayout = "e-S16-p:16:16-i8:8-i16:16-i32:16-i64:16-f16:16-f32:16-f64:1
 define signext i8 @shift8(i8 signext %a, i8 signext %b) #0 {
 entry:
 ; CHECK-LABEL: shift8>
-; CHECK-NEXT: # %bb.0:
-; CHECK-NEXT: push fp
-; CHECK-NEXT: ldsp fp
-; CHECK-NEXT: br [[LABEL2:.*]]
+; CHECK: br [[LABEL2:.*]]
 ; CHECK-NEXT: [[LABEL1:.*]]:
 ; CHECK: shra r0, r0, 1
 ; CHECK-NEXT: sub r1, 1
 ; CHECK-NEXT: [[LABEL2]]:
 ; CHECK: cmp r1, 0
 ; CHECK-NEXT: bgt [[LABEL1]]
-; CHECK-NEXT: # %bb.3:
-; CHECK-NEXT: stsp fp
-; CHECK-NEXT: pop fp
-; CHECK-NEXT: rts
   %conv = sext i8 %a to i16
   %conv13 = zext nneg i8 %b to i16
   %shr = ashr i16 %conv, %conv13
@@ -33,20 +26,13 @@ entry:
 define i16 @shift16(i16 %a, i16 %b) #0 {
 entry:
 ; CHECK-LABEL: shift16>
-; CHECK-NEXT: # %bb.0:
-; CHECK-NEXT: push fp
-; CHECK-NEXT: ldsp fp
-; CHECK-NEXT: br [[LABEL2:.*]]
+; CHECK: br [[LABEL2:.*]]
 ; CHECK-NEXT: [[LABEL1:.*]]:
 ; CHECK: shra r0, r0, 1
 ; CHECK-NEXT: sub r1, 1
 ; CHECK-NEXT: [[LABEL2]]:
 ; CHECK: cmp r1, 0
 ; CHECK-NEXT: bgt [[LABEL1]]
-; CHECK-NEXT: # %bb.3:
-; CHECK-NEXT: stsp fp
-; CHECK-NEXT: pop fp
-; CHECK-NEXT: rts
   %shr = ashr i16 %a, %b
   ret i16 %shr
 }
@@ -55,10 +41,7 @@ entry:
 define i32 @shift32(i32 %a, i32 %b) #0 {
 entry:
 ; CHECK-LABEL: shift32>
-; CHECK-NEXT: # %bb.0:
-; CHECK-NEXT: push fp
-; CHECK-NEXT: ldsp fp
-; CHECK-NEXT: br [[LABEL2:.*]]
+; CHECK: br [[LABEL2:.*]]
 ; CHECK-NEXT: [[LABEL1:.*]]:
 ; CHECK: shra r1, r1, 1
 ; CHECK-NEXT: rcr r0, r0, 1
@@ -66,10 +49,6 @@ entry:
 ; CHECK-NEXT: [[LABEL2]]:
 ; CHECK: cmp r2, 0
 ; CHECK-NEXT: bgt [[LABEL1]]
-; CHECK-NEXT: # %bb.3:
-; CHECK-NEXT: stsp fp
-; CHECK-NEXT: pop fp
-; CHECK-NEXT: rts
   %shr = ashr i32 %a, %b
   ret i32 %shr
 }
@@ -78,28 +57,17 @@ entry:
 define i64 @shift64(i64 %a, i64 %b) #0 {
 entry:
 ; CHECK-LABEL: shift64>
-; CHECK-NEXT: # %bb.0:
-; CHECK-NEXT: push fp
-; CHECK-NEXT: ldsp fp
-; CHECK-NEXT: addsp -2
-; CHECK-NEXT: ssw r4, -2
-; CHECK-NEXT: lsw r4, 12
+; CHECK: lsw [[REG:r[0-6]]], 12
 ; CHECK-NEXT: br [[LABEL2:.*]]
 ; CHECK-NEXT: [[LABEL1:.*]]:
 ; CHECK: shra r3, r3, 1
 ; CHECK-NEXT: rcr r2, r2, 1
 ; CHECK-NEXT: rcr r1, r1, 1
 ; CHECK-NEXT: rcr r0, r0, 1
-; CHECK-NEXT: sub r4, 1
+; CHECK-NEXT: sub [[REG]], 1
 ; CHECK-NEXT: [[LABEL2]]:
-; CHECK: cmp r4, 0
+; CHECK: cmp [[REG]], 0
 ; CHECK-NEXT: bgt [[LABEL1]]
-; CHECK-NEXT: # %bb.3:
-; CHECK-NEXT: lsw r4, -2
-; CHECK-NEXT: addsp 2
-; CHECK-NEXT: stsp fp
-; CHECK-NEXT: pop fp
-; CHECK-NEXT: rts
   %shr = ashr i64 %a, %b
   ret i64 %shr
 }

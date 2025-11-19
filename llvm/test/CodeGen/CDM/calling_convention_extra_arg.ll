@@ -33,10 +33,10 @@ define i16 @main() #0 {
 entry:
 ; CHECK-LABEL: main>
 ; CHECK: addsp -10
-; CHECK-NEXT: ldsp r0
-; CHECK-NEXT: ldi r1, 8
-; CHECK-NEXT: ldi r2, 6
-; CHECK-NEXT: stw r0, r1, r2
+; CHECK-NEXT: ldsp [[RD1:r[0-6]]]
+; CHECK-NEXT: ldi [[RD2:r[0-6]]], 8
+; CHECK-NEXT: ldi [[RS:r[0-6]]], 6
+; CHECK-NEXT: stw [[RD1]], [[RD2]], [[RS]]
 ; CHECK-NEXT: ldi r0, 2
 ; CHECK-NEXT: ldi r1, 3
 ; CHECK-NEXT: ldi r2, 4

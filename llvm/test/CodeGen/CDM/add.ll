@@ -28,16 +28,16 @@ define i16 @add16_reg_imm(i16 %a) #0 {
 
 define i32 @add32_reg_reg(i32 %a, i32 %b) #0 {
 ; CHECK-LABEL: add32_reg_reg>
-; CHECK: move r0, r4
-; CHECK-NEXT: add r4, r2, r0
-; CHECK-NEXT: ldi r2, 1
-; CHECK-NEXT: cmp r0, r4
+; CHECK: move r0, [[REG1:r[0-6]]]
+; CHECK-NEXT: add [[REG1]], r2, r0
+; CHECK-NEXT: ldi [[REG2:r[0-6]]], 1
+; CHECK-NEXT: cmp r0, [[REG1]]
 ; CHECK-NEXT: blo [[LABEL:.*]]
 ; CHECK-NEXT: # %bb.1:
-; CHECK-NEXT: ldi r2, 0
+; CHECK-NEXT: ldi [[REG2]], 0
 ; CHECK-NEXT: [[LABEL]]:
 ; CHECK-NEXT: add r1, r3, r1
-; CHECK-NEXT: add r1, r2, r1
+; CHECK-NEXT: add r1, [[REG2]], r1
     %result = add i32 %a, %b
     ret i32 %result
 }

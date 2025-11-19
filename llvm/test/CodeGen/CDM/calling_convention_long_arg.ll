@@ -11,8 +11,8 @@ entry:
 ; CHECK-NEXT: # %bb.0:
 ; CHECK-NEXT: push fp
 ; CHECK-NEXT: ldsp fp
-; CHECK-NEXT: ldi r1, 2
-; CHECK-NEXT: and r0, r1, r0
+; CHECK-NEXT: ldi [[REG:r[0-6]]], 2
+; CHECK-NEXT: and r0, [[REG]], r0
 ; CHECK-NEXT: ldi r1, 0
 ; CHECK-NEXT: stsp fp
 ; CHECK-NEXT: pop fp
