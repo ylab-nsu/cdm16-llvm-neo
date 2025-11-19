@@ -109,13 +109,12 @@ void CDMAsmStreamer::emitBytes(StringRef Data) {
 }
 
 void CDMAsmStreamer::emitValueToAlignment(Align Alignment, int64_t Fill, uint8_t FillLen, unsigned MaxBytesToEmit) {
+    assert((Fill == 0) && "Non-zero fill value not supported for alignment");
+
     if (Alignment == Align(1))
         return;
     
-    OS << "\talign";
-    if (Alignment.value() != 2) {
-        OS << " " << Alignment.value();
-    }
+    OS << "\talign" << " " << Alignment.value();
     EmitEOL();
 }
 
@@ -150,7 +149,6 @@ void CDMAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc
     }
     EmitEOL();
     
-    // Call base class to update internal state
     MCStreamer::emitValueImpl(Value, Size, Loc);
 }
 
