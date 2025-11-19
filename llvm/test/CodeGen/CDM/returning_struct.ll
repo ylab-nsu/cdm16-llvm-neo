@@ -2,6 +2,11 @@ target datalayout = "e-S16-p:16:16-i8:8-i16:16-i32:16-i64:16-f16:16-f32:16-f64:1
 
 ; RUN: llc -mtriple=cdm < %s | FileCheck %s
 
+; Test for struct by val returning:
+; - Caller allocates struct on stack
+; - Caller passes pointer to it as 0-th argument
+; - Callee stores returned struct value in struct by this pointer
+
 %struct.s = type { i16, i16 }
 
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(argmem: write)

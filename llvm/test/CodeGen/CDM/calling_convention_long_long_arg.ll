@@ -2,6 +2,8 @@ target datalayout = "e-S16-p:16:16-i8:8-i16:16-i32:16-i64:16-f16:16-f32:16-f64:1
 
 ; RUN: llc -mtriple=cdm < %s | FileCheck %s
 
+; Test for passing i64 argument on registers r0-r3
+
 define i64 @foo(i64 %a) #0 {
 entry:
 ; CHECK-LABEL: foo>

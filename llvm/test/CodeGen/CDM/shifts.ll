@@ -2,6 +2,8 @@ target datalayout = "e-S16-p:16:16-i8:8-i16:16-i32:16-i64:16-f16:16-f32:16-f64:1
 
 ; RUN: llc -mtriple=cdm < %s | FileCheck %s
 
+; Tests for shifts with variable
+
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 define signext i8 @shift8(i8 signext %a, i8 signext %b) #0 {
 entry:

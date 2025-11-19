@@ -1,5 +1,8 @@
 // RUN: clang -target cdm -O0 -S -o /dev/stdout %s | FileCheck %s
 
+// Regression test for storing long long on stack
+// Bytes of i64 value used to be stored in wrong order because of incorrect alignment value
+
 long long foo(long long value) {
 // CHECK-LABEL: foo>
 //

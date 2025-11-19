@@ -1,6 +1,8 @@
 // RUN: clang -target cdm -O1 -S -o /dev/stdout %s | FileCheck %s
 
-// Test for struct by val passing
+// Test for struct by val passing:
+// - Caller allocates struct on stack
+// - Caller passes pointer to this struct as argument
 
 struct s {
 	int a;

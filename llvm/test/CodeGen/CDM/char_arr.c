@@ -1,5 +1,8 @@
 // RUN: clang -target cdm -O1 -S -o /dev/stdout %s | FileCheck %s
 
+// Test for storing chars on stack.
+// Regression test for paddings in char arrays
+
 void foo(char a, char b, char c){
 // CHECK-LABEL: foo>
 // CHECK: addsp -4

@@ -2,8 +2,7 @@ target datalayout = "e-S16-p:16:16-i8:8-i16:16-i32:16-i64:16-f16:16-f32:16-f64:1
 
 ; RUN: llc -mtriple=cdm < %s | FileCheck %s
 
-
-; Test for accessing data, located to far from fp to use lsw/ssw/lsb/ssb
+; Test for accessing data on stack frame located too far from frame pointer to use lsw/ssw/lsb/ssb
 
 ; Function Attrs: nofree noinline norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
 define i16 @foo(ptr %arr) #0 {

@@ -2,7 +2,7 @@ target datalayout = "e-S16-p:16:16-i8:8-i16:16-i32:16-i64:16-f16:16-f32:16-f64:1
 
 ; RUN: llc -mtriple=cdm < %s | FileCheck %s
 
-; Test for stack frame allocation
+; Test for allocations on function stack frame
 
 define void @alloca_addressof_small() #0 {
 entry:

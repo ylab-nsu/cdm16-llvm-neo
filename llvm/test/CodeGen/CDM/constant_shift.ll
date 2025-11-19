@@ -2,7 +2,7 @@ target datalayout = "e-S16-p:16:16-i8:8-i16:16-i32:16-i64:16-f16:16-f32:16-f64:1
 
 ; RUN: llc -mtriple=cdm < %s | FileCheck %s
 
-; Constant shift larger when 8 bits
+; Tests for constant shifts
 
 define i16 @shl16(i16 %a) #0 {
 entry:

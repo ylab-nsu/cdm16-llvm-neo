@@ -2,6 +2,12 @@ target datalayout = "e-S16-p:16:16-i8:8-i16:16-i32:16-i64:16-f16:16-f32:16-f64:1
 
 ; RUN: llc -mtriple=cdm < %s | FileCheck %s
 
+; Regression test for so-called "move problem":
+; - cmp sets arithmetic flags in PS register
+; - Conditional branch uses these flags 
+; BUT:
+; - Move used to be inserted between cmp and conditional branch, so it clobbers PS register
+
 define i16 @foo(i16 %a, i16 %b, i16 %c, i16 %d) #0 {
 entry:
 ; CHECK-LABEL: foo>

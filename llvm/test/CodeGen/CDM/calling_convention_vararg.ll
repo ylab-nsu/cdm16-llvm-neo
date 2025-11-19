@@ -2,6 +2,10 @@ target datalayout = "e-S16-p:16:16-i8:8-i16:16-i32:16-i64:16-f16:16-f32:16-f64:1
 
 ; RUN: llc -mtriple=cdm < %s | FileCheck %s
 
+; Test for variadic functions:
+; - Caller passes arguments as usual
+; - Callee stores all registers r0-r3 (except ones, what hold regular arguments) in "shadow space" on stack
+
 define i16 @foo(i16 %a, ...) #0 {
 entry:
 ; CHECK-LABEL: foo>

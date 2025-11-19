@@ -2,7 +2,7 @@ target datalayout = "e-S16-p:16:16-i8:8-i16:16-i32:16-i64:16-f16:16-f32:16-f64:1
 
 ; RUN: llc -mtriple=cdm < %s | FileCheck %s
 
-; Test for emitting public labels for non-static functions
+; Test for emitting private labels for static functions
 
 ; Function Attrs: noinline nounwind optnone
 define internal i16 @foo() #0 {
