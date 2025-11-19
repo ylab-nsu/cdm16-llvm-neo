@@ -7,6 +7,7 @@
 
 #include "CDM.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include <cstdint>
 
 namespace llvm {
 class CDMSubtarget;
@@ -21,6 +22,10 @@ public:
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
+
+  // More than 2^15 will be impossible to address in the current scheme.
+  uint64_t getStackThreshold() const override { return INT16_MAX; }
+
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
 

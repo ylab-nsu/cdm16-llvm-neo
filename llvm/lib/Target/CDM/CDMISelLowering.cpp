@@ -13,9 +13,11 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DataLayout.h"
@@ -39,7 +41,7 @@ CDMISelLowering::CDMISelLowering(const CDMTargetMachine &TM,
   setOperationAction(ISD::VAARG, MVT::Other, Expand);
   setOperationAction(ISD::VACOPY, MVT::Other, Expand);
   setOperationAction(ISD::VAEND, MVT::Other, Expand);
-  
+
   setStackPointerRegisterToSaveRestore(CDM::SP);
   setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
   setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
@@ -64,7 +66,7 @@ CDMISelLowering::CDMISelLowering(const CDMTargetMachine &TM,
   setOperationAction(ISD::SRL_PARTS, MVT::i16, Expand);
   setOperationAction(ISD::SRA_PARTS, MVT::i16, Expand);
 
-  // We don't support multiplication/division natively, 
+  // We don't support multiplication/division natively,
   // so they are lowered to libcalls.
   setOperationAction(ISD::MUL, MVT::i16, LibCall);
   setOperationAction(ISD::SMUL_LOHI, MVT::i16, Expand);
@@ -645,8 +647,7 @@ CDMISelLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 MachineBasicBlock *
 CDMISelLowering::emitPseudoSelectCC(MachineInstr &MI,
                                     MachineBasicBlock *MBB) const {
-  const CDMInstrInfo &TII =
-      *(const CDMInstrInfo *)MBB->getParent()->getSubtarget().getInstrInfo();
+  const TargetInstrInfo *TII = MBB->getParent()->getSubtarget().getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
 
   auto Dst = MI.getOperand(0);
@@ -677,23 +678,25 @@ CDMISelLowering::emitPseudoSelectCC(MachineInstr &MI,
   IfFalseMBB->addSuccessor(TailMBB);
 
   if (MI.getOpcode() == CDM::PseudoSelectCC) {
-    BuildMI(HeadMBB, DL, TII.get(CDM::PseudoBCondRR))
+    BuildMI(HeadMBB, DL, TII->get(CDM::PseudoBCondRR))
         .addImm(CondCode)
         .addReg(LHS.getReg())
         .addReg(RHS.getReg())
         .addMBB(TailMBB);
   } else {
-    BuildMI(HeadMBB, DL, TII.get(CDM::PseudoBCondRI))
+    BuildMI(HeadMBB, DL, TII->get(CDM::PseudoBCondRI))
         .addImm(CondCode)
         .addReg(LHS.getReg())
         .addImm(RHS.getImm())
         .addMBB(TailMBB);
   }
 
-  BuildMI(*TailMBB, TailMBB->begin(), DL, TII.get(CDM::PHI), Dst.getReg())
+  BuildMI(*TailMBB, TailMBB->begin(), DL, TII->get(CDM::PHI), Dst.getReg())
       .addReg(TrueVal.getReg())
+      // .add(TrueVal)
       .addMBB(HeadMBB)
       .addReg(FalseVal.getReg())
+      // .add(FalseVal)
       .addMBB(IfFalseMBB);
 
   MI.eraseFromParent();
@@ -706,8 +709,7 @@ CDMISelLowering::emitShiftLargeAmt(MachineInstr &MI,
                                    MachineBasicBlock *MBB) const {
   MachineFunction &MF = *MBB->getParent();
   MachineRegisterInfo &RI = MF.getRegInfo();
-  const CDMInstrInfo &TII =
-      *(const CDMInstrInfo *)MF.getSubtarget().getInstrInfo();
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
 
   unsigned Opc;
@@ -731,13 +733,18 @@ CDMISelLowering::emitShiftLargeAmt(MachineInstr &MI,
     break;
   }
 
-  Register DstReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(1).getReg();
+  MachineOperand Dst = MI.getOperand(0);
+  MachineOperand Src = MI.getOperand(1);
   int64_t ShAmt = MI.getOperand(2).getImm();
+
   Register TmpReg = RI.createVirtualRegister(&CDM::CPURegsRegClass);
 
-  BuildMI(*MBB, MI, DL, TII.get(Opc), TmpReg).addReg(SrcReg).addImm(8);
-  BuildMI(*MBB, MI, DL, TII.get(Opc), DstReg).addReg(TmpReg).addImm(ShAmt - 8);
+  BuildMI(*MBB, MI, DL, TII->get(Opc), TmpReg).add(Src).addImm(8);
+  BuildMI(*MBB, MI, DL, TII->get(Opc))
+      .add(Dst)
+      .addReg(TmpReg)
+      .addImm(ShAmt - 8);
+
   MI.eraseFromParent();
 
   return MBB;
@@ -748,8 +755,7 @@ MachineBasicBlock *
 CDMISelLowering::emitShiftLoop(MachineInstr &MI, MachineBasicBlock *MBB) const {
   MachineFunction &MF = *MBB->getParent();
   MachineRegisterInfo &RI = MF.getRegInfo();
-  const CDMInstrInfo &TII =
-      *(const CDMInstrInfo *)MF.getSubtarget().getInstrInfo();
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
   const BasicBlock *BB = MBB->getBasicBlock();
 
@@ -861,9 +867,9 @@ CDMISelLowering::emitShiftLoop(MachineInstr &MI, MachineBasicBlock *MBB) const {
   // RemBB:
   // ...
 
-  BuildMI(MBB, DL, TII.get(CDM::BR)).addMBB(CheckBB);
+  BuildMI(MBB, DL, TII->get(CDM::BR)).addMBB(CheckBB);
 
-  auto ShiftOp = BuildMI(LoopBB, DL, TII.get(Opc));
+  auto ShiftOp = BuildMI(LoopBB, DL, TII->get(Opc));
   for (int RegIndex = 0; RegIndex < RegCount; RegIndex++) {
     ShiftOp.addReg(ShiftRegs2[RegIndex], RegState::Define);
   }
@@ -875,28 +881,28 @@ CDMISelLowering::emitShiftLoop(MachineInstr &MI, MachineBasicBlock *MBB) const {
   if (RegCount == 1) {
     ShiftOp.addImm(1);
   }
-  BuildMI(LoopBB, DL, TII.get(CDM::SUBI), ShiftAmtReg2)
+  BuildMI(LoopBB, DL, TII->get(CDM::SUBI), ShiftAmtReg2)
       .addReg(ShiftAmtReg)
       .addImm(1);
 
   for (int RegIndex = 0; RegIndex < RegCount; RegIndex++) {
-    BuildMI(CheckBB, DL, TII.get(CDM::PHI), ShiftRegs[RegIndex])
+    BuildMI(CheckBB, DL, TII->get(CDM::PHI), ShiftRegs[RegIndex])
         .addReg(SrcRegs[RegIndex])
         .addMBB(MBB)
         .addReg(ShiftRegs2[RegIndex])
         .addMBB(LoopBB);
-    BuildMI(CheckBB, DL, TII.get(CDM::PHI), DstRegs[RegIndex])
+    BuildMI(CheckBB, DL, TII->get(CDM::PHI), DstRegs[RegIndex])
         .addReg(SrcRegs[RegIndex])
         .addMBB(MBB)
         .addReg(ShiftRegs2[RegIndex])
         .addMBB(LoopBB);
   }
-  BuildMI(CheckBB, DL, TII.get(CDM::PHI), ShiftAmtReg)
+  BuildMI(CheckBB, DL, TII->get(CDM::PHI), ShiftAmtReg)
       .addReg(ShAmtSrcReg)
       .addMBB(MBB)
       .addReg(ShiftAmtReg2)
       .addMBB(LoopBB);
-  BuildMI(CheckBB, DL, TII.get(CDM::PseudoBCondRI))
+  BuildMI(CheckBB, DL, TII->get(CDM::PseudoBCondRI))
       .addImm(CDMCOND::GT)
       .addReg(ShiftAmtReg)
       .addImm(0)

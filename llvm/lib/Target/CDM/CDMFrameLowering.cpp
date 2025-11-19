@@ -12,6 +12,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
@@ -30,9 +31,7 @@ bool CDMFrameLowering::hasFPImpl(const MachineFunction &MF) const {
 void CDMFrameLowering::emitPrologue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
-
-  const CDMInstrInfo &TII =
-      *static_cast<const CDMInstrInfo *>(STI.getInstrInfo());
+  const CDMInstrInfo *TII = STI.getInstrInfo();
 
   MachineBasicBlock::iterator MBBI = MBB.begin();
   DebugLoc DL = DebugLoc();
@@ -41,12 +40,12 @@ void CDMFrameLowering::emitPrologue(MachineFunction &MF,
   uint64_t StackSize = MFI.getStackSize();
 
   if (hasFP(MF)) {
-    BuildMI(MBB, MBBI, DL, TII.get(CDM::PUSH)).addReg(CDM::FP);
-    BuildMI(MBB, MBBI, DL, TII.get(CDM::LDSP)).addReg(CDM::FP);
+    BuildMI(MBB, MBBI, DL, TII->get(CDM::PUSH)).addReg(CDM::FP);
+    BuildMI(MBB, MBBI, DL, TII->get(CDM::LDSP)).addReg(CDM::FP);
   }
 
   if (StackSize != 0) {
-    TII.adjustStackPtr(-StackSize, MBB, MBBI, DL);
+    TII->adjustStackPtr(-StackSize, MBB, MBBI, DL);
   }
 }
 
@@ -63,7 +62,7 @@ void CDMFrameLowering::emitEpilogue(MachineFunction &MF,
   // Get the number of bytes from FrameInfo
   uint64_t StackSize = MFI.getStackSize();
 
-  if (StackSize != 0) {
+  if (!hasFP(MF) and StackSize != 0) {
     TII.adjustStackPtr(StackSize, MBB, MBBI, DL);
   }
 

@@ -7,6 +7,9 @@
 #include "CDM.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/Register.h"
+#include "llvm/Support/TypeSize.h"
 
 #define GET_INSTRINFO_CTOR_DTOR
 #include "CDMGenInstrInfo.inc"
@@ -104,7 +107,7 @@ void CDMInstrInfo::expandBCond(MachineBasicBlock &MBB, MachineInstr &MI) const {
 
   DebugLoc DL = MI.getDebugLoc();
 
-  auto CondCode = static_cast<CDMCOND::CondOp>(MI.getOperand(0).getImm());
+  auto CondCode = MI.getOperand(0);
   auto LHS = MI.getOperand(1);
   auto RHS = MI.getOperand(2);
   auto Target = MI.getOperand(3);
@@ -114,17 +117,15 @@ void CDMInstrInfo::expandBCond(MachineBasicBlock &MBB, MachineInstr &MI) const {
   MIBundleBuilder Bundler = MIBundleBuilder(MBB, MI);
 
   if (MI.getOpcode() == CDM::PseudoBCondRR) {
-    Bundler.append(BuildMI(*MBB.getParent(), DL, get(CDM::CMP))
-                       .addReg(LHS.getReg())
-                       .addReg(RHS.getReg()));
+    Bundler.append(
+        BuildMI(*MBB.getParent(), DL, get(CDM::CMP)).add(LHS).add(RHS));
   } else {
-    Bundler.append(BuildMI(*MBB.getParent(), DL, get(CDM::CMPI))
-                       .addReg(LHS.getReg())
-                       .addImm(RHS.getImm()));
+    Bundler.append(
+        BuildMI(*MBB.getParent(), DL, get(CDM::CMPI)).add(LHS).add(RHS));
   }
 
   Bundler.append(BuildMI(*MBB.getParent(), DL, get(CDM::BCond))
-                     .addImm(CondCode)
+                     .add(CondCode)
                      .addMBB(Target.getMBB()));
 
   finalizeBundle(MBB, Bundler.begin(), Bundler.end());
@@ -181,36 +182,48 @@ void CDMInstrInfo::expandShiftExt(MachineBasicBlock &MBB,
     break;
   }
 
-  SmallVector<Register, 4> DstRegs;
-  SmallVector<Register, 4> SrcRegs;
+  SmallVector<MachineOperand *, 4> DstRegs;
+  SmallVector<MachineOperand *, 4> SrcRegs;
+
   for (int I = 0; I < RegCount; I++) {
-    DstRegs.push_back(MI.getOperand(I).getReg());
+    DstRegs.push_back(&MI.getOperand(I));
   }
+
   for (int I = 0; I < RegCount; I++) {
-    SrcRegs.push_back(MI.getOperand(RegCount + I).getReg());
+    SrcRegs.push_back(&MI.getOperand(RegCount + I));
   }
 
   // Bundle up the chain because a move inserted between its elements may break
   // it.
   MIBundleBuilder Bundler = MIBundleBuilder(MBB, MI);
   if (HeadIsLo) {
-    Bundler.append(
-        BuildMI(MF, DL, get(HeadOpc), DstRegs[0]).addReg(SrcRegs[0]).addImm(1));
-    for (int I = 1; I < RegCount; I++) {
-      Bundler.append(BuildMI(MF, DL, get(TailOpc), DstRegs[I])
-                         .addReg(SrcRegs[I])
-                         .addImm(1));
-    }
-  } else {
-    Bundler.append(BuildMI(MF, DL, get(HeadOpc), DstRegs[RegCount - 1])
-                       .addReg(SrcRegs[RegCount - 1])
+    Bundler.append(BuildMI(MF, DL, get(HeadOpc), DstRegs[0]->getReg())
+                       .addReg(SrcRegs[0]->getReg())
                        .addImm(1));
-    for (int I = RegCount - 2; I >= 0; I--) {
-      Bundler.append(BuildMI(MF, DL, get(TailOpc), DstRegs[I])
-                         .addReg(SrcRegs[I])
+    for (int I = 1; I < RegCount - 1; I++) {
+      Bundler.append(BuildMI(MF, DL, get(TailOpc), DstRegs[I]->getReg())
+                         .addReg(SrcRegs[I]->getReg())
                          .addImm(1));
     }
+    Bundler.append(
+        BuildMI(MF, DL, get(TailOpc), DstRegs[RegCount - 1]->getReg())
+            .add(*SrcRegs[RegCount - 1])
+            .addImm(1));
+  } else {
+    Bundler.append(
+        BuildMI(MF, DL, get(HeadOpc), DstRegs[RegCount - 1]->getReg())
+            .addReg(SrcRegs[RegCount - 1]->getReg())
+            .addImm(1));
+    for (int I = RegCount - 2; I > 0; I--) {
+      Bundler.append(BuildMI(MF, DL, get(TailOpc), DstRegs[I]->getReg())
+                         .addReg(SrcRegs[I]->getReg())
+                         .addImm(1));
+    }
+    Bundler.append(BuildMI(MF, DL, get(TailOpc), DstRegs[0]->getReg())
+                       .add(*SrcRegs[0])
+                       .addImm(1));
   }
+
   finalizeBundle(MBB, Bundler.begin(), Bundler.end());
 }
 
@@ -223,30 +236,39 @@ void CDMInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     assert(CDM::CPURegsRegClass.contains(DestReg) &&
            "Cannot copy SP to special register");
 
-    MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, get(CDM::LDSP));
-    MIB.addReg(DestReg, RegState::Define);
+    BuildMI(MBB, MI, DL, get(CDM::LDSP)).addReg(DestReg, RegState::Define);
     return;
   }
+
   if (DestReg == CDM::SP) {
     assert(CDM::CPURegsRegClass.contains(SrcReg) &&
            "Cannot copy a special register to SP");
 
-    MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, get(CDM::STSP));
-    MIB.addReg(SrcReg, getKillRegState(KillSrc));
+    BuildMI(MBB, MI, DL, get(CDM::STSP))
+        .addReg(SrcReg, getKillRegState(KillSrc));
     return;
   }
 
   assert(CDM::CPURegsRegClass.contains(SrcReg) &&
          CDM::CPURegsRegClass.contains(DestReg) &&
          "Impossible reg-to-reg copy");
-  MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, get(CDM::MOVE));
-  MIB.addReg(DestReg);
-  MIB.addReg(SrcReg, getKillRegState(KillSrc));
+  BuildMI(MBB, MI, DL, get(CDM::MOVE))
+      .addReg(DestReg, RegState::Define)
+      .addReg(SrcReg, getKillRegState(KillSrc));
 }
 
 void CDMInstrInfo::adjustStackPtr(int64_t Amount, MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
                                   const DebugLoc &DL) const {
+  // addsp's (odly) use imm11 so
+  if (-1024 > Amount or Amount >= 1024) {
+    int64_t ImmLimit = Amount < 0 ? -1024 : 1023;
+    BuildMI(MBB, I, DL, get(CDM::ADDSP)).addImm(ImmLimit);
+
+    // le tail recusrive pls
+    return adjustStackPtr(Amount - ImmLimit, MBB, I, DL);
+  }
+
   BuildMI(MBB, I, DL, get(CDM::ADDSP)).addImm(Amount);
 }
 
