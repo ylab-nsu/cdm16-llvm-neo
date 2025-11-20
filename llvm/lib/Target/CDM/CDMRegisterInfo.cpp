@@ -114,7 +114,7 @@ bool CDMRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   auto [SubstitutionOpc, MemSize] = OpcodeFind->second;
 
-  if ((FpOffset > MemSize * 64 - 1) or (FpOffset < MemSize * -64)) {
+  if ((FpOffset > MemSize * 64 - 1) || (FpOffset < MemSize * -64)) {
     const MachineOperand &SrcOperand = MI.getOperand(0);
 
     Register OffsetReg;

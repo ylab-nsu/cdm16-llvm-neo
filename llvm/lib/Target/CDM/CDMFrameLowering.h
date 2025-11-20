@@ -6,8 +6,9 @@
 #define LLVM_CDMFRAMELOWERING_H
 
 #include "CDM.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
-#include <limits>
 
 namespace llvm {
 class CDMSubtarget;
@@ -23,16 +24,12 @@ public:
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
 
-  // More than 2^15 will be impossible to address in the current scheme.
-  uint64_t getStackThreshold() const override {
-    return std::numeric_limits<int16_t>::max();
-  }
-
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
 
 private:
   const CDMSubtarget &STI;
+  static void checkStackFrameSize(const MachineFunction &MF);
 };
 
 } // namespace llvm

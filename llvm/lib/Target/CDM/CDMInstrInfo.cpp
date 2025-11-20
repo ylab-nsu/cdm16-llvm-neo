@@ -259,7 +259,7 @@ void CDMInstrInfo::adjustStackPtr(int64_t Amount, MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
                                   const DebugLoc &DL) const {
   // addsp's (odly) use imm11 so
-  if (-1024 > Amount or Amount >= 1024) {
+  if (-1024 > Amount || Amount >= 1024) {
     int64_t ImmLimit = Amount < 0 ? -1024 : 1023;
     BuildMI(MBB, I, DL, get(CDM::ADDSP)).addImm(ImmLimit);
 

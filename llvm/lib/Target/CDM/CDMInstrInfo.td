@@ -141,7 +141,7 @@ defm ROL : Shift<"rol", rotl>;
 defm ROR : Shift<"ror", rotr>;
 
 // Class for rotate through carry instrctions
-class RotateCarry<string instr_asm> 
+class RotateCarry<string instr_asm>
     : CDMInst<(outs CPURegs:$rd), (ins CPURegs:$rs, shamt:$shamt),
           !strconcat(instr_asm, "\t$rs, $rd, $shamt"), []>;
 
@@ -173,7 +173,7 @@ multiclass ShiftExt32<SDNode OpNode> {
         [(set CPURegs:$rdlo, CPURegs:$rdhi, (OpNode CPURegs:$rslo, CPURegs:$rshi, CPURegs:$shamt))]> {
       let usesCustomInserter = true;
     }
-    
+
     // The shift amount is always 1.
     // Expanded post-RA into a shift-rotate chain.
     def "" : CDMPseudo<(outs CPURegs:$rdlo, CPURegs:$rdhi), (ins CPURegs:$rslo, CPURegs:$rshi), "",
@@ -188,19 +188,19 @@ multiclass ShiftExt64<SDNode OpNode> {
     // The shift amount is stored in a register.
     // Expanded into an inline loop.
     def "_LOOP" : CDMPseudo<
-      (outs CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3), 
+      (outs CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3),
       (ins CPURegs:$rs0, CPURegs:$rs1, CPURegs:$rs2, CPURegs:$rs3, CPURegs:$shamt), "",
-      [(set CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3, 
+      [(set CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3,
         (OpNode CPURegs:$rs0, CPURegs:$rs1, CPURegs:$rs2, CPURegs:$rs3, CPURegs:$shamt))]> {
       let usesCustomInserter = true;
     }
-    
+
     // The shift amount is always 1.
     // Expanded post-RA into a shift-rotate chain.
     def "" : CDMPseudo<
-      (outs CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3), 
+      (outs CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3),
       (ins CPURegs:$rs0, CPURegs:$rs1, CPURegs:$rs2, CPURegs:$rs3), "",
-      [(set CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3, 
+      [(set CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3,
         (OpNode CPURegs:$rs0, CPURegs:$rs1, CPURegs:$rs2, CPURegs:$rs3, 1))]> {
       let Constraints = "$rd0 = $rs0,$rd1 = $rs1,$rd2 = $rs2,$rd3 = $rs3,@earlyclobber $rd0,@earlyclobber $rd1,@earlyclobber $rd2,@earlyclobber $rd3";
     }
@@ -527,6 +527,10 @@ let Uses = [SP], Defs = [SP] in {
   def PUSH : CDMInst<(outs), (ins CPURegs:$rs), "push\t$rs", []> {
     let mayStore = 1;
   }
+
+  def ADDSP : CDMInst<(outs), (ins simm16:$imm), "addsp\t$imm", []>;
+
+  def ADDSPR : CDMInst<(outs), (ins CPURegs:$rd), "addsp\t$rd", []>;
 }
 
 def LDSP : CDMInst<(outs CPURegs:$rd), (ins), "ldsp\t$rd", []> {
@@ -537,10 +541,8 @@ def STSP : CDMInst<(outs), (ins CPURegs:$rd), "stsp\t$rd", []> {
   let Defs = [SP];
 }
 
-def ADDSP : CDMInst<(outs), (ins simm16:$imm), "addsp\t$imm", []> {
-  let Uses = [SP];
-  let Defs = [SP];
-}
+
+
 
 def load_frame_adderss
     : CDMInst<(outs CPURegs:$rd), (ins CPURegs:$rs), "add\t$rs, fp, $rd", []> {
