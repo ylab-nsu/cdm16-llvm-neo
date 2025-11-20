@@ -693,10 +693,8 @@ CDMISelLowering::emitPseudoSelectCC(MachineInstr &MI,
 
   BuildMI(*TailMBB, TailMBB->begin(), DL, TII->get(CDM::PHI), Dst.getReg())
       .addReg(TrueVal.getReg())
-      // .add(TrueVal)
       .addMBB(HeadMBB)
       .addReg(FalseVal.getReg())
-      // .add(FalseVal)
       .addMBB(IfFalseMBB);
 
   MI.eraseFromParent();

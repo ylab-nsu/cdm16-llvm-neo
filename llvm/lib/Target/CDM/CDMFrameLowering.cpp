@@ -12,7 +12,6 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
-#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
@@ -62,7 +61,7 @@ void CDMFrameLowering::emitEpilogue(MachineFunction &MF,
   // Get the number of bytes from FrameInfo
   uint64_t StackSize = MFI.getStackSize();
 
-  if (!hasFP(MF) and StackSize != 0) {
+  if (!hasFP(MF) && StackSize != 0) {
     TII.adjustStackPtr(StackSize, MBB, MBBI, DL);
   }
 

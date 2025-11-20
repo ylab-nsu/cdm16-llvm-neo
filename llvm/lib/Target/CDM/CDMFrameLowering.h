@@ -7,7 +7,7 @@
 
 #include "CDM.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
-#include <cstdint>
+#include <limits>
 
 namespace llvm {
 class CDMSubtarget;
@@ -24,7 +24,9 @@ public:
                                 MachineBasicBlock::iterator MI) const override;
 
   // More than 2^15 will be impossible to address in the current scheme.
-  uint64_t getStackThreshold() const override { return INT16_MAX; }
+  uint64_t getStackThreshold() const override {
+    return std::numeric_limits<int16_t>::max();
+  }
 
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;

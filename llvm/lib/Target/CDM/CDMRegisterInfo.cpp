@@ -179,19 +179,19 @@ Register CDMRegisterInfo::huntRegister(MachineBasicBlock &MBB,
 
   for (auto It = std::prev(MBB.end()); It != MI; --It) {
     for (MachineOperand Op : It->operands()) {
-      if (Op.isReg() and Op.getReg().isPhysical() and Op.isDef())
+      if (Op.isReg() && Op.getReg().isPhysical() && Op.isDef())
         Used.erase(Op.getReg());
     }
 
     for (MachineOperand Op : It->operands()) {
-      if (Op.isReg() and Op.getReg().isPhysical() and Op.isUse())
+      if (Op.isReg() && Op.getReg().isPhysical() && Op.isUse())
         Used.insert(Op.getReg());
     }
   }
 
   SmallSet<Register, CDM::NUM_TARGET_REGS> LiveInMI;
   for (MachineOperand Op : MI->operands()) {
-    if (Op.isReg() and Op.getReg().isPhysical())
+    if (Op.isReg() && Op.getReg().isPhysical())
       LiveInMI.insert(Op.getReg());
   }
 

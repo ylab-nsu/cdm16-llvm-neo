@@ -9,7 +9,6 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/Register.h"
-#include "llvm/Support/TypeSize.h"
 
 #define GET_INSTRINFO_CTOR_DTOR
 #include "CDMGenInstrInfo.inc"
@@ -236,7 +235,7 @@ void CDMInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     assert(CDM::CPURegsRegClass.contains(DestReg) &&
            "Cannot copy SP to special register");
 
-    BuildMI(MBB, MI, DL, get(CDM::LDSP)).addReg(DestReg, RegState::Define);
+    BuildMI(MBB, MI, DL, get(CDM::LDSP), DestReg);
     return;
   }
 
@@ -252,8 +251,7 @@ void CDMInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   assert(CDM::CPURegsRegClass.contains(SrcReg) &&
          CDM::CPURegsRegClass.contains(DestReg) &&
          "Impossible reg-to-reg copy");
-  BuildMI(MBB, MI, DL, get(CDM::MOVE))
-      .addReg(DestReg, RegState::Define)
+  BuildMI(MBB, MI, DL, get(CDM::MOVE), DestReg)
       .addReg(SrcReg, getKillRegState(KillSrc));
 }
 
