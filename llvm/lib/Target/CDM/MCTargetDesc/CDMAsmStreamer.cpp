@@ -22,6 +22,7 @@ CDMAsmStreamer::CDMAsmStreamer(MCContext &Context,
       MAI(Context.getAsmInfo()), InstPrinter(std::move(printer)),
       CommentStream(CommentToEmit), IsVerboseAsm(true) {
   assert(InstPrinter && "CDMAsmStreamer created with no instruction printer");
+  Context.setUseNamesOnTempLabels(true);
 }
 
 void CDMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
@@ -79,12 +80,9 @@ void CDMAsmStreamer::switchSectionNoPrint(MCSection *Section) {
     MCStreamer::switchSectionNoPrint(Section);
 }
 
-void CDMAsmStreamer::switchSection(MCSection *Section, uint32_t Subsec) {
+void CDMAsmStreamer::switchSection(MCSection *Section, uint32_t Subsection) {
     AddComment("switchSection CDM");
-    if (Section) {
-        OS << "### SECTION: " << Section->getName() << "\n";
-    }
-    MCStreamer::switchSection(Section, Subsec);
+    MCStreamer::switchSection(Section, Subsection);
 }
 
 void CDMAsmStreamer::AddComment(const Twine &T, bool EOL) {

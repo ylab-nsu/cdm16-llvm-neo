@@ -59,7 +59,7 @@ public:
 
   void initSections(bool NoExecStack, const MCSubtargetInfo &STI) override;
   virtual void switchSectionNoPrint(MCSection *Section) override;
-  virtual void switchSection(MCSection *Section, uint32_t Subsec = 0) override;
+  void switchSection(MCSection *Section, uint32_t Subsection) override;
 
   void emitBytes(StringRef Data) override;
 
