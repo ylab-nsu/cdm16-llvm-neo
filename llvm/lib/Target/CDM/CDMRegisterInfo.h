@@ -23,7 +23,7 @@ public:
                            RegScavenger *RS) const override;
   Register getFrameRegister(const MachineFunction &MF) const override;
 
-  // Searches for an unused register up to MI excluding reguster that are live
+  // Searches for an unused register up to MI excluding registers that are live
   // during MI. If no register is available and adjusting the stack is
   // permitted, spills used register using the stack (in this case MI should not
   // be SP dependant). On failure returns 0.

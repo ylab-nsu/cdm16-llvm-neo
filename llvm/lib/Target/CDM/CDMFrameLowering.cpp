@@ -20,7 +20,7 @@
 
 namespace llvm {
 
-void CDMFrameLowering::checkStackFrameSize(const MachineFunction &MF) {
+void CDMFrameLowering::ensureStackFrameAddressable(const MachineFunction &MF) {
   static int DK_LargeStackFrameSize = // NOLINT
       llvm::getNextAvailablePluginDiagnosticKind();
 
@@ -68,7 +68,7 @@ void CDMFrameLowering::emitPrologue(MachineFunction &MF,
   DebugLoc DL = DebugLoc();
 
   // First, check if stack frame size exceeds limit
-  checkStackFrameSize(MF);
+  ensureStackFrameAddressable(MF);
 
   // Second, compute final stack size.
   uint64_t StackSize = MFI.getStackSize();
@@ -78,10 +78,11 @@ void CDMFrameLowering::emitPrologue(MachineFunction &MF,
     BuildMI(MBB, MBBI, DL, TII->get(CDM::LDSP), CDM::FP);
   }
 
-  if (StackSize == 0)
+  if (StackSize == 0) {
     return;
+  }
 
-  // 4 instruction in alternative rout
+  // 4 instruction in alternative scheme
   const uint64_t StackSizeThreshold = 4 * 1024;
 
   if (StackSize > StackSizeThreshold) {
@@ -93,12 +94,7 @@ void CDMFrameLowering::emitPrologue(MachineFunction &MF,
     return;
   }
 
-  uint64_t Rest = StackSize;
-  for (; Rest > 1024; Rest -= 1024) {
-    TII->adjustStackPtr(-1024, MBB, MBBI, DL);
-  }
-
-  TII->adjustStackPtr(-Rest, MBB, MBBI, DL);
+  TII->adjustStackPtr(-StackSize, MBB, MBBI, DL);
 }
 
 void CDMFrameLowering::emitEpilogue(MachineFunction &MF,

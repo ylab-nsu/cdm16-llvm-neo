@@ -29,7 +29,7 @@ protected:
 
 private:
   const CDMSubtarget &STI;
-  static void checkStackFrameSize(const MachineFunction &MF);
+  static void ensureStackFrameAddressable(const MachineFunction &MF);
 };
 
 } // namespace llvm

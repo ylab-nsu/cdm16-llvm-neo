@@ -2,6 +2,7 @@
 // Created by ilya on 21.11.23.
 //
 
+#include "llvm/ADT/SmallVector.h"
 #define DEBUG_TYPE "cdm-reg-info"
 
 #include "CDMFrameLowering.h"
@@ -93,33 +94,29 @@ bool CDMRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   MI.getOperand(I).ChangeToImmediate(FpOffset);
 
-  // devil: my child will write switch-case like "they" want him to
-  // god: abuse c++ till the day you die son
-
   // Opcode -> (Opcode, MemSize)
   static const std::map<unsigned, std::pair<unsigned, unsigned>>
-      SubstitutionOpcsTable = {
+      FPRelSubstitutionOpcsTable = {
           {CDM::ssw, {CDM::stwRR, 2}},   {CDM::lsw, {CDM::ldwRR, 2}},
           {CDM::ssb, {CDM::stbRR, 1}},   {CDM::lsb, {CDM::ldbRR, 1}},
           {CDM::lssb, {CDM::ldsbRR, 1}},
       };
 
-  const auto OpcodeFind =
-      std::map<unsigned, std::pair<unsigned, unsigned>>::const_iterator(
-          SubstitutionOpcsTable.find(
-              MI.getOpcode())); // because inline gods said so
+  const auto Opcode = MI.getOpcode();
+  const auto OpcodeFindIter = FPRelSubstitutionOpcsTable.find(Opcode);
 
-  if (OpcodeFind == SubstitutionOpcsTable.end())
+  if (OpcodeFindIter == FPRelSubstitutionOpcsTable.end()) {
     return false; // no instruction to change
+  }
 
-  auto [SubstitutionOpc, MemSize] = OpcodeFind->second;
+  auto [SubstitutionOpc, MemSize] = OpcodeFindIter->second;
 
-  if ((FpOffset > MemSize * 64 - 1) || (FpOffset < MemSize * -64)) {
+  if (FpOffset >= MemSize * 64 || FpOffset < MemSize * -64) {
     const MachineOperand &SrcOperand = MI.getOperand(0);
 
     Register OffsetReg;
     // if load
-    if (InstrInfo->get(MI.getOpcode()).mayLoad()) {
+    if (InstrInfo->get(Opcode).mayLoad()) {
       OffsetReg = SrcOperand.getReg(); // just use same register since load will
                                        // re-define it anyway
     } else {
@@ -166,49 +163,73 @@ Register CDMRegisterInfo::huntRegister(MachineBasicBlock &MBB,
                                        const TargetRegisterClass &RC,
                                        MachineBasicBlock::iterator MI,
                                        bool AllowStackAdj) {
-  // TODO: handle inital sets (Used, GPR) thru info from tablegen (and put that
-  // info into fucking tablegen in a first place)
+  using RegSmallSet = SmallSet<Register, CDM::NUM_TARGET_REGS>;
+
   assert(MI->getParent() == &MBB && "MI must belong to the MBB");
   assert(MI != MBB.end() && "MI must not be MBB.end()");
 
-  // r4-r6 are callee saved, so we can't initially asume they're available
-  SmallSet<Register, CDM::NUM_TARGET_REGS> Used{CDM::R4, CDM::R5, CDM::R6};
+  const MachineRegisterInfo &MRegInfo = MBB.getParent()->getRegInfo();
+  const MachineFunction &MF = *MBB.getParent();
 
-  for (auto It = MBB.liveout_begin(); It != MBB.liveout_end(); ++It)
+  RegSmallSet Used;
+  for (const MCPhysReg *I = MRegInfo.getCalleeSavedRegs(); *I; I++) {
+    if (!MRegInfo.isReserved(*I)) {
+      Used.insert(*I);
+    }
+  }
+
+  for (auto It = MBB.liveout_begin(); It != MBB.liveout_end(); ++It) {
     Used.insert(It->PhysReg);
+  }
 
   for (auto It = std::prev(MBB.end()); It != MI; --It) {
     for (MachineOperand Op : It->operands()) {
-      if (Op.isReg() && Op.getReg().isPhysical() && Op.isDef())
+      if (Op.isReg() && Op.getReg().isPhysical() && Op.isDef()) {
         Used.erase(Op.getReg());
+      }
     }
 
     for (MachineOperand Op : It->operands()) {
-      if (Op.isReg() && Op.getReg().isPhysical() && Op.isUse())
+      if (Op.isReg() && Op.getReg().isPhysical() && Op.isUse()) {
         Used.insert(Op.getReg());
+      }
     }
   }
 
-  SmallSet<Register, CDM::NUM_TARGET_REGS> LiveInMI;
+  RegSmallSet LiveInMI;
   for (MachineOperand Op : MI->operands()) {
-    if (Op.isReg() && Op.getReg().isPhysical())
+    if (Op.isReg() && Op.getReg().isPhysical()) {
       LiveInMI.insert(Op.getReg());
+    }
   }
 
-  const SmallSet<Register, 7> GPR{CDM::R0, CDM::R1, CDM::R2, CDM::R3,
-                                  CDM::R4, CDM::R5, CDM::R6};
+  // wrapped in lambda instant call so it's initialized statically
+  static const RegSmallSet GPR = [&RC, &MRegInfo, &MF]() {
+    RegSmallSet S;
+    for (auto Reg : RC.getRawAllocationOrder(MF)) {
+      if (!MRegInfo.isReserved(Reg)) {
+        S.insert(Reg);
+      }
+    }
+    return S;
+  }();
+
   auto Available = GPR;
 
-  for (Register Reg : Used)
+  for (Register Reg : Used) {
     Available.erase(Reg);
-  for (Register Reg : LiveInMI)
+  }
+  for (Register Reg : LiveInMI) {
     Available.erase(Reg);
+  }
 
-  if (!Available.empty())
+  if (!Available.empty()) {
     return *Available.begin();
+  }
 
-  if (!AllowStackAdj)
+  if (!AllowStackAdj) {
     return 0;
+  }
 
   for (Register Reg : GPR) {
     if (!LiveInMI.contains(Reg)) {

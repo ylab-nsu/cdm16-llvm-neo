@@ -258,16 +258,14 @@ void CDMInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void CDMInstrInfo::adjustStackPtr(int64_t Amount, MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
                                   const DebugLoc &DL) const {
-  // addsp's (odly) use imm11 so
-  if (-1024 > Amount || Amount >= 1024) {
-    int64_t ImmLimit = Amount < 0 ? -1024 : 1023;
-    BuildMI(MBB, I, DL, get(CDM::ADDSP)).addImm(ImmLimit);
+  const int64_t ImmLimit = Amount < 0 ? -1024 : 1023;
+  int64_t Rest = Amount;
 
-    // le tail recusrive pls
-    return adjustStackPtr(Amount - ImmLimit, MBB, I, DL);
+  for (; Rest < -1024 || Rest >= 1024; Rest -= ImmLimit) {
+    BuildMI(MBB, I, DL, get(CDM::ADDSP)).addImm(ImmLimit);
   }
 
-  BuildMI(MBB, I, DL, get(CDM::ADDSP)).addImm(Amount);
+  BuildMI(MBB, I, DL, get(CDM::ADDSP)).addImm(Rest);
 }
 
 } // namespace llvm
