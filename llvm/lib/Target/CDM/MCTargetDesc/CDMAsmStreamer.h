@@ -52,19 +52,19 @@ public:
 
   void emitLabel(MCSymbol *Symbol, SMLoc Loc) override;
 
-  void EmitEOL();
-  void EmitCommentsAndEOL();
+  void emitEOL();
 
   void emitExplicitComments() override;
 
-  void initSections(bool NoExecStack, const MCSubtargetInfo &STI) override;
-  virtual void switchSectionNoPrint(MCSection *Section) override;
   void switchSection(MCSection *Section, uint32_t Subsection) override;
 
   void emitBytes(StringRef Data) override;
 
   void emitValueToAlignment(Align Alignment, int64_t Fill, uint8_t FillLen,
                             unsigned MaxBytesToEmit) override;
+
+  void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
+                                 unsigned MaxBytesToEmit = 0) override;
 
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 

@@ -1530,10 +1530,7 @@ void MCAsmStreamer::emitAlignmentDirective(uint64_t ByteAlignment,
 
 void MCAsmStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
                                          uint8_t FillLen,
-                                         unsigned MaxBytesToEmit) {
-  // TODO: do we even need alignment?
-  // emitAlignmentDirective(Alignment.value(), Fill, FillLen, MaxBytesToEmit);
-}
+                                         unsigned MaxBytesToEmit) {}
 
 void MCAsmStreamer::emitCodeAlignment(Align Alignment,
                                       const MCSubtargetInfo *STI,
