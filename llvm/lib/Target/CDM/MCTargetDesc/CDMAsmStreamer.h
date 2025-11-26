@@ -38,6 +38,13 @@ public:
   MCInstPrinter *getInstPrinter() { return InstPrinter.get(); }
   MCAssembler *getAssemblerPtr() override { return nullptr; }
 
+  raw_ostream &getCommentOS() override {
+      if (!IsVerboseAsm) {
+          return nulls();
+      }
+      return CommentStream;
+  }
+
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
     return false;
   }
@@ -73,6 +80,9 @@ public:
   void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override;
 
   void AddComment(const Twine &T, bool EOL = true) override;
+  
+  void emitRawComment(const Twine &T, bool TabPrefix = true) override;
+  
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                 SMLoc Loc = SMLoc()) override;
   void emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,

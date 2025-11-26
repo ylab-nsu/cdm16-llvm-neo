@@ -20,7 +20,7 @@ CDMAsmStreamer::CDMAsmStreamer(MCContext &Context,
                                std::unique_ptr<MCAsmBackend> asmbackend)
     : MCStreamer(Context), OSOwner(std::move(os)), OS(*OSOwner),
       MAI(Context.getAsmInfo()), InstPrinter(std::move(printer)),
-      CommentStream(CommentToEmit), IsVerboseAsm(true) {
+      CommentStream(CommentToEmit) {
     assert(InstPrinter && "CDMAsmStreamer created with no instruction printer");
     Context.setUseNamesOnTempLabels(true);
 
@@ -29,9 +29,34 @@ CDMAsmStreamer::CDMAsmStreamer(MCContext &Context,
         return;
     }
     IsVerboseAsm = TO->AsmVerbose;
+    
     if (IsVerboseAsm) {
         InstPrinter->setCommentStream(CommentStream);
     }
+}
+
+static bool isValidWordWithDots(StringRef Name) {
+    if (Name.empty()) {
+        return false;
+    }
+
+    if (!std::isalpha(Name[0]) && Name[0] != '_') {
+        return false;
+    }
+    
+    bool has_dot = false;
+    for (size_t i = 1; i < Name.size(); ++i) {
+        char c = Name[i];
+        if (c == '.') {
+            has_dot = true;
+            continue;
+        }
+        if (!std::isalnum(c) && c != '_' && c != '.') {
+            return false;
+        }
+    }
+    
+    return has_dot && Name.back() != '.';
 }
 
 void CDMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
@@ -42,13 +67,17 @@ void CDMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 
     Symbol->print(iOS, MAI);
 
-    for (char C : Str) {
-        if (std::isalnum(C) || C == '_') {
-            OS << C;
-        } else {
-            OS << "___";
-            OS << llvm::format("%02X", static_cast<unsigned char>(C));
-            OS << "___";
+    if (isValidWordWithDots(Str)) {
+        OS << Str;
+    } else {
+        for (char C : Str) {
+            if (std::isalnum(C) || C == '_' || C == '.') {
+                OS << C;
+            } else {
+                OS << "___";
+                OS << llvm::format("%02X", static_cast<unsigned char>(C));
+                OS << "___";
+            }
         }
     }
 
@@ -92,9 +121,11 @@ void CDMAsmStreamer::emitEOL() {
 }
 
 void CDMAsmStreamer::switchSection(MCSection *Section, uint32_t Subsection) {
-    AddComment("switchSection CDM");
+    MCSectionSubPair Cur = getCurrentSection();
     if (getCurrentSection().first != Section || getCurrentSection().second != Subsection) {
-        Section->printSwitchToSection(*MAI, getContext().getTargetTriple(), OS, Subsection);
+        if (MCTargetStreamer *TS = getTargetStreamer()) {
+            TS->changeSection(Cur.first, Section, Subsection, OS);
+        }
     }
     MCStreamer::switchSection(Section, Subsection);
 }
@@ -103,11 +134,11 @@ void CDMAsmStreamer::AddComment(const Twine &T, bool EOL) {
     if (!IsVerboseAsm) {
         return;
     }
-        
-    CommentToEmit.clear();
+
     T.toVector(CommentToEmit);
-    if (EOL && !CommentToEmit.empty() && CommentToEmit.back() != '\n')
+    if (EOL && !CommentToEmit.empty() && CommentToEmit.back() != '\n') {
         CommentToEmit.push_back('\n');
+    }
 }
 
 void CDMAsmStreamer::emitBytes(StringRef Data) {
@@ -249,6 +280,14 @@ void CDMAsmStreamer::emitFill(const MCExpr &NumValues, int64_t Size, int64_t Exp
         emitIntValue(ValueToEmit, EmissionSize);
         Emitted += EmissionSize;
     }
+}
+
+void CDMAsmStreamer::emitRawComment(const Twine &T, bool TabPrefix) {
+    if (TabPrefix) {
+        OS << '\t';
+    }
+    OS << MAI->getCommentString() << T;
+    emitEOL();
 }
 
 void CDMAsmStreamer::emitRawTextImpl(StringRef String) {
