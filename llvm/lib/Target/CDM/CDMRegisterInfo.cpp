@@ -95,7 +95,7 @@ bool CDMRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MI.getOperand(I).ChangeToImmediate(FpOffset);
 
   // Opcode -> (Opcode, MemSize)
-  static const std::map<unsigned, std::pair<unsigned, unsigned>>
+  static const std::map<unsigned, std::pair<unsigned, int>>
       FPRelSubstitutionOpcsTable = {
           {CDM::ssw, {CDM::stwRR, 2}},   {CDM::lsw, {CDM::ldwRR, 2}},
           {CDM::ssb, {CDM::stbRR, 1}},   {CDM::lsb, {CDM::ldbRR, 1}},

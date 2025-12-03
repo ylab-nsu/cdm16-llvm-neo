@@ -9,6 +9,5 @@ void foo(char a, char b, char c){
 // CHECK-NEXT: ssb r0, -1
 // CHECK-NEXT: ssb r1, -2
 // CHECK-NEXT: ssb r2, -3
-// CHECK-NEXT: addsp 4
 	volatile char arr[] = {a, b, c};
 }

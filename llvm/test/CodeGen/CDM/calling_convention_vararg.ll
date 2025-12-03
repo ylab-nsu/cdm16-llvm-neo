@@ -17,7 +17,6 @@ entry:
 ; CHECK-NEXT: ssw r2, 8
 ; CHECK-NEXT: ssw r1, 6
 ; CHECK-NEXT: add r1, r0, r0
-; CHECK-NEXT: addsp 2
 ; CHECK-NEXT: stsp fp
 ; CHECK-NEXT: pop fp
 ; CHECK-NEXT: rts
