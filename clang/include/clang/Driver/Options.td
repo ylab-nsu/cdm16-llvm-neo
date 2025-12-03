@@ -220,6 +220,8 @@ def m_hexagon_Features_HVX_Group : OptionGroup<"<hexagon features group>">,
                                    Group<m_Group>, DocName<"Hexagon">;
 def m_m68k_Features_Group: OptionGroup<"<m68k features group>">,
                            Group<m_Group>, DocName<"M68k">;
+def m_cdm_Features_Group : OptionGroup<"<cdm features group>">,
+                           Group<m_Group>, DocName<"CdM">;
 def m_mips_Features_Group : OptionGroup<"<mips features group>">,
                             Group<m_Group>, DocName<"MIPS">;
 def m_ppc_Features_Group : OptionGroup<"<ppc features group>">,
@@ -661,6 +663,10 @@ defvar std = !strconcat("LangStandard::getLangStandardForKind(", lang_std.KeyPat
 //   . => _
 
 // Developer Driver Options
+
+def cocas_debug_output : Separate<["--"], "cocas-debug-output">,
+                         Group<m_cdm_Features_Group>,
+                         HelpText<"Set file for exporting cocas debug info">;
 
 def internal_Group : OptionGroup<"<clang internal options>">,
   Flags<[HelpHidden]>;
