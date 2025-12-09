@@ -3,6 +3,7 @@
 //
 
 #include "CDMAsmPrinter.h"
+#include "MCTargetDesc/CDMTargetStreamer.h"
 #include "TargetInfo/CDMTargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -181,8 +182,6 @@ void CDMAsmPrinter::emitFunctionHeader() {
 void CDMAsmPrinter::emitStartOfAsmFile(Module &Module) {
   collectAndEmitSourceFiles(Module);
 
-  OutStreamer->emitRawText("memset, memcpy, memmove, __mulhi3, __divhi3, __udivhi3, __modhi3, __umodhi3, __mulsi3, __divsi3, __udivsi3, __modsi3, __umodsi3, __muldi3, __divdi3, __udivdi3, __moddi3, __umoddi3: ext\n");
-
   auto FN = Module.getSourceFileName();
 
   std::replace_if(
@@ -198,7 +197,6 @@ void CDMAsmPrinter::emitStartOfAsmFile(Module &Module) {
                      [&](auto Pref) {
                        return GV.getName().starts_with(Pref);
                      }) == PrefixesToIgnore.end()) {
-      OutStreamer->emitRawText(llvm::formatv("{0}: ext\n", GV.getName()));
     }
   }
 
@@ -209,7 +207,10 @@ void CDMAsmPrinter::emitStartOfAsmFile(Module &Module) {
 }
 
 void CDMAsmPrinter::emitEndOfAsmFile(Module &Module) {
-  OutStreamer->emitRawText("end.");
+  if (auto *TS = static_cast<CDMTargetStreamer *>(OutStreamer->getTargetStreamer())) {
+    TS->emitExtTable();
+    TS->emitEnd();
+  }
 }
 
 // TODO: implement target streamer

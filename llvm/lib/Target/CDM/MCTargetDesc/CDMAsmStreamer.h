@@ -4,6 +4,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
+#include <set>
 
 namespace llvm {
 
@@ -19,6 +20,7 @@ class CDMAsmStreamer : public MCStreamer {
   formatted_raw_ostream &OS;
   const MCAsmInfo *MAI;
   std::unique_ptr<MCInstPrinter> InstPrinter;
+  std::set<MCSymbol *> UsedSymbols;
   SmallString<128> ExplicitCommentToEmit;
   SmallString<128> CommentToEmit;
   raw_svector_ostream CommentStream;
@@ -59,6 +61,10 @@ public:
 
   void emitLabel(MCSymbol *Symbol, SMLoc Loc) override;
 
+  void visitUsedSymbol(const MCSymbol &Sym) override;
+
+  const std::set<MCSymbol *> &getUsedSymbols() const { return UsedSymbols; }
+
   void emitEOL();
 
   void emitExplicitComments() override;
@@ -87,6 +93,12 @@ public:
                 SMLoc Loc = SMLoc()) override;
   void emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                 SMLoc Loc = SMLoc()) override;
+
+  void reset() override;
+
+  static bool classof(const MCStreamer *S) {
+    return S->hasRawTextSupport();
+  }
 };
 
 } // namespace llvm

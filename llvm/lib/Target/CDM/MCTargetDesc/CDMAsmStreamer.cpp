@@ -86,6 +86,10 @@ void CDMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
     emitEOL();
 }
 
+void CDMAsmStreamer::visitUsedSymbol(const MCSymbol &Sym) {
+    UsedSymbols.insert(const_cast<MCSymbol*>(&Sym));
+}
+
 void CDMAsmStreamer::emitExplicitComments() {
     StringRef Comments = ExplicitCommentToEmit;
     if (!Comments.empty()) {
@@ -180,8 +184,6 @@ void CDMAsmStreamer::emitIntValue(uint64_t Value, unsigned Size) {
 }
 
 void CDMAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) {
-    SmallString<128> Str;
-    raw_svector_ostream iOS(Str);
     const char *Directive = nullptr;
 
     switch (Size) {
@@ -191,6 +193,8 @@ void CDMAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc
     }
 
     if (Directive) {
+        SmallString<128> Str;
+        raw_svector_ostream iOS(Str);
         OS << Directive;
         getContext().getAsmInfo()->printExpr(iOS, *Value);
         emitRawText(iOS.str());
@@ -291,6 +295,14 @@ void CDMAsmStreamer::emitRawComment(const Twine &T, bool TabPrefix) {
 }
 
 void CDMAsmStreamer::emitRawTextImpl(StringRef String) {
+    String.consume_back("\n");
     OS << String;
     emitEOL();
+}
+
+void CDMAsmStreamer::reset() {
+    MCStreamer::reset();
+    CommentToEmit.clear();
+    ExplicitCommentToEmit.clear();
+    UsedSymbols.clear();
 }

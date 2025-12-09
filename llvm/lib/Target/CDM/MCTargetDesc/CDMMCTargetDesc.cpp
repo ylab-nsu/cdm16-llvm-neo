@@ -1,5 +1,6 @@
 #include "CDMMCTargetDesc.h"
 #include "CDMAsmStreamer.h"
+#include "CDMTargetStreamer.h"
 #include "CDMMCAsmInfo.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -74,11 +75,17 @@ static MCInstPrinter *createCDMMCInstPrinter(const Triple &T,
   return new CDMInstPrinter(MAI, MII, MRI);
 }
 
-static MCTargetStreamer *createCDMTargetAsmStreamer(MCStreamer &S,
+static MCTargetStreamer *createCDMTargetStreamer(MCStreamer &S,
                                                     formatted_raw_ostream &OS,
                                                     MCInstPrinter *InstPrint) {
-  return new CDMAsmTargetStreamer(S);
+  return new CDMTargetStreamer(S, OS);
 }
+
+/*static MCTargetStreamer *createCDMMCTargetAsmStreamer(MCStreamer &S,
+                                                      formatted_raw_ostream &OS,
+                                                      MCInstPrinter *InstPrint) {
+  return new CDMMCTargetStreamer(S, OS);
+}*/
 
 static MCStreamer *createCDMAsmStreamer(MCContext &Context,
                                           std::unique_ptr<formatted_raw_ostream> OS,
@@ -98,7 +105,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCDMTargetMC() {
   TargetRegistry::RegisterMCInstPrinter(getTheCDMTarget(),
                                         createCDMMCInstPrinter);
   TargetRegistry::RegisterAsmTargetStreamer(getTheCDMTarget(),
-                                            createCDMTargetAsmStreamer);
+                                            createCDMTargetStreamer);
   TargetRegistry::RegisterAsmStreamer(getTheCDMTarget(),
                                       createCDMAsmStreamer);
 }
