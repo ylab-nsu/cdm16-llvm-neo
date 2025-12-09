@@ -81,10 +81,7 @@ public:
   void AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
 
-  /*
-   * TODO: Add compiler rt
   std::string getCompilerRTPath() const override;
-  */
 
   bool SupportsProfiling() const override { return false; }
 

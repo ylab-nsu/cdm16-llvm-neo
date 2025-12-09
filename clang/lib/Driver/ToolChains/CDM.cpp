@@ -84,25 +84,25 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
       Exec, CmdArgs, Inputs, Output));
 }
 
-CDMToolChain::CDMToolChainInstallationDetector::CDMToolChainInstallationDetector(const Driver &D) : IsValid(false) {
+CDMToolChain::CDMToolChainInstallationDetector::CDMToolChainInstallationDetector(const Driver &D) : IsValid(true) {
   char *CocasEnv = std::getenv("COCAS");
 
   // If COCAS env defined, get it as path to cocas
   if (CocasEnv != NULL) {
     CocasPath = CocasEnv;
-    IsValid = true;
   }
   // Try to search cocas in PATH
   else if (llvm::ErrorOr<std::string> P =
-            llvm::sys::findProgramByName("cocas")){
+            llvm::sys::findProgramByName("cocas")) {
     CocasPath = *P;
-    IsValid = true;
   }
   // Try to search cocas in current directory
   else if (llvm::ErrorOr<std::string> P =
             llvm::sys::findProgramByName("cocas", {"."})) {
     CocasPath = *P;
-    IsValid = true;
+  }
+  else {
+    IsValid = false;
   }
 	
   // TODO: Set Lib and Include Path
@@ -112,12 +112,17 @@ CDMToolChain::CDMToolChainInstallationDetector::CDMToolChainInstallationDetector
   }
 }
 
+std::string CDMToolChain::getCompilerRTPath() const {
+  return CDMInstallation.getLibPath();
+}
+
 DerivedArgList *
 CDMToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
               Action::OffloadKind DeviceOffloadKind) const {
   DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
 
   // TODO: Remove this when C debug info emitting to objects in cocas got done
+
   // Remove -g option and warn user about its ignorance
   for (Arg *A : Args) {
     if (A->getOption().getID() == options::OPT_g_Flag) {
