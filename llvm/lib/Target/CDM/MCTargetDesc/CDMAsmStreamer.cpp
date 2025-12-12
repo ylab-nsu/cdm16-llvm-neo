@@ -133,7 +133,7 @@ void CDMAsmStreamer::visitUsedSymbol(const MCSymbol &Sym) {
 
 static inline char toOctal(int X) { return (X & 7) + '0'; }
 
-static void printQuotedString(StringRef Data, raw_ostream &OS) {
+static void printQuotedString(StringRef Data, raw_ostream &OS, bool AllowNonAscii = false) {
   OS << '"';
   for (unsigned char C : Data) {
     switch (C) {
@@ -165,7 +165,7 @@ static void printQuotedString(StringRef Data, raw_ostream &OS) {
       OS << "\\v";
       break;
     default:
-      if (isPrint(C)) {
+      if (isPrint(C) || (!isASCII(C) && AllowNonAscii)) {
         OS << (char)C;
       } else {
         OS << '\\';
@@ -371,4 +371,37 @@ void CDMAsmStreamer::reset() {
   CommentToEmit.clear();
   UsedSymbols.clear();
   EmittedSectionDirective = false;
+}
+
+void CDMAsmStreamer::emitRsect(const Twine &Name) {
+  OS << "rsect " << Name;
+  emitEOL();
+  addBlankLine();
+}
+
+void CDMAsmStreamer::emitDbgSource(unsigned FileIndex, const Twine &FileName) {
+  OS << "dbg_source " << FileIndex << ", ";
+  SmallString<128> Str;
+  FileName.toStringRef(Str);
+  printQuotedString(Str, OS, true);
+  emitEOL();
+}
+
+void CDMAsmStreamer::emitDbgLoc(unsigned Index, unsigned Line,
+                                unsigned Column) {
+  OS << "dbg_loc " << Index << ", " << Line << ", " << Column;
+  emitEOL();
+}
+
+void CDMAsmStreamer::emitExtList() {
+  for (const MCSymbol *Sym : UsedSymbols) {
+    if (Sym && !Sym->isDefined()) {
+      OS << Sym->getName() << ": ext";
+      emitEOL();
+    }
+  }
+}
+
+void CDMAsmStreamer::emitEnd() {
+  OS << "end.";
 }

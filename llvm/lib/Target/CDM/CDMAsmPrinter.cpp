@@ -34,7 +34,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
-#include <set>
 
 using namespace llvm;
 
@@ -71,11 +70,8 @@ void CDMAsmPrinter::collectAndEmitSourceFiles(Module &Module) {
 
           std::string Path = llvm::sys::path::convert_to_slash(RawPath);
 
-          // место для dbg_source
-
           if (!getSourceFileIndex(Checksum)) {
-            OutStreamer->emitRawText(formatv("dbg_source {0}, \"{1}\"\n",
-                                             this->SourceFiles.size(), Path));
+            getTargetStreamer()->emitDbgSource(this->SourceFiles.size(), Path);
             this->SourceFiles.insert({Checksum, this->SourceFiles.size()});
           }
         }
@@ -94,9 +90,6 @@ void CDMAsmPrinter::emitInstruction(const MachineInstr *Instr) {
   }
   if (Instr->isDebugLabel())
     return;
-
-
-  // место для dbg_loc
 
   DILocation *DebugLoc = Instr->getDebugLoc().get();
 
@@ -117,10 +110,8 @@ void CDMAsmPrinter::emitInstruction(const MachineInstr *Instr) {
                        CurrColumnNumber)
             << "\n";
 
-        OutStreamer->emitRawText(formatv("\n\tdbg_loc {0}, {1}, {2}",
-                                         *SourceFileIndex, CurrLineNumber,
-                                         CurrColumnNumber));
-
+        getTargetStreamer()->emitDbgLoc(*SourceFileIndex, CurrLineNumber,
+                                        CurrColumnNumber);
         PrevLineNumber = CurrLineNumber;
         PrevFileIndex = *SourceFileIndex;
       }
@@ -134,8 +125,8 @@ void CDMAsmPrinter::emitInstruction(const MachineInstr *Instr) {
   // iterate over all instructions in bundle and emit them all
   do {
     // Skip bundle pseudo instruction and emit content of a bundle
-    if (I->isBundle()){
-	continue;
+    if (I->isBundle()) {
+      continue;
     }
 
     if (I->isPseudo())
@@ -198,8 +189,7 @@ void CDMAsmPrinter::emitStartOfAsmFile(Module &Module) {
 }
 
 void CDMAsmPrinter::emitEndOfAsmFile(Module &Module) {
-  if (auto *TS = getTargetStreamer()) {
-    TS->emitExtTable();
-    TS->emitEnd();
-  }
+  auto *TS = getTargetStreamer();
+  TS->emitExtList();
+  TS->emitEnd();
 }

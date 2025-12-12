@@ -1,8 +1,7 @@
 add_llvm_component_library(LLVMCDMDesc
     CDMMCTargetDesc.cpp
     CDMAsmStreamer.cpp
-    CDMTargetStreamer.cpp
-        CDMMCAsmInfo.cpp
+    CDMMCAsmInfo.cpp
 
         LINK_COMPONENTS
         MC

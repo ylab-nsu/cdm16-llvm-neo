@@ -20,7 +20,7 @@ class CDMAsmStreamer : public MCStreamer {
   formatted_raw_ostream &OS;
   const MCAsmInfo *MAI;
   std::unique_ptr<MCInstPrinter> InstPrinter;
-  std::set<const MCSymbol*> UsedSymbols;
+  std::set<const MCSymbol *> UsedSymbols;
   SmallString<128> CommentToEmit;
   raw_svector_ostream CommentStream;
   raw_null_ostream NullStream;
@@ -32,31 +32,38 @@ protected:
   void emitRawTextImpl(StringRef String) override;
 
 public:
+  CDMAsmStreamer(MCContext &Context, std::unique_ptr<formatted_raw_ostream> OS,
+                 std::unique_ptr<MCInstPrinter> Printer,
+                 std::unique_ptr<MCCodeEmitter> Emitter,
+                 std::unique_ptr<MCAsmBackend> AsmBackend);
+
   // This should be used instead of MCAsmInfo::printExpr
   // to make sure that we don't print invalid expressions.
   static void printExpr(raw_ostream &OS, const MCExpr &Expr);
 
-  CDMAsmStreamer(MCContext &Context,
-                 std::unique_ptr<formatted_raw_ostream> OS,
-                 std::unique_ptr<MCInstPrinter> Printer,
-                 std::unique_ptr<MCCodeEmitter> Emitter,
-                 std::unique_ptr<MCAsmBackend> AsmBackend);
+  // CDM-specific functions
+  void emitRsect(const Twine &Name);
+  void emitDbgSource(unsigned FileIndex, const Twine &FileName);
+  void emitDbgLoc(unsigned Index, unsigned Line, unsigned Column);
+  void emitExtList();
+  void emitEnd();
 
   MCInstPrinter *getInstPrinter() { return InstPrinter.get(); }
   MCAssembler *getAssemblerPtr() override { return nullptr; }
 
   raw_ostream &getCommentOS() override {
-      if (!IsVerboseAsm) {
-          return nulls();
-      }
-      return CommentStream;
+    if (!IsVerboseAsm) {
+      return nulls();
+    }
+    return CommentStream;
   }
 
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
     return false;
   }
 
-  void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size, Align ByteAlignment) override {
+  void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+                        Align ByteAlignment) override {
     // CDM doesn't support common symbols
   }
 
@@ -67,8 +74,6 @@ public:
   void emitLabel(MCSymbol *Symbol, SMLoc Loc) override;
 
   void visitUsedSymbol(const MCSymbol &Sym) override;
-
-  const std::set<const MCSymbol*> &getUsedSymbols() const { return UsedSymbols; }
 
   void emitEOL();
 
@@ -84,7 +89,7 @@ public:
                             unsigned MaxBytesToEmit) override;
 
   void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
-                                 unsigned MaxBytesToEmit = 0) override;
+                         unsigned MaxBytesToEmit = 0) override;
 
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
@@ -103,9 +108,7 @@ public:
 
   void reset() override;
 
-  static bool classof(const MCStreamer *S) {
-    return S->hasRawTextSupport();
-  }
+  static bool classof(const MCStreamer *S) { return S->hasRawTextSupport(); }
 };
 
 } // namespace llvm
