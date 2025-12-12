@@ -50,6 +50,8 @@ std::optional<int> CDMAsmPrinter::getSourceFileIndex(StringRef Checksum) {
 }
 
 void CDMAsmPrinter::collectAndEmitSourceFiles(Module &Module) {
+  bool Emitted = false;
+
   for (Function &Function : Module) {
     for (BasicBlock &BasicBlock : Function) {
       for (Instruction &Instruction : BasicBlock) {
@@ -73,10 +75,15 @@ void CDMAsmPrinter::collectAndEmitSourceFiles(Module &Module) {
           if (!getSourceFileIndex(Checksum)) {
             getTargetStreamer()->emitDbgSource(this->SourceFiles.size(), Path);
             this->SourceFiles.insert({Checksum, this->SourceFiles.size()});
+            Emitted = true;
           }
         }
       }
     }
+  }
+
+  if (Emitted) {
+    OutStreamer->addBlankLine();
   }
 }
 

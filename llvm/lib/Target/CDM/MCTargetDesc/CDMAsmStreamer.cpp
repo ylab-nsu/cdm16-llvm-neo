@@ -382,14 +382,14 @@ void CDMAsmStreamer::emitRsect(const Twine &Name) {
 void CDMAsmStreamer::emitDbgSource(unsigned FileIndex, const Twine &FileName) {
   OS << "dbg_source " << FileIndex << ", ";
   SmallString<128> Str;
-  FileName.toStringRef(Str);
-  printQuotedString(Str, OS, true);
+  StringRef NameRef = FileName.toStringRef(Str);
+  printQuotedString(NameRef, OS, true);
   emitEOL();
 }
 
 void CDMAsmStreamer::emitDbgLoc(unsigned Index, unsigned Line,
                                 unsigned Column) {
-  OS << "dbg_loc " << Index << ", " << Line << ", " << Column;
+  OS << "\tdbg_loc " << Index << ", " << Line << ", " << Column;
   emitEOL();
 }
 
