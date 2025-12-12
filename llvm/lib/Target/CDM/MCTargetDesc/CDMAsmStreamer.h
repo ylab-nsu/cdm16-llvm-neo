@@ -26,6 +26,8 @@ class CDMAsmStreamer : public MCStreamer {
   raw_null_ostream NullStream;
   bool IsVerboseAsm;
 
+  bool EmittedSectionDirective = false;
+
 protected:
   void emitRawTextImpl(StringRef String) override;
 

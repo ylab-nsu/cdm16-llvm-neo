@@ -309,8 +309,10 @@ void CDMAsmStreamer::emitInstruction(const MCInst &Inst,
 }
 
 void CDMAsmStreamer::switchSection(MCSection *Section, uint32_t Subsection) {
-  if (getCurrentSection().first != Section ||
-      getCurrentSection().second != Subsection) {
+  MCSectionSubPair Cur = getCurrentSection();
+  if (!EmittedSectionDirective ||
+      MCSectionSubPair(Section, Subsection) != Cur) {
+    EmittedSectionDirective = true;
     emitRawText("### SECTION: " + Section->getName() + "\n");
   }
   MCStreamer::switchSection(Section, Subsection);
@@ -368,4 +370,5 @@ void CDMAsmStreamer::reset() {
   MCStreamer::reset();
   CommentToEmit.clear();
   UsedSymbols.clear();
+  EmittedSectionDirective = false;
 }
