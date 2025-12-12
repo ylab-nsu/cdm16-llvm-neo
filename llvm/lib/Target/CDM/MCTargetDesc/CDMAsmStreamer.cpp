@@ -51,21 +51,73 @@ static void printSymbolName(StringRef Name, raw_ostream &OS) {
   }
 }
 
-void CDMAsmStreamer::printExpr(raw_ostream &OS, const MCExpr &Expr) {
+// Cocas only supports add and sub expressions with no parentheses.
+static void printExprImpl(raw_ostream &OS, const MCExpr &Expr, bool LeadingPlus,
+                          bool Negate) {
   switch (Expr.getKind()) {
+  default: {
+    int64_t IntValue;
+    if (Expr.evaluateAsAbsolute(IntValue)) {
+      if (Negate) {
+        IntValue = -IntValue;
+      }
+      if (IntValue >= 0 && LeadingPlus) {
+        OS << '+';
+      }
+      OS << IntValue;
+      return;
+    }
+  } break;
+
   case MCExpr::SymbolRef: {
     const MCSymbolRefExpr &SRE = cast<MCSymbolRefExpr>(Expr);
     StringRef Name = SRE.getSymbol().getName();
-    printSymbolName(Name, OS);
-  } break;
-  default:
-    int64_t IntValue;
-    if (!Expr.evaluateAsAbsolute(IntValue)) {
-      report_fatal_error("Don't know how to emit this value.");
+    if (!Negate && LeadingPlus) {
+      OS << '+';
     }
-    OS << IntValue;
-    break;
+    if (Negate) {
+      OS << '-';
+    }
+    printSymbolName(Name, OS);
+    return;
+  } break;
+
+  case MCExpr::Binary: {
+    const MCBinaryExpr &BE = cast<MCBinaryExpr>(Expr);
+    switch (BE.getOpcode()) {
+    case MCBinaryExpr::Add:
+      printExprImpl(OS, *BE.getLHS(), LeadingPlus, Negate);
+      printExprImpl(OS, *BE.getRHS(), true, Negate);
+      return;
+    case MCBinaryExpr::Sub:
+      printExprImpl(OS, *BE.getLHS(), LeadingPlus, Negate);
+      printExprImpl(OS, *BE.getRHS(), true, !Negate);
+      return;
+    default:
+      break;
+    }
+  } break;
+
+  case MCExpr::Unary: {
+    const MCUnaryExpr &UE = cast<MCUnaryExpr>(Expr);
+    switch (UE.getOpcode()) {
+    case MCUnaryExpr::Plus:
+      printExprImpl(OS, *UE.getSubExpr(), LeadingPlus, Negate);
+      return;
+    case MCUnaryExpr::Minus:
+      printExprImpl(OS, *UE.getSubExpr(), LeadingPlus, !Negate);
+      return;
+    default:
+      break;
+    }
+  } break;
   }
+
+  report_fatal_error("Don't know how to emit this value.");
+}
+
+void CDMAsmStreamer::printExpr(raw_ostream &OS, const MCExpr &Expr) {
+  printExprImpl(OS, Expr, false, false);
 }
 
 void CDMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
