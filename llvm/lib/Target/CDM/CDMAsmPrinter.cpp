@@ -71,6 +71,8 @@ void CDMAsmPrinter::collectAndEmitSourceFiles(Module &Module) {
 
           std::string Path = llvm::sys::path::convert_to_slash(RawPath);
 
+          // место для dbg_source
+
           if (!getSourceFileIndex(Checksum)) {
             OutStreamer->emitRawText(formatv("dbg_source {0}, \"{1}\"\n",
                                              this->SourceFiles.size(), Path));
@@ -80,8 +82,6 @@ void CDMAsmPrinter::collectAndEmitSourceFiles(Module &Module) {
       }
     }
   }
-
-  OutStreamer->emitRawText("\n\n");
 }
 
 void CDMAsmPrinter::emitInstruction(const MachineInstr *Instr) {
@@ -94,6 +94,9 @@ void CDMAsmPrinter::emitInstruction(const MachineInstr *Instr) {
   }
   if (Instr->isDebugLabel())
     return;
+
+
+  // место для dbg_loc
 
   DILocation *DebugLoc = Instr->getDebugLoc().get();
 
@@ -143,20 +146,24 @@ void CDMAsmPrinter::emitInstruction(const MachineInstr *Instr) {
     OutStreamer->emitInstruction(TmpInst0, getSubtargetInfo());
   } while ((++I != E) && I->isInsideBundle());
 }
+
 void CDMAsmPrinter::emitFunctionBodyStart() {
   MCInstLower.initialize(&MF->getContext());
   // TODO
 }
+
 void CDMAsmPrinter::emitFunctionBodyEnd() {
   // TODO
 }
+
 void CDMAsmPrinter::emitFunctionEntryLabel() {
   OutStreamer->emitLabel(CurrentFnSym);
-  //  OutStreamer->emitRawText(llvm::formatv("{0}>", CurrentFnSym->getName()));
 }
+
 void CDMAsmPrinter::emitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const {
   // not needed (stub)
 }
+
 void CDMAsmPrinter::emitFunctionHeader() {
   // If something is missing, check original implementation
   // We don't want to emit anything here, but we want to preserve some of the
@@ -183,48 +190,16 @@ void CDMAsmPrinter::emitStartOfAsmFile(Module &Module) {
   collectAndEmitSourceFiles(Module);
 
   auto FN = Module.getSourceFileName();
-
   std::replace_if(
       FN.begin(), FN.end(), [](char C) { return !(isAlnum(C) || C == '_'); },
       '_');
-  OutStreamer->emitRawText(llvm::formatv("rsect _{0}_{1}\n\n", FN, rand()));
 
-  std::set<std::string> PrefixesToIgnore = {"llvm.lifetime.", "llvm."};
-
-  for (auto &GV : Module.global_objects()) {
-    if (GV.isDeclaration() and
-        std::find_if(PrefixesToIgnore.begin(), PrefixesToIgnore.end(),
-                     [&](auto Pref) {
-                       return GV.getName().starts_with(Pref);
-                     }) == PrefixesToIgnore.end()) {
-    }
-  }
-
-  // for (auto &ExternalSymbolName : ExternalSymbolNames) {
-  //   OutStreamer->emitRawText(formatv("{0}: ext\n", ExternalSymbolName));
-  // }
-
+  getTargetStreamer()->emitRsect(llvm::formatv("_{0}_{1}", FN, rand()));
 }
 
 void CDMAsmPrinter::emitEndOfAsmFile(Module &Module) {
-  if (auto *TS = static_cast<CDMTargetStreamer *>(OutStreamer->getTargetStreamer())) {
+  if (auto *TS = getTargetStreamer()) {
     TS->emitExtTable();
     TS->emitEnd();
   }
-}
-
-// TODO: implement target streamer
-CDMAsmTargetStreamer::CDMAsmTargetStreamer(MCStreamer &S)
-    : MCTargetStreamer(S) {}
-void CDMAsmTargetStreamer::emitLabel(MCSymbol *Symbol) {}
-
-void CDMAsmTargetStreamer::changeSection(const MCSection *CurSection,
-                                         MCSection *Section,
-                                         uint32_t SubSection,
-                                         raw_ostream &OS) {
-  // This is a stub. We don't have sections in cdm
-  // Section->
-  // OS << llvm::formatv("rsect[{0}] ", Section->getName()/*Without first
-  // dot*/);
-  OS << llvm::formatv("### SECTION: {0}\n", Section->getName());
 }

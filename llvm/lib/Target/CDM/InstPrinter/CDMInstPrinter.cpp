@@ -6,7 +6,6 @@
 #include <map>
 
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -18,6 +17,7 @@ using namespace llvm;
 #define PRINT_ALIAS_INSTR
 #include "CDMGenAsmWriter.inc"
 #include "CDMInstrInfo.h"
+#include "MCTargetDesc/CDMAsmStreamer.h"
 
 void CDMInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                StringRef Annot, const MCSubtargetInfo &STI,
@@ -40,7 +40,7 @@ void CDMInstPrinter::printOperand(const MCInst *MI, unsigned int OpNo,
     return;
   }
   if (Op.isExpr()) {
-    MAI.printExpr(O, *Op.getExpr());
+    CDMAsmStreamer::printExpr(O, *Op.getExpr());
     return;
   }
 

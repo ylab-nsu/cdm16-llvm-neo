@@ -81,12 +81,6 @@ static MCTargetStreamer *createCDMTargetStreamer(MCStreamer &S,
   return new CDMTargetStreamer(S, OS);
 }
 
-/*static MCTargetStreamer *createCDMMCTargetAsmStreamer(MCStreamer &S,
-                                                      formatted_raw_ostream &OS,
-                                                      MCInstPrinter *InstPrint) {
-  return new CDMMCTargetStreamer(S, OS);
-}*/
-
 static MCStreamer *createCDMAsmStreamer(MCContext &Context,
                                           std::unique_ptr<formatted_raw_ostream> OS,
                                           std::unique_ptr<MCInstPrinter> IP,

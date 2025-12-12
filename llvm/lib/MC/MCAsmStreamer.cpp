@@ -2670,7 +2670,7 @@ MCStreamer *llvm::createAsmStreamer(MCContext &Context,
                                     std::unique_ptr<formatted_raw_ostream> OS,
                                     std::unique_ptr<MCInstPrinter> IP,
                                     std::unique_ptr<MCCodeEmitter> CE,
-                                    std::unique_ptr<MCAsmBackend> TAB) {
+                                    std::unique_ptr<MCAsmBackend> MAB) {
   return new MCAsmStreamer(Context, std::move(OS), std::move(IP), std::move(CE),
-                           std::move(TAB));
+                           std::move(MAB));
 }

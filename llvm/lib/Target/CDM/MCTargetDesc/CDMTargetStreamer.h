@@ -6,6 +6,8 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/ADT/StringRef.h"
 
+#include "CDMAsmStreamer.h"
+
 namespace llvm {
 class CDMAsmStreamer;
 
@@ -17,14 +19,18 @@ public:
     CDMTargetStreamer(MCStreamer &S, formatted_raw_ostream &os)
         : MCTargetStreamer(S), OS(os) {}
 
-    void emitRsect(StringRef Name);
+    void emitRsect(const Twine &Name);
     void emitDdgSource();
     void emitDbgLoc(unsigned Index, unsigned Line, unsigned Column);
     void emitExtTable();
     void emitEnd();
-    
+
     void changeSection(const MCSection *CurSection, MCSection *Section,
                      uint32_t SubSection, raw_ostream &OS) override;
+
+    CDMAsmStreamer *getAsmStreamer() const {
+        return static_cast<CDMAsmStreamer *>(&Streamer);
+    }
 };
 
 } // namespace llvm

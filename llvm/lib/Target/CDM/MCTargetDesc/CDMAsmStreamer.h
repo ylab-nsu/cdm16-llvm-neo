@@ -20,8 +20,7 @@ class CDMAsmStreamer : public MCStreamer {
   formatted_raw_ostream &OS;
   const MCAsmInfo *MAI;
   std::unique_ptr<MCInstPrinter> InstPrinter;
-  std::set<MCSymbol *> UsedSymbols;
-  SmallString<128> ExplicitCommentToEmit;
+  std::set<const MCSymbol*> UsedSymbols;
   SmallString<128> CommentToEmit;
   raw_svector_ostream CommentStream;
   raw_null_ostream NullStream;
@@ -31,11 +30,15 @@ protected:
   void emitRawTextImpl(StringRef String) override;
 
 public:
+  // This should be used instead of MCAsmInfo::printExpr
+  // to make sure that we don't print invalid expressions.
+  static void printExpr(raw_ostream &OS, const MCExpr &Expr);
+
   CDMAsmStreamer(MCContext &Context,
-                 std::unique_ptr<formatted_raw_ostream> os,
-                 std::unique_ptr<MCInstPrinter> printer,
-                 std::unique_ptr<MCCodeEmitter> emitter,
-                 std::unique_ptr<MCAsmBackend> asmbackend);
+                 std::unique_ptr<formatted_raw_ostream> OS,
+                 std::unique_ptr<MCInstPrinter> Printer,
+                 std::unique_ptr<MCCodeEmitter> Emitter,
+                 std::unique_ptr<MCAsmBackend> AsmBackend);
 
   MCInstPrinter *getInstPrinter() { return InstPrinter.get(); }
   MCAssembler *getAssemblerPtr() override { return nullptr; }
@@ -63,15 +66,17 @@ public:
 
   void visitUsedSymbol(const MCSymbol &Sym) override;
 
-  const std::set<MCSymbol *> &getUsedSymbols() const { return UsedSymbols; }
+  const std::set<const MCSymbol*> &getUsedSymbols() const { return UsedSymbols; }
 
   void emitEOL();
 
-  void emitExplicitComments() override;
+  void addBlankLine() override { emitEOL(); }
 
   void switchSection(MCSection *Section, uint32_t Subsection) override;
 
   void emitBytes(StringRef Data) override;
+
+  void emitBinaryData(StringRef Data) override;
 
   void emitValueToAlignment(Align Alignment, int64_t Fill, uint8_t FillLen,
                             unsigned MaxBytesToEmit) override;
@@ -82,13 +87,13 @@ public:
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   void emitIntValue(uint64_t Value, unsigned Size) override;
-  
+
   void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override;
 
   void AddComment(const Twine &T, bool EOL = true) override;
-  
+
   void emitRawComment(const Twine &T, bool TabPrefix = true) override;
-  
+
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                 SMLoc Loc = SMLoc()) override;
   void emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,

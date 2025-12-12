@@ -1,308 +1,319 @@
 #include "CDMAsmStreamer.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCInstPrinter.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
-#include "llvm/MC/MCAsmBackend.h"
-#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
 CDMAsmStreamer::CDMAsmStreamer(MCContext &Context,
-                               std::unique_ptr<formatted_raw_ostream> os,
-                               std::unique_ptr<MCInstPrinter> printer,
-                               std::unique_ptr<MCCodeEmitter> emitter,
-                               std::unique_ptr<MCAsmBackend> asmbackend)
-    : MCStreamer(Context), OSOwner(std::move(os)), OS(*OSOwner),
-      MAI(Context.getAsmInfo()), InstPrinter(std::move(printer)),
+                               std::unique_ptr<formatted_raw_ostream> OS,
+                               std::unique_ptr<MCInstPrinter> Printer,
+                               std::unique_ptr<MCCodeEmitter> Emitter,
+                               std::unique_ptr<MCAsmBackend> AsmBackend)
+    : MCStreamer(Context), OSOwner(std::move(OS)), OS(*OSOwner),
+      MAI(Context.getAsmInfo()), InstPrinter(std::move(Printer)),
       CommentStream(CommentToEmit) {
-    assert(InstPrinter && "CDMAsmStreamer created with no instruction printer");
-    Context.setUseNamesOnTempLabels(true);
-
-    auto *TO = Context.getTargetOptions();
-    if (!TO) {
-        return;
-    }
+  assert(InstPrinter && "CDMAsmStreamer created with no instruction printer");
+  Context.setUseNamesOnTempLabels(true);
+  InstPrinter->setCommentStream(CommentStream);
+  auto *TO = Context.getTargetOptions();
+  if (TO) {
     IsVerboseAsm = TO->AsmVerbose;
-    
-    if (IsVerboseAsm) {
-        InstPrinter->setCommentStream(CommentStream);
-    }
+  }
 }
 
-static bool isValidWordWithDots(StringRef Name) {
-    if (Name.empty()) {
-        return false;
+static void printSymbolName(StringRef Name, raw_ostream &OS) {
+  // TODO This symbol name correction is temporary until we have
+  // quoted symbol names in cocas.
+  //
+  // This can still produce invalid symbol names, because we don't
+  // ensure that symbol names don't start with a dot or a digit or
+  // end with a dot.
+  for (char C : Name) {
+    if (std::isalnum(C) || C == '_' || C == '.') {
+      OS << C;
+    } else {
+      OS << "___";
+      OS << llvm::format("%02X", (unsigned)C);
+      OS << "___";
     }
+  }
+}
 
-    if (!std::isalpha(Name[0]) && Name[0] != '_') {
-        return false;
+void CDMAsmStreamer::printExpr(raw_ostream &OS, const MCExpr &Expr) {
+  switch (Expr.getKind()) {
+  case MCExpr::SymbolRef: {
+    const MCSymbolRefExpr &SRE = cast<MCSymbolRefExpr>(Expr);
+    StringRef Name = SRE.getSymbol().getName();
+    printSymbolName(Name, OS);
+  } break;
+  default:
+    int64_t IntValue;
+    if (!Expr.evaluateAsAbsolute(IntValue)) {
+      report_fatal_error("Don't know how to emit this value.");
     }
-    
-    bool has_dot = false;
-    for (size_t i = 1; i < Name.size(); ++i) {
-        char c = Name[i];
-        if (c == '.') {
-            has_dot = true;
-            continue;
-        }
-        if (!std::isalnum(c) && c != '_' && c != '.') {
-            return false;
-        }
-    }
-    
-    return has_dot && Name.back() != '.';
+    OS << IntValue;
+    break;
+  }
 }
 
 void CDMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
-    MCStreamer::emitLabel(Symbol, Loc);
-
-    SmallString<128> Str;
-    raw_svector_ostream iOS(Str);
-
-    Symbol->print(iOS, MAI);
-
-    if (isValidWordWithDots(Str)) {
-        OS << Str;
-    } else {
-        for (char C : Str) {
-            if (std::isalnum(C) || C == '_' || C == '.') {
-                OS << C;
-            } else {
-                OS << "___";
-                OS << llvm::format("%02X", static_cast<unsigned char>(C));
-                OS << "___";
-            }
-        }
-    }
-
-    OS << (Symbol->isExternal() ? ">" : ":");
-
-    emitEOL();
+  MCStreamer::emitLabel(Symbol, Loc);
+  printSymbolName(Symbol->getName(), OS);
+  OS << (Symbol->isExternal() ? ">" : ":");
+  emitEOL();
 }
 
 void CDMAsmStreamer::visitUsedSymbol(const MCSymbol &Sym) {
-    UsedSymbols.insert(const_cast<MCSymbol*>(&Sym));
+  UsedSymbols.insert(&Sym);
 }
 
-void CDMAsmStreamer::emitExplicitComments() {
-    StringRef Comments = ExplicitCommentToEmit;
-    if (!Comments.empty()) {
-        OS << Comments;
+static inline char toOctal(int X) { return (X & 7) + '0'; }
+
+static void printQuotedString(StringRef Data, raw_ostream &OS) {
+  OS << '"';
+  for (unsigned char C : Data) {
+    switch (C) {
+    case '\\':
+      OS << "\\\\";
+      break;
+    case '"':
+      OS << "\\\"";
+      break;
+    case '\a':
+      OS << "\\a";
+      break;
+    case '\b':
+      OS << "\\b";
+      break;
+    case '\f':
+      OS << "\\f";
+      break;
+    case '\n':
+      OS << "\\n";
+      break;
+    case '\r':
+      OS << "\\r";
+      break;
+    case '\t':
+      OS << "\\t";
+      break;
+    case '\v':
+      OS << "\\v";
+      break;
+    default:
+      if (isPrint(C)) {
+        OS << (char)C;
+      } else {
+        OS << '\\';
+        OS << toOctal(C >> 6);
+        OS << toOctal(C >> 3);
+        OS << toOctal(C >> 0);
+      }
     }
-    ExplicitCommentToEmit.clear();
+  }
+  OS << '"';
 }
 
-void CDMAsmStreamer::emitEOL() {
-    emitExplicitComments();
-
-    if (!isVerboseAsm()) {
-        OS << '\n';
-        return;
+static bool canPrintAsQuotedString(StringRef Data) {
+  for (char C : Data) {
+    // Cocas has UTF-8 strings so they cannot have arbitrary bytes
+    if ((unsigned)C > 127) {
+      return false;
     }
-    if (CommentToEmit.empty() && CommentStream.GetNumBytesInBuffer() == 0) {
-        OS << '\n';
-        return;
-    }
-
-    StringRef Comments = CommentToEmit;
-
-    assert(Comments.back() == '\n' && "Comment array not newline terminated");
-    do {
-        OS.PadToColumn(MAI->getCommentColumn());
-        size_t Position = Comments.find('\n');
-        OS << MAI->getCommentString() << ' ' << Comments.substr(0, Position) << '\n';
-
-        Comments = Comments.substr(Position+1);
-    } while (!Comments.empty());
-
-    CommentToEmit.clear();
-}
-
-void CDMAsmStreamer::switchSection(MCSection *Section, uint32_t Subsection) {
-    MCSectionSubPair Cur = getCurrentSection();
-    if (getCurrentSection().first != Section || getCurrentSection().second != Subsection) {
-        if (MCTargetStreamer *TS = getTargetStreamer()) {
-            TS->changeSection(Cur.first, Section, Subsection, OS);
-        }
-    }
-    MCStreamer::switchSection(Section, Subsection);
-}
-
-void CDMAsmStreamer::AddComment(const Twine &T, bool EOL) {
-    if (!IsVerboseAsm) {
-        return;
-    }
-
-    T.toVector(CommentToEmit);
-    if (EOL && !CommentToEmit.empty() && CommentToEmit.back() != '\n') {
-        CommentToEmit.push_back('\n');
-    }
+  }
+  return true;
 }
 
 void CDMAsmStreamer::emitBytes(StringRef Data) {
-    if (Data.empty()) {
-        return;
-    }
-
-    const char *Directive = "\tdb\t";
-    for (const unsigned char C : Data.bytes()) {
-        OS << Directive << (unsigned)C;
-        emitEOL();
-    }
-}
-
-void CDMAsmStreamer::emitValueToAlignment(Align Alignment, int64_t Fill, uint8_t FillLen, unsigned MaxBytesToEmit) {
-    assert((Fill == 0) && "Non-zero fill value not supported for alignment");
-
-    if (Alignment == Align(1)) {
-        return;
-    }
-
-    OS << "\talign" << " " << Alignment.value();
+  if (canPrintAsQuotedString(Data)) {
+    OS << "\tdb\t";
+    printQuotedString(Data, OS);
     emitEOL();
+  } else {
+    emitBinaryData(Data);
+  }
 }
 
-void CDMAsmStreamer::emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI, unsigned MaxBytesToEmit) {
-    emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
-}
-
-void CDMAsmStreamer::emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) {
-    MCStreamer::emitInstruction(Inst, STI);
-    MCInstPrinter *InstPrinter = getInstPrinter();
-    InstPrinter->printInst(&Inst, 0, "", STI, OS);
+void CDMAsmStreamer::emitBinaryData(StringRef Data) {
+  const size_t Cols = 8;
+  for (size_t I = 0, EI = alignTo(Data.size(), Cols); I < EI; I += Cols) {
+    size_t J = I, EJ = std::min(I + Cols, Data.size());
+    assert(EJ > 0);
+    OS << "\tdb\t";
+    for (; J < EJ - 1; ++J) {
+      OS << format("0x%02x", uint8_t(Data[J])) << ", ";
+    }
+    OS << format("0x%02x", uint8_t(Data[J]));
     emitEOL();
+  }
 }
 
-void CDMAsmStreamer::emitIntValue(uint64_t Value, unsigned Size) { 
+void CDMAsmStreamer::emitIntValue(uint64_t Value, unsigned Size) {
   emitValue(MCConstantExpr::create(Value, getContext()), Size);
 }
 
-void CDMAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) {
-    const char *Directive = nullptr;
+void CDMAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
+                                   SMLoc Loc) {
 
-    switch (Size) {
-        case 1: Directive = "\tdb\t";  break;
-        case 2: Directive = "\tdc\t"; break;
-        default: Directive = nullptr; break;
-    }
+  MCStreamer::emitValueImpl(Value, Size, Loc);
 
-    if (Directive) {
-        SmallString<128> Str;
-        raw_svector_ostream iOS(Str);
-        OS << Directive;
-        getContext().getAsmInfo()->printExpr(iOS, *Value);
-        emitRawText(iOS.str());
+  const char *Directive;
+  switch (Size) {
+  case 1:
+    Directive = "\tdb\t";
+    break;
+  case 2:
+    Directive = "\tdc\t";
+    break;
+  default:
+    Directive = nullptr;
+    break;
+  }
 
-        MCStreamer::emitValueImpl(Value, Size, Loc);
-        return;
-    }
+  if (Directive) {
+    OS << Directive;
+    SmallString<128> Str;
+    raw_svector_ostream OS(Str);
+    printExpr(OS, *Value);
+    emitRawText(OS.str());
+    return;
+  }
 
-    int64_t IntValue;
-    if (!Value->evaluateAsAbsolute(IntValue)) {
-        report_fatal_error("Don't know how to emit this value.");
-    }
-
-    for (unsigned Emitted = 0; Emitted != Size;) {
-        unsigned Remaining = Size - Emitted;
-        unsigned EmissionSize = llvm::bit_floor(std::min(Remaining, (unsigned)Size - 1));
-
-        unsigned ByteOffset = Emitted;
-        uint64_t ValueToEmit = IntValue >> (ByteOffset * 8);
-
-        uint64_t Shift = 64 - EmissionSize * 8;
-        ValueToEmit &= ~0ULL >> Shift;
-        emitIntValue(ValueToEmit, EmissionSize);
-        Emitted += EmissionSize;
-    }
+  int64_t IntValue;
+  if (!Value->evaluateAsAbsolute(IntValue)) {
+    report_fatal_error("Don't know how to emit this value.");
+  }
+  SmallString<8> Str;
+  for (unsigned BytesEmitted = 0; BytesEmitted < Size; BytesEmitted++) {
+    Str.push_back((char)(IntValue >> (BytesEmitted * 8)));
+  }
+  emitBinaryData(Str);
 }
 
-void CDMAsmStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue, SMLoc Loc) {
-    int64_t IntNumBytes;
-
-    if (FillValue == 0) {
-        OS << "\tds\t";
-        getContext().getAsmInfo()->printExpr(OS, NumBytes);
-        emitEOL();
-        return;
-    }
-    
-    if (!NumBytes.evaluateAsAbsolute(IntNumBytes)) {
-        report_fatal_error("Cannot emit non-absolute expression lengths of fill.");
-    }
-    
-    if (IntNumBytes == 0) {
-        return;
-    }
-
-    for (int i = 0; i < IntNumBytes; ++i) {
-        OS << "\tdb\t" << (int)FillValue;
-        emitEOL();
-    }
+void CDMAsmStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
+                              SMLoc Loc) {
+  emitFill(NumBytes, 1, FillValue, Loc);
 }
 
-void CDMAsmStreamer::emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr, SMLoc Loc) {
-    int64_t IntNumValues;
-    if (!NumValues.evaluateAsAbsolute(IntNumValues)) {
-        report_fatal_error("Cannot emit non-absolute expression lengths of fill.");
-    }
-    
-    if (IntNumValues == 0) {
-        return;
-    }
-        
-    const char *Directive = nullptr;
-    switch (Size) {
-        case 1: Directive = "\tdb\t"; break;
-        case 2: Directive = "\tdc\t"; break;
-        default: Directive = nullptr; break;
-    }
-    
-    if (Directive) {
-        for (int i = 0; i < IntNumValues; ++i) {
-            OS << Directive << Expr;
-            emitEOL();
-        }
+void CDMAsmStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
+                              int64_t Expr, SMLoc Loc) {
+  int64_t IntNumValues;
+  if (!NumValues.evaluateAsAbsolute(IntNumValues)) {
+    report_fatal_error("Cannot emit non-absolute expression lengths of fill.");
+  }
 
-        return;
-    }
+  if (IntNumValues == 0) {
+    return;
+  }
 
-    for (unsigned Emitted = 0; Emitted != Size;) {
-        unsigned Remaining = Size - Emitted;
-        unsigned EmissionSize = llvm::bit_floor(std::min(Remaining, (unsigned)Size - 1));
+  if (Expr == 0) {
+    int64_t IntNumBytes = IntNumValues * Size;
+    OS << "\tds\t" << IntNumBytes;
+    emitEOL();
+    return;
+  }
 
-        unsigned ByteOffset = Emitted;
-        uint64_t ValueToEmit = (uint64_t)Expr >> (ByteOffset * 8);
+  for (int I = 0; I < IntNumValues; ++I) {
+    emitIntValue(Expr, Size);
+  }
+}
 
-        uint64_t Shift = 64 - EmissionSize * 8;
-        ValueToEmit &= ~0ULL >> Shift;
-        emitIntValue(ValueToEmit, EmissionSize);
-        Emitted += EmissionSize;
-    }
+void CDMAsmStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
+                                          uint8_t FillLen,
+                                          unsigned MaxBytesToEmit) {
+  assert((Fill == 0) && "Non-zero fill value not supported for alignment");
+
+  if (Alignment == Align(1)) {
+    return;
+  }
+  OS << "\talign\t" << Alignment.value();
+  emitEOL();
+}
+
+void CDMAsmStreamer::emitCodeAlignment(Align Alignment,
+                                       const MCSubtargetInfo *STI,
+                                       unsigned MaxBytesToEmit) {
+  emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
+}
+
+void CDMAsmStreamer::emitInstruction(const MCInst &Inst,
+                                     const MCSubtargetInfo &STI) {
+  MCStreamer::emitInstruction(Inst, STI);
+  MCInstPrinter *InstPrinter = getInstPrinter();
+  InstPrinter->printInst(&Inst, 0, "", STI, OS);
+  emitEOL();
+}
+
+void CDMAsmStreamer::switchSection(MCSection *Section, uint32_t Subsection) {
+  if (getCurrentSection().first != Section ||
+      getCurrentSection().second != Subsection) {
+    emitRawText("### SECTION: " + Section->getName() + "\n");
+  }
+  MCStreamer::switchSection(Section, Subsection);
+}
+
+void CDMAsmStreamer::AddComment(const Twine &T, bool EOL) {
+  if (!IsVerboseAsm) {
+    return;
+  }
+
+  T.toVector(CommentToEmit);
+  if (EOL && !CommentToEmit.empty() && CommentToEmit.back() != '\n') {
+    CommentToEmit.push_back('\n');
+  }
 }
 
 void CDMAsmStreamer::emitRawComment(const Twine &T, bool TabPrefix) {
-    if (TabPrefix) {
-        OS << '\t';
-    }
-    OS << MAI->getCommentString() << T;
-    emitEOL();
+  if (TabPrefix) {
+    OS << '\t';
+  }
+  OS << '#' << T;
+  emitEOL();
 }
 
 void CDMAsmStreamer::emitRawTextImpl(StringRef String) {
-    String.consume_back("\n");
-    OS << String;
-    emitEOL();
+  String.consume_back("\n");
+  OS << String;
+  emitEOL();
+}
+
+void CDMAsmStreamer::emitEOL() {
+  if (!isVerboseAsm()) {
+    OS << '\n';
+    return;
+  }
+  if (CommentToEmit.empty() && CommentStream.GetNumBytesInBuffer() == 0) {
+    OS << '\n';
+    return;
+  }
+
+  StringRef Comments = CommentToEmit;
+
+  assert(Comments.back() == '\n' && "Comment array not newline terminated");
+  do {
+    OS.PadToColumn(48);
+    size_t Position = Comments.find('\n');
+    OS << "# " << Comments.substr(0, Position) << '\n';
+    Comments = Comments.substr(Position + 1);
+  } while (!Comments.empty());
+
+  CommentToEmit.clear();
 }
 
 void CDMAsmStreamer::reset() {
-    MCStreamer::reset();
-    CommentToEmit.clear();
-    ExplicitCommentToEmit.clear();
-    UsedSymbols.clear();
+  MCStreamer::reset();
+  CommentToEmit.clear();
+  UsedSymbols.clear();
 }

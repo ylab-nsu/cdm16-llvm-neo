@@ -6,6 +6,7 @@
 #define LLVM_CDMASMPRINTER_H
 
 #include "CDMMCInstLower.h"
+#include "MCTargetDesc/CDMTargetStreamer.h"
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -38,15 +39,10 @@ public:
   void emitFunctionHeader() override;
   void emitStartOfAsmFile(Module &Module) override;
   void emitEndOfAsmFile(Module &Module) override;
-};
 
-class CDMAsmTargetStreamer : public MCTargetStreamer {
-
-public:
-  explicit CDMAsmTargetStreamer(MCStreamer &S);
-  void changeSection(const MCSection *CurSection, MCSection *Section,
-                     uint32_t SubSection, raw_ostream &OS) override;
-  void emitLabel(MCSymbol *Symbol) override;
+  CDMTargetStreamer *getTargetStreamer() const { 
+    return static_cast<CDMTargetStreamer *>(OutStreamer->getTargetStreamer()); 
+  }
 };
 
 } // namespace llvm
