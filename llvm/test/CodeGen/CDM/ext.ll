@@ -6,3 +6,10 @@ target datalayout = "e-S16-p:16:16-i8:8-i16:16-i32:16-i64:16-f16:16-f32:16-f64:1
 
 declare i16 @foo(i16, i16)
 ; CHECK-LABEL: foo: ext
+
+; We need to use the symbol so that the ext is emitted
+define void @main() #0 {
+    %result = call i16 @foo(i16 2, i16 4)
+    ret void
+}
+
