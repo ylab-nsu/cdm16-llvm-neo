@@ -36,16 +36,16 @@ CDMAsmStreamer::CDMAsmStreamer(MCContext &Context,
 static void printSymbolName(StringRef Name, raw_ostream &OS) {
   // TODO This symbol name correction is temporary until we have
   // quoted symbol names in cocas.
-  //
-  // This can still produce invalid symbol names, because we don't
-  // ensure that symbol names don't start with a dot or a digit or
-  // end with a dot.
-  for (char C : Name) {
-    if (std::isalnum(C) || C == '_' || C == '.') {
+  for (size_t I = 0; I < Name.size(); ++I) {
+    char C = Name[I];
+    bool IsFirst = I == 0;
+    bool IsLast = I == Name.size() - 1;
+    if (std::isalpha(C) || C == '_' || (std::isdigit(C) && !IsFirst) ||
+        (C == '.' && !IsFirst && !IsLast)) {
       OS << C;
     } else {
       OS << "___";
-      OS << llvm::format("%02X", (unsigned)C);
+      OS << llvm::format("%02X", (unsigned char)C);
       OS << "___";
     }
   }
@@ -133,7 +133,8 @@ void CDMAsmStreamer::visitUsedSymbol(const MCSymbol &Sym) {
 
 static inline char toOctal(int X) { return (X & 7) + '0'; }
 
-static void printQuotedString(StringRef Data, raw_ostream &OS, bool AllowNonAscii = false) {
+static void printQuotedString(StringRef Data, raw_ostream &OS,
+                              bool AllowNonAscii = false) {
   OS << '"';
   for (unsigned char C : Data) {
     switch (C) {
@@ -402,6 +403,4 @@ void CDMAsmStreamer::emitExtList() {
   }
 }
 
-void CDMAsmStreamer::emitEnd() {
-  OS << "end.";
-}
+void CDMAsmStreamer::emitEnd() { OS << "end."; }
