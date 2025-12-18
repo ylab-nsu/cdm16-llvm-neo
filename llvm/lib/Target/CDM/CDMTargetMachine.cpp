@@ -19,8 +19,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCDMTarget() {
 static std::string computeDataLayout() {
   // XXX Build the triple from the arguments.
   // This is hard-coded for now for this example target.
-  return "e-S16-p:16:16-i8:8-i16:16-i32:16-i64:16-f16:16-f32:16-f64:16-f128:16-m:C-"
-         "n16";
+  return "e-S16-p:16:16-i8:8-i16:16-i32:16-i64:16-f16:16-f32:16-f64:16-f128:16-"
+         "m:C-n16";
 }
 
 CDMTargetMachine::CDMTargetMachine(const Target &T, const Triple &TT,
@@ -48,7 +48,9 @@ namespace {
 class CDMPassConfig : public TargetPassConfig {
 public:
   CDMPassConfig(CDMTargetMachine &TM, PassManagerBase &PM)
-      : TargetPassConfig(TM, PM) {}
+      : TargetPassConfig(TM, PM) {
+    EnableTailMerge = false;
+  }
 
   bool addInstSelector() override;
 };
