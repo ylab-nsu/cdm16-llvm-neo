@@ -1,7 +1,0 @@
-#ifndef F0BAB941_28DE_4845_9BFD_E4A49AA7FF61
-#define F0BAB941_28DE_4845_9BFD_E4A49AA7FF61
-
-int tolower(int c);
-int toupper(int c);
-
-#endif/* F0BAB941_28DE_4845_9BFD_E4A49AA7FF61 */
