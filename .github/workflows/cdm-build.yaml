@@ -30,12 +30,12 @@ jobs:
         run: |
               cd ./llvm/build
               find .
+      - name: get testing system
+        run: git clone https://github.com/ylab-nsu/cdm16-clang-tester.git test_cdm
       - name: run tests
-        if: ${{ contains(matrix.os, 'ubuntu') }}
         run: |
-              pip install pytest pytest-xdist six
-              cd ./llvm/test_cdm
-              make
+             cd ./test_cdm
+             make CLANG=../llvm/build/bin/clang
       - name: upload artifacts
         uses: actions/upload-artifact@v4
         with:
