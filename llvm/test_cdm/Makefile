@@ -9,7 +9,8 @@ MAIN_SCRIPT = $(SRC_DIR)/main.py
 
 COMMONS_OBJECTS = $(addprefix $(COMMONS_DIR)/, $(addsuffix .obj, $(basename $(notdir $(wildcard $(COMMONS_DIR)/src/*)))))
 
-all: test
+test: $(VENV_DIR) $(COMMONS_OBJECTS)
+	$(VENV_DIR)/bin/python3 $(MAIN_SCRIPT) -c $(CLANG) -I $(INCLUDE_DIR) $(TESTS_DIR)
 
 $(VENV_DIR):
 	python3 -m venv $@
@@ -21,7 +22,5 @@ $(COMMONS_DIR)/src/%.asm: $(COMMONS_DIR)/src/%.c
 $(COMMONS_DIR)/%.obj: $(COMMONS_DIR)/src/%.asm
 	$(VENV_DIR)/bin/cocas -c -t cdm16 -o $@ $^
 
-test: $(VENV_DIR) $(COMMONS_OBJECTS)
-	$(VENV_DIR)/bin/python3 $(MAIN_SCRIPT) -c $(CLANG) -I $(INCLUDE_DIR) $(TESTS_DIR)
 
-.PHONY: test all
+.PHONY: test
