@@ -34,6 +34,8 @@ jobs:
         run: git clone --depth 1 https://github.com/ylab-nsu/cdm16-clang-tester.git test_cdm
       - name: run end-to-end tests
         run: make -C test_cdm CLANG=$(realpath llvm/build/bin/clang) run_tests
+      - name: run lit tests
+        run: ./llvm/build/bin/llvm-lit ./llvm/test/CodeGen/CDM
       - name: upload artifacts
         uses: actions/upload-artifact@v4
         with:
