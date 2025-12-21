@@ -31,7 +31,7 @@ jobs:
               cd ./llvm/build
               find .
       - name: get testing system
-        run: git clone https://github.com/ylab-nsu/cdm16-clang-tester.git test_cdm
+        run: git clone --depth 1 https://github.com/ylab-nsu/cdm16-clang-tester.git test_cdm
       - name: run tests
         run: |
              cd ./test_cdm
