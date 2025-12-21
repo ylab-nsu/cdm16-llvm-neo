@@ -30,7 +30,6 @@ jobs:
         run: |
               cd ./llvm/build
               find .
-      - name: get testing system
       - name: run end-to-end tests
         run: make -C llvm/test_cdm CLANG=$(realpath llvm/build/bin/clang) test
       - name: run lit tests
