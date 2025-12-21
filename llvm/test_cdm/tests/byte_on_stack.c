@@ -1,4 +1,4 @@
-
+// CHECK reg(r0) 8801
 
 __attribute__((noinline))
 void store_byte_on_stack(char i, int j, char k, int l){
@@ -24,5 +24,5 @@ int load_bytes_from_stack(){
 
 int main(){
   store_byte_on_stack('F', 1337, 'u', 7331);
-  load_bytes_from_stack();
+  return load_bytes_from_stack();
 }
