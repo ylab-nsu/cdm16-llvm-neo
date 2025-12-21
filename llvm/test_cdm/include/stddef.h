@@ -1,0 +1,8 @@
+#ifndef E31751A4_3C81_459F_9CE2_451C064899D4
+#define E31751A4_3C81_459F_9CE2_451C064899D4
+
+typedef unsigned size_t;
+
+#define NULL (void *)0
+
+#endif/* E31751A4_3C81_459F_9CE2_451C064899D4 */
