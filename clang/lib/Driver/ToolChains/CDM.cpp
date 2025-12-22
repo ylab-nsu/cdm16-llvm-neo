@@ -73,8 +73,12 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (JA.getKind() == Action::LinkJobClass) {
-    // TODO: Add any .obj files to link (use TC.GetFilePath(<filename>))
+    for (const std::string &obj : TC.getStdLibObjs()) {
+      CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(obj)));
+    }
   }
+
+  Args.addAllArgs(CmdArgs, {options::OPT_L});
 
   const char *Exec = Args.MakeArgString(TC.getCDMInstallation().getCocasPath());
 
