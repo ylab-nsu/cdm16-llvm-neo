@@ -52,7 +52,7 @@ class LLVM_LIBRARY_VISIBILITY CDMToolChain : public ToolChain {
 
   const CDMToolChainInstallationDetector CDMInstallation;
   // TODO: Add object files from standard lib
-  const std::vector<std::string> stdLibObjs = {};
+  const std::vector<const char*> stdLibObjs = {};
 
 public:
   CDMToolChain(const Driver &D, const llvm::Triple &Triple,
@@ -89,7 +89,7 @@ public:
   bool SupportsProfiling() const override { return false; }
 
   CDMToolChainInstallationDetector getCDMInstallation() const { return CDMInstallation; }
-  const std::vector<std::string> &getStdLibObjs() const { return stdLibObjs; }
+  const std::vector<const char*> &getStdLibObjs() const { return stdLibObjs; }
 
 protected:
   Tool *buildAssembler() const override; // cocas
