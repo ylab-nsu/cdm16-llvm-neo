@@ -7,6 +7,7 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/InputInfo.h"
 #include <vector>
+#include <optional>
 
 namespace clang {
 namespace driver {
@@ -34,20 +35,17 @@ namespace toolchains {
 class LLVM_LIBRARY_VISIBILITY CDMToolChain : public ToolChain {
 
   class CDMToolChainInstallationDetector {
-    bool IsValid;
 
-    std::string CocasPath;	// Cocas executable path
-    std::string LibPath;
-    std::string IncludePath;
+    std::optional<std::string> CocasPath;	// Cocas executable path
+    std::optional<std::string> LibPath;
+    std::optional<std::string> IncludePath;
 
   public:
     CDMToolChainInstallationDetector(const Driver &D);
 
-    bool isValid() const { return IsValid; }
-
-    std::string getCocasPath() const { return CocasPath; }
-    std::string getLibPath() const { return LibPath; }
-    std::string getIncludePath() const { return IncludePath; }
+    std::optional<std::string> getCocasPath() const { return CocasPath; }
+    std::optional<std::string> getLibPath() const { return LibPath; }
+    std::optional<std::string> getIncludePath() const { return IncludePath; }
   };
 
   const CDMToolChainInstallationDetector CDMInstallation;

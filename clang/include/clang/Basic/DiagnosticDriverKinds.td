@@ -66,8 +66,10 @@ def err_drv_no_cuda_libdevice : Error<
   "via '--cuda-path', or pass '-nocudalib' to build without linking with "
   "libdevice">;
 
-def err_drv_no_cocas_installation : Error<
-  "cannot find cocas installation. Consider adding path to it to PATH or to COCAS environmental variable">;
+def err_drv_no_cocas_assembler : Error<
+  "cannot find cocas for assembling. Consider adding path to it to PATH or to COCAS environmental variable">;
+def err_drv_no_cocas_linker : Error<
+  "cannot find cocas for linkage. Consider adding path to it to PATH or to COCAS environmental variable">;
 
 def err_drv_no_rocm_device_lib : Error<
   "cannot find ROCm device library%select{| for %1| for ABI version %1"

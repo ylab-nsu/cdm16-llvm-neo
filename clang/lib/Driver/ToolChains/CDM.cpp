@@ -1,6 +1,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Tool.h"
@@ -11,6 +12,7 @@
 #include "CDM.h"
 #include <cstdlib>
 #include <cstring>
+#include <optional>
 
 using namespace llvm::opt;
 using namespace clang::driver;
@@ -24,10 +26,6 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
   const auto &TC =
       static_cast<const toolchains::CDMToolChain &>(getToolChain());
   ArgStringList CmdArgs;
-
-  if (!TC.getCDMInstallation().isValid()) {
-    return;
-  }
 
 
   // If job kind is Assemble, only assemble, don't link
@@ -69,24 +67,58 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Add all input files
   for (const auto &II : Inputs){
-    CmdArgs.push_back(Args.MakeArgString(TC.getInputFilename(II)));
-  }
-
-  if (JA.getKind() == Action::LinkJobClass) {
-    for (const char *obj : TC.getStdLibObjs()) {
-      CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(obj)));
+    if (II.isFilename()) {
+      CmdArgs.push_back(Args.MakeArgString(TC.getInputFilename(II)));
     }
   }
 
-  const char *Exec = Args.MakeArgString(TC.getCDMInstallation().getCocasPath());
+  if (JA.getKind() == Action::LinkJobClass) {
+    // Add object files from standard lib
+    for (const char *obj : TC.getStdLibObjs()) {
+      CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(obj)));
+    }
+
+    std::vector<std::string> libSearchDirs = Args.getAllArgValues(options::OPT_L);
+    std::vector<std::string> libsToLink = Args.getAllArgValues(options::OPT_l);
+
+    // Link files, provided with -l option
+    SmallString<128> P;
+    for (const std::string &lib : libsToLink) {
+      bool found = false;
+      for (const std::string &dir : libSearchDirs) {
+        P = dir;
+	if (lib[0] == ':') {
+          llvm::sys::path::append(P, lib.c_str() + 1);
+	}
+	else {
+          llvm::sys::path::append(P, lib + ".lib");
+	}
+
+	if (llvm::sys::fs::exists(Twine(P))) {
+          CmdArgs.push_back(Args.MakeArgString(P));
+	  found = true;
+	  break;
+	}
+      }
+
+      if (!found) {
+        C.getDriver().Diag(clang::diag::err_drv_no_such_file) << lib;
+      }
+    }
+  }
+
+  std::optional<std::string> cocas = TC.getCDMInstallation().getCocasPath();
+  if (!cocas) {
+    return;
+  }
 
   C.addCommand(std::make_unique<Command>(
       JA, *this,
       ResponseFileSupport::None(),
-      Exec, CmdArgs, Inputs, Output));
+      Args.MakeArgString(*cocas), CmdArgs, Inputs, Output));
 }
 
-CDMToolChain::CDMToolChainInstallationDetector::CDMToolChainInstallationDetector(const Driver &D) : IsValid(true) {
+CDMToolChain::CDMToolChainInstallationDetector::CDMToolChainInstallationDetector(const Driver &D) {
   char *CocasEnv = std::getenv("COCAS");
 
   // If COCAS env defined, get it as path to cocas
@@ -103,19 +135,18 @@ CDMToolChain::CDMToolChainInstallationDetector::CDMToolChainInstallationDetector
             llvm::sys::findProgramByName("cocas", {"."})) {
     CocasPath = *P;
   }
-  else {
-    IsValid = false;
-  }
 	
   // TODO: Set Lib and Include Path
-
-  if (!IsValid) {
-    D.Diag(clang::diag::err_drv_no_cocas_installation);
-  }
 }
 
 std::string CDMToolChain::getCompilerRTPath() const {
-  return CDMInstallation.getLibPath();
+  std::optional<std::string> lib = CDMInstallation.getLibPath();
+  if (lib) {
+    return *lib;
+  }
+  else {
+    return ToolChain::getCompilerRTPath();
+  }
 }
 
 DerivedArgList *
@@ -156,18 +187,25 @@ std::string CDMToolChain::getInputFilename(const InputInfo &Input) const {
 
 void CDMToolChain::AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                           llvm::opt::ArgStringList &CC1Args) const {
-  if (!CDMInstallation.getIncludePath().empty() && CDMInstallation.isValid()) {
+  std::optional<std::string> inc = CDMInstallation.getIncludePath();
+  if (inc) {
     CC1Args.append(
         {"-internal-isystem",
-         DriverArgs.MakeArgString(CDMInstallation.getIncludePath())});
+         DriverArgs.MakeArgString(*inc)});
   }
 }
 
 Tool *CDMToolChain::buildAssembler() const {
+  if (!getCDMInstallation().getCocasPath()){
+    getDriver().Diag(clang::diag::err_drv_no_cocas_assembler);
+  }
   return new CDM::Cocas(*this);
 }
 
 Tool *CDMToolChain::buildLinker() const {
+  if (!getCDMInstallation().getCocasPath()){
+    getDriver().Diag(clang::diag::err_drv_no_cocas_linker);
+  }
   return new CDM::Cocas(*this);
 }
 
