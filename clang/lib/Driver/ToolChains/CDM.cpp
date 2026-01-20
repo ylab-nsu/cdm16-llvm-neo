@@ -56,9 +56,9 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Add output file
   CmdArgs.push_back("-o");
-  const char *FinalOutput = C.getArgs().getLastArg(options::OPT_o)->getValue();
-  // If output is final output, don't change filename
-  if (std::strcmp(FinalOutput, Output.getFilename()) == 0) {
+  // If output is final output, specified by user, don't change it's filename
+  Arg *FinalOutput = Args.getLastArg(options::OPT_o);
+  if (FinalOutput && std::strcmp(FinalOutput->getValue(), Output.getFilename()) == 0) {
     CmdArgs.push_back(Args.MakeArgString(Output.getFilename()));
   }
   else {
