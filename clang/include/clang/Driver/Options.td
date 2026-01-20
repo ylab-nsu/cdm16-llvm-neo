@@ -666,7 +666,7 @@ defvar std = !strconcat("LangStandard::getLangStandardForKind(", lang_std.KeyPat
 
 def cocas_debug_output : Separate<["--"], "cocas-debug-output">,
                          Group<m_cdm_Features_Group>,
-                         HelpText<"Set file for exporting cocas debug info">;
+                         HelpText<"Set the file to export CdM debug symbols to">;
 
 def internal_Group : OptionGroup<"<clang internal options>">,
   Flags<[HelpHidden]>;
