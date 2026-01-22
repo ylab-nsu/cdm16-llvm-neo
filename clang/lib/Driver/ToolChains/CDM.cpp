@@ -19,13 +19,18 @@ using namespace clang::driver;
 using namespace clang::driver::toolchains;
 using namespace clang::driver::tools;
 
+CDM::Cocas::Cocas(const CDMToolChain &TC) : Tool("CDM::Cocas", "cocas", TC), TheCDMToolChain(TC) {
+  if (!TC.getCDMInstallation().getCocasPath()) {
+    llvm_unreachable("Cannot create cocas object without path to cocas");
+  }
+  cocasPath = *TC.getCDMInstallation().getCocasPath();
+}
+
 void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
                               const InputInfo &Output,
                               const InputInfoList &Inputs,
                               const llvm::opt::ArgList &Args,
                               const char *LinkingOutput) const {
-  const auto &TC =
-      static_cast<const toolchains::CDMToolChain &>(getToolChain());
   ArgStringList CmdArgs;
 
   // If job kind is Assemble, only assemble, don't link
@@ -62,20 +67,20 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
       std::strcmp(FinalOutput->getValue(), Output.getFilename()) == 0) {
     CmdArgs.push_back(Args.MakeArgString(Output.getFilename()));
   } else {
-    CmdArgs.push_back(Args.MakeArgString(TC.getInputFilename(Output)));
+    CmdArgs.push_back(Args.MakeArgString(TheCDMToolChain.getInputFilename(Output)));
   }
 
   // Add all input files
   for (const auto &II : Inputs) {
     if (II.isFilename()) {
-      CmdArgs.push_back(Args.MakeArgString(TC.getInputFilename(II)));
+      CmdArgs.push_back(Args.MakeArgString(TheCDMToolChain.getInputFilename(II)));
     }
   }
 
   if (JA.getKind() == Action::LinkJobClass) {
     // Add object files from standard lib
-    for (const char *obj : TC.getStdLibObjs()) {
-      CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(obj)));
+    for (const char *obj : TheCDMToolChain.getStdLibObjs()) {
+      CmdArgs.push_back(Args.MakeArgString(TheCDMToolChain.GetFilePath(obj)));
     }
 
     std::vector<std::string> libSearchDirs =
@@ -107,13 +112,8 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  std::optional<std::string> cocas = TC.getCDMInstallation().getCocasPath();
-  if (!cocas) {
-    return;
-  }
-
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         Args.MakeArgString(*cocas), CmdArgs,
+                                         Args.MakeArgString(cocasPath), CmdArgs,
                                          Inputs, Output));
 }
 
@@ -196,6 +196,7 @@ void CDMToolChain::AddClangSystemIncludeArgs(
 Tool *CDMToolChain::buildAssembler() const {
   if (!getCDMInstallation().getCocasPath()) {
     getDriver().Diag(clang::diag::err_drv_no_cocas_assembler);
+    return nullptr;
   }
   return new CDM::Cocas(*this);
 }
@@ -203,6 +204,7 @@ Tool *CDMToolChain::buildAssembler() const {
 Tool *CDMToolChain::buildLinker() const {
   if (!getCDMInstallation().getCocasPath()) {
     getDriver().Diag(clang::diag::err_drv_no_cocas_linker);
+    return nullptr;
   }
   return new CDM::Cocas(*this);
 }

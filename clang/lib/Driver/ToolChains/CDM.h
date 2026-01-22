@@ -12,24 +12,6 @@
 namespace clang {
 namespace driver {
 
-namespace tools {
-namespace CDM {
-
-class LLVM_LIBRARY_VISIBILITY Cocas final : public Tool {
-public:
-  Cocas(const ToolChain &TC) : Tool("CDM::Cocas", "cocas", TC) {}
-
-  bool hasIntegratedCPP() const override { return false; }
-
-  void ConstructJob(Compilation &C, const JobAction &JA,
-                    const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::opt::ArgList &Args,
-                    const char *LinkingOutput) const override;
-};
-
-} // end namespace CDM
-} // end namespace tools
-
 namespace toolchains {
 
 class LLVM_LIBRARY_VISIBILITY CDMToolChain : public ToolChain {
@@ -99,6 +81,28 @@ protected:
 };
 
 } // end namespace toolchains
+
+namespace tools {
+namespace CDM {
+
+class LLVM_LIBRARY_VISIBILITY Cocas final : public Tool {
+  
+  const toolchains::CDMToolChain &TheCDMToolChain;
+  std::string cocasPath;
+
+public:
+  Cocas(const toolchains::CDMToolChain &TC);
+
+  bool hasIntegratedCPP() const override { return false; }
+
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &Args,
+                    const char *LinkingOutput) const override;
+};
+
+} // end namespace CDM
+} // end namespace tools
 } // end namespace driver
 } // end namespace clang
 
