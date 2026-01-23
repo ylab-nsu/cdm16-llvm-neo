@@ -86,8 +86,7 @@ namespace tools {
 namespace CDM {
 
 class LLVM_LIBRARY_VISIBILITY Cocas final : public Tool {
-  
-  const toolchains::CDMToolChain &TheCDMToolChain;
+
   std::string cocasPath;
 
 public:
@@ -99,6 +98,10 @@ public:
                     const InputInfo &Output, const InputInfoList &Inputs,
                     const llvm::opt::ArgList &Args,
                     const char *LinkingOutput) const override;
+
+  const toolchains::CDMToolChain &getCDMToolChain() const {
+    return static_cast<const toolchains::CDMToolChain &>(getToolChain());
+  }
 };
 
 } // end namespace CDM

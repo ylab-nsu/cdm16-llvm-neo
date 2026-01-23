@@ -19,7 +19,7 @@ using namespace clang::driver;
 using namespace clang::driver::toolchains;
 using namespace clang::driver::tools;
 
-CDM::Cocas::Cocas(const CDMToolChain &TC) : Tool("CDM::Cocas", "cocas", TC), TheCDMToolChain(TC) {
+CDM::Cocas::Cocas(const CDMToolChain &TC) : Tool("CDM::Cocas", "cocas", TC) {
   if (!TC.getCDMInstallation().getCocasPath()) {
     llvm_unreachable("Cannot create cocas object without path to cocas");
   }
@@ -67,20 +67,22 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
       std::strcmp(FinalOutput->getValue(), Output.getFilename()) == 0) {
     CmdArgs.push_back(Args.MakeArgString(Output.getFilename()));
   } else {
-    CmdArgs.push_back(Args.MakeArgString(TheCDMToolChain.getInputFilename(Output)));
+    CmdArgs.push_back(
+        Args.MakeArgString(getCDMToolChain().getInputFilename(Output)));
   }
 
   // Add all input files
   for (const auto &II : Inputs) {
     if (II.isFilename()) {
-      CmdArgs.push_back(Args.MakeArgString(TheCDMToolChain.getInputFilename(II)));
+      CmdArgs.push_back(
+          Args.MakeArgString(getCDMToolChain().getInputFilename(II)));
     }
   }
 
   if (JA.getKind() == Action::LinkJobClass) {
     // Add object files from standard lib
-    for (const char *obj : TheCDMToolChain.getStdLibObjs()) {
-      CmdArgs.push_back(Args.MakeArgString(TheCDMToolChain.GetFilePath(obj)));
+    for (const char *obj : getCDMToolChain().getStdLibObjs()) {
+      CmdArgs.push_back(Args.MakeArgString(getCDMToolChain().GetFilePath(obj)));
     }
 
     std::vector<std::string> libSearchDirs =
