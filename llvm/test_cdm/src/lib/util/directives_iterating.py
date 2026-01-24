@@ -2,7 +2,7 @@ import re
 from ..exceptions import TestParsingError
 
 _DIRECTIVE_PATTERN = re.compile("^.*?//\\s*CHECK\\s(.*)\n")
-_DIRECTIVE_INNER_PATTERN = re.compile("\\s*(\\S+)\((.*)\)\\s*(.*)")
+_DIRECTIVE_INNER_PATTERN = re.compile("\\s*(\\S+)\\((.*)\\)\\s*(.*)")
 
 def iter_directives(filepath):
   if not filepath.is_file():
