@@ -42,3 +42,4 @@ def run_tests_producers(cocoemu_port, tests_dir, clang_path, include_paths, prod
       return (total_succ, total_fails)
   finally:
     server_proc.send_signal(signal.SIGINT)
+    server_proc.wait()
