@@ -5,7 +5,7 @@ from .structs import ProcessorInfo
 from .exceptions import CocoemuServerError
 
 def connect_to_server(port):
-  MAX_TRIES = 5
+  MAX_TRIES = 10
 
   tries = 0
   while tries < MAX_TRIES:
