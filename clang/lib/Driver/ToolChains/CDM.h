@@ -20,7 +20,7 @@ class LLVM_LIBRARY_VISIBILITY CDMToolChain : public ToolChain {
   std::optional<std::string> LibPath;
   std::optional<std::string> IncludePath;
   // TODO: Add object files from standard lib
-  const std::vector<const char *> stdLibObjs = {};
+  const std::vector<const char *> StdLibObjs = {};
 
 public:
   CDMToolChain(const Driver &D, const llvm::Triple &Triple,
@@ -60,7 +60,7 @@ public:
   std::optional<std::string> getCocasPath() const { return CocasPath; }
   std::optional<std::string> getLibPath() const { return LibPath; }
   std::optional<std::string> getIncludePath() const { return IncludePath; }
-  const std::vector<const char *> &getStdLibObjs() const { return stdLibObjs; }
+  const std::vector<const char *> &getStdLibObjs() const { return StdLibObjs; }
 
 protected:
   Tool *buildAssembler() const override; // cocas
