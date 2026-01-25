@@ -20,10 +20,9 @@ using namespace clang::driver::toolchains;
 using namespace clang::driver::tools;
 
 CDM::Cocas::Cocas(const CDMToolChain &TC) : Tool("CDM::Cocas", "cocas", TC) {
-  if (!TC.getCDMInstallation().getCocasPath()) {
+  if (!TC.getCocasPath()) {
     llvm_unreachable("Cannot create cocas object without path to cocas");
   }
-  cocasPath = *TC.getCDMInstallation().getCocasPath();
 }
 
 void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
@@ -114,13 +113,15 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         Args.MakeArgString(cocasPath), CmdArgs,
-                                         Inputs, Output));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::None(),
+      Args.MakeArgString(*getCDMToolChain().getCocasPath()), CmdArgs, Inputs,
+      Output));
 }
 
-CDMToolChain::CDMToolChainInstallationDetector::
-    CDMToolChainInstallationDetector(const Driver &D) {
+CDMToolChain::CDMToolChain(const Driver &D, const llvm::Triple &Triple,
+                           const llvm::opt::ArgList &Args)
+    : ToolChain(D, Triple, Args) {
   char *CocasEnv = std::getenv("COCAS");
 
   // If COCAS env defined, get it as path to cocas
@@ -142,9 +143,8 @@ CDMToolChain::CDMToolChainInstallationDetector::
 }
 
 std::string CDMToolChain::getCompilerRTPath() const {
-  std::optional<std::string> lib = CDMInstallation.getLibPath();
-  if (lib) {
-    return *lib;
+  if (getLibPath()) {
+    return *getLibPath();
   } else {
     return ToolChain::getCompilerRTPath();
   }
@@ -189,14 +189,14 @@ std::string CDMToolChain::getInputFilename(const InputInfo &Input) const {
 void CDMToolChain::AddClangSystemIncludeArgs(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {
-  std::optional<std::string> inc = CDMInstallation.getIncludePath();
-  if (inc) {
-    CC1Args.append({"-internal-isystem", DriverArgs.MakeArgString(*inc)});
+  if (getIncludePath()) {
+    CC1Args.append(
+        {"-internal-isystem", DriverArgs.MakeArgString(*getIncludePath())});
   }
 }
 
 Tool *CDMToolChain::buildAssembler() const {
-  if (!getCDMInstallation().getCocasPath()) {
+  if (!getCocasPath()) {
     getDriver().Diag(clang::diag::err_drv_no_cocas_assembler);
     return nullptr;
   }
@@ -204,7 +204,7 @@ Tool *CDMToolChain::buildAssembler() const {
 }
 
 Tool *CDMToolChain::buildLinker() const {
-  if (!getCDMInstallation().getCocasPath()) {
+  if (!getCocasPath()) {
     getDriver().Diag(clang::diag::err_drv_no_cocas_linker);
     return nullptr;
   }

@@ -16,28 +16,15 @@ namespace toolchains {
 
 class LLVM_LIBRARY_VISIBILITY CDMToolChain : public ToolChain {
 
-  class CDMToolChainInstallationDetector {
-
-    std::optional<std::string> CocasPath; // Cocas executable path
-    std::optional<std::string> LibPath;
-    std::optional<std::string> IncludePath;
-
-  public:
-    CDMToolChainInstallationDetector(const Driver &D);
-
-    std::optional<std::string> getCocasPath() const { return CocasPath; }
-    std::optional<std::string> getLibPath() const { return LibPath; }
-    std::optional<std::string> getIncludePath() const { return IncludePath; }
-  };
-
-  const CDMToolChainInstallationDetector CDMInstallation;
+  std::optional<std::string> CocasPath; // Cocas executable path
+  std::optional<std::string> LibPath;
+  std::optional<std::string> IncludePath;
   // TODO: Add object files from standard lib
   const std::vector<const char *> stdLibObjs = {};
 
 public:
   CDMToolChain(const Driver &D, const llvm::Triple &Triple,
-               const llvm::opt::ArgList &Args)
-      : ToolChain(D, Triple, Args), CDMInstallation(D) {};
+               const llvm::opt::ArgList &Args);
 
   // CdM hasn't integrated assembler, it must use cocas
   bool useIntegratedAs() const override { return false; }
@@ -70,9 +57,9 @@ public:
 
   bool SupportsProfiling() const override { return false; }
 
-  CDMToolChainInstallationDetector getCDMInstallation() const {
-    return CDMInstallation;
-  }
+  std::optional<std::string> getCocasPath() const { return CocasPath; }
+  std::optional<std::string> getLibPath() const { return LibPath; }
+  std::optional<std::string> getIncludePath() const { return IncludePath; }
   const std::vector<const char *> &getStdLibObjs() const { return stdLibObjs; }
 
 protected:
@@ -86,9 +73,6 @@ namespace tools {
 namespace CDM {
 
 class LLVM_LIBRARY_VISIBILITY Cocas final : public Tool {
-
-  std::string cocasPath;
-
 public:
   Cocas(const toolchains::CDMToolChain &TC);
 
