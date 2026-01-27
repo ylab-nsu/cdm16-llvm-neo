@@ -1,3 +1,5 @@
+include "CDMInstrFormats.td"
+
 // custom SDnode for return
 
 def SDT_CDMRet : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
@@ -18,32 +20,6 @@ def addr_on_frame
 def addrRR : ComplexPattern<iPTR, 2, "SelectAddrRR", [], []>;
 def addr : ComplexPattern<iPTR, 2, "SelectAddr", [], []> {
    let WantsParent = true;
-}
-
-class CDMInst<dag outs, dag ins, string asmstr, list<dag> pattern>
-    : Instruction {
-  // Inst and Size: for tablegen(... -gen-emitter) and
-  // tablegen(... -gen-disassembler) in CMakeLists.txt
-
-  let Namespace = "CDM";
-
-  let Size = 2;
-
-  let OutOperandList = outs;
-  let InOperandList = ins;
-
-  let AsmString = asmstr;
-  let Pattern = pattern;
-  let hasDelaySlot = 0;
-
-  field bits<16> Inst;
-  let Inst = 0;
-}
-
-class CDMPseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
-    : CDMInst<outs, ins, asmstr, pattern> {
-  let isCodeGenOnly = 1;
-  let isPseudo = 1;
 }
 
 class arithLogicR<string asm_instr, SDNode OpNode, bit isComm = 0>
