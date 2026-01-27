@@ -83,6 +83,10 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
     for (const char *obj : getCDMToolChain().getStdLibObjs()) {
       CmdArgs.push_back(Args.MakeArgString(getCDMToolChain().GetFilePath(obj)));
     }
+    // Add builtins
+    for (const char *obj : getCDMToolChain().getBuiltinNames()) {
+      CmdArgs.push_back(getCDMToolChain().getCompilerRTArgString(Args, obj, ToolChain::FT_Object));
+    }
 
     std::vector<std::string> libSearchDirs =
         Args.getAllArgValues(options::OPT_L);
@@ -139,15 +143,7 @@ CDMToolChain::CDMToolChain(const Driver &D, const llvm::Triple &Triple,
     CocasPath = *P;
   }
 
-  // TODO: Set Lib and Include Path
-}
-
-std::string CDMToolChain::getCompilerRTPath() const {
-  if (getLibPath()) {
-    return *getLibPath();
-  } else {
-    return ToolChain::getCompilerRTPath();
-  }
+  // TODO: Set Include Path and push any Lib paths to ToolChain::LibraryPaths
 }
 
 DerivedArgList *

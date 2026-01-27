@@ -17,10 +17,12 @@ namespace toolchains {
 class LLVM_LIBRARY_VISIBILITY CDMToolChain : public ToolChain {
 
   std::optional<std::string> CocasPath; // Cocas executable path
-  std::optional<std::string> LibPath;
   std::optional<std::string> IncludePath;
   // TODO: Add object files from standard lib
   const std::vector<const char *> StdLibObjs = {};
+  // TODO: Add names of builtins to link
+  // Each name <name> corresponds to file <clang_resources_dir>/lib/cdm/clang_rt.<name>.o
+  const std::vector<const char *> BuiltinNames = {};
 
 public:
   CDMToolChain(const Driver &D, const llvm::Triple &Triple,
@@ -53,14 +55,12 @@ public:
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
 
-  std::string getCompilerRTPath() const override;
-
   bool SupportsProfiling() const override { return false; }
 
   std::optional<std::string> getCocasPath() const { return CocasPath; }
-  std::optional<std::string> getLibPath() const { return LibPath; }
   std::optional<std::string> getIncludePath() const { return IncludePath; }
   const std::vector<const char *> &getStdLibObjs() const { return StdLibObjs; }
+  const std::vector<const char *> &getBuiltinNames() const { return BuiltinNames; }
 
 protected:
   Tool *buildAssembler() const override; // cocas
