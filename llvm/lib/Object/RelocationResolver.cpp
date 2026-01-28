@@ -597,6 +597,27 @@ static uint64_t resolveLoongArch(uint64_t Type, uint64_t Offset, uint64_t S,
   }
 }
 
+static bool supportsCDM(uint64_t Type) {
+  switch (Type) {
+  case ELF::R_CDM_16:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static uint64_t resolveCDM(uint64_t Type, uint64_t Offset, uint64_t S,
+                           uint64_t LocData, int64_t Addend) {
+  switch (Type) {
+  case ELF::R_CDM_NONE:
+    return LocData;
+  case ELF::R_CDM_16:
+    return (S + LocData) & 0xFFFF;
+  default:
+    llvm_unreachable("Invalid relocation type");
+  }
+}
+
 static bool supportsCOFFX86(uint64_t Type) {
   switch (Type) {
   case COFF::IMAGE_REL_I386_SECREL:
@@ -854,6 +875,8 @@ getRelocationResolver(const ObjectFile &Obj) {
       return {supportsRISCV, resolveRISCV};
     case Triple::csky:
       return {supportsCSKY, resolveCSKY};
+    case Triple::cdm:
+      return {supportsCDM, resolveCDM};
     default:
       if (isAMDGPU(Obj))
         return {supportsAmdgpu, resolveAmdgpu};

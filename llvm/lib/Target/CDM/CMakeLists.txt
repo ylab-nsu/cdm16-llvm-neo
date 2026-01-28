@@ -41,6 +41,7 @@ endfunction()
 #tablegen(LLVM SparcGenSubtargetInfo.inc -gen-subtarget)
 cdm_tablegen(LLVM CDMGenRegisterInfo.inc -gen-register-info)
 
+tablegen(LLVM CDMGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM CDMGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM CDMGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM CDMGenSubtargetInfo.inc -gen-subtarget)

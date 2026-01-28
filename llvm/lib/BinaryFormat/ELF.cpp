@@ -197,6 +197,7 @@ uint16_t ELF::convertArchNameToEMachine(StringRef Arch) {
       .Case("ve", EM_VE)
       .Case("csky", EM_CSKY)
       .Case("loongarch", EM_LOONGARCH)
+      .Case("cdm", EM_CDM)
       .Default(EM_NONE);
 }
 
@@ -262,6 +263,8 @@ uint16_t ELF::convertTripleArchTypeToEMachine(Triple::ArchType ArchType) {
     return EM_XCORE;
   case Triple::xtensa:
     return EM_XTENSA;
+  case Triple::cdm:
+    return EM_CDM;
   }
 }
 
@@ -628,6 +631,8 @@ StringRef ELF::convertEMachineToArchName(uint16_t EMachine) {
     return "csky";
   case EM_LOONGARCH:
     return "loongarch";
+  case EM_CDM:
+    return "cdm";
   default:
     return "None";
   }

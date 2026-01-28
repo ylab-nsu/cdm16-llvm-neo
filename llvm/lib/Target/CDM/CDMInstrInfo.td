@@ -35,7 +35,9 @@ class CDMInst<dag outs, dag ins, string asmstr, list<dag> pattern>
   let AsmString = asmstr;
   let Pattern = pattern;
   let hasDelaySlot = 0;
-  // TODO: right now we don't need opcodes and stuff
+
+  field bits<16> Inst;
+  let Inst = 0;
 }
 
 class CDMPseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
