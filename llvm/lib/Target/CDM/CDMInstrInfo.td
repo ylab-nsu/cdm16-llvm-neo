@@ -22,21 +22,128 @@ def addr : ComplexPattern<iPTR, 2, "SelectAddr", [], []> {
    let WantsParent = true;
 }
 
-class arithLogicR<string asm_instr, SDNode OpNode, bit isComm = 0>
-    : CDMInst<(outs CPURegs:$rd), (ins CPURegs:$rs0, CPURegs:$rs1),
-              !strconcat(asm_instr, " $rs0, $rs1, $rd"),
-              [(set CPURegs:$rd, (OpNode CPURegs:$rs0, CPURegs:$rs1))]> {
-  let isCommutable = isComm;
-  let isReMaterializable = 1;
-  let Defs = [PSR];
+// 0op
+def ZERO: Inst0Op<0b0000, (outs), (ins), "zero", []>
+def HALT: Inst0Op<0b0100, (outs), (ins), "halt", []>
+def WAIT: Inst0Op<0b0101, (outs), (ins), "wait", []>
+def EI: Inst0Op<0b0110, (outs), (ins), "ei", []>
+def DI: Inst0Op<0b0111, (outs), (ins), "di", []>
+
+def calltarget : Operand<iPTR> {
+  let OperandType = "OPERAND_PCREL";
+  // let PrintMethod = "printCallTarget";
 }
 
-def ADD : arithLogicR<"add", add, 1>;
-def SUB : arithLogicR<"sub", sub, 0>;
+def JSR : InstJsr<0b1000, (outs), (ins calltarget:$target),
+                  "jsr\t$target", []> {
+  let isCall = 1;
+}
+def : Pat<(CDMCall(i16 tglobaladdr:$target)), (JSR tglobaladdr:$target)>;
+def : Pat<(CDMCall(i16 texternalsym:$target)), (JSR texternalsym:$target)>;
 
-def AND : arithLogicR<"and", and, 1>;
-def OR : arithLogicR<"or", or, 1>;
-def XOR : arithLogicR<"xor", xor, 1>;
+def RTI : RetBase<0b1001, "rti">;
+def PUPC : Inst0Op<0b1010, (outs), (ins), "pupc", []>
+def POPC : RetBase<0b1011, "popc">;
+def PUSP : Inst0Op<0b1100, (outs), (ins), "pusp", []>
+def POSP : Inst0Op<0b1101, (outs), (ins), "posp", []>
+def PUPS : Inst0Op<0b1110, (outs), (ins), "pups", []>
+def POPS : Inst0Op<0b1111, (outs), (ins), "pops", []>
+
+// 1Op
+
+// push, pop, ldsp, addsp
+// TODO: this is not selected automatically, probably there should be something
+// more
+let Uses = [SP], Defs = [SP] in {
+  def PUSH : Inst1Op<0b0000, (outs), (ins CPURegs:$rd), "push\t$rd", []> {
+    let mayStore = 1;
+  }
+
+  def POP : Inst1Op<0b0001, (outs CPURegs:$rd), (ins), "pop\t$rd", []> {
+    let mayLoad = 1;
+  }
+
+  def ADDSPR : Inst1Op<0b1010, (outs), (ins CPURegs:$rd), "addsp\t$rd", []>;
+}
+
+def simm16 : Operand<i16> {}
+
+def ldi : InstLdi<0b0010, (outs CPURegs:$rd), (ins Imm:$imm), "ldi\t$rd, $imm", []>;
+/*
+ TODO: RET, RetLR
+ LD: LoadM32 -> LoadM -> FMem -> FL -> CpuoInst -> Instruction
+ My LD: LoadM32 -> LoadM -> CDMInst
+*/
+def load_sym : SDNode<"CDMISD::LOAD_SYM", SDTIntUnaryOp>;
+def : Pattern<(i16(load_sym tglobaladdr:$addr)), [(ldi $addr)]>;
+def : Pattern<(i16(load_sym tjumptable:$addr)), [(ldi $addr)]>;
+def : Pat<(i16 imm:$imm), (ldi imm:$imm)>;
+
+def JSRR : Inst2Op<0b0011, (outs), (ins CPURegs:$rd), "jsrr\t$rd", []>{
+  let isCall = 1;
+}
+
+def LDSP : Inst2Op<0b0100, (outs CPURegs:$rd), (ins), "ldsp\t$rd", []> {
+  let Uses = [SP];
+}
+
+def STSP : Inst2Op<0b0101, (outs), (ins CPURegs:$rd), "stsp\t$rd", []> {
+  let Defs = [SP];
+}
+
+def LDPS : Inst2Op<0b0110, (outs), (ins CPURegs:$rd), "ldps\t$rd", []> {
+  let Uses = [PS];
+}
+
+def STPS : Inst2Op<0b0111, (outs), (ins CPURegs:$rd), "stps\t$rd", []> {
+  let Defs = [PS];
+}
+
+def LDPC : Inst2Op<0b1000, (outs), (ins CPURegs:$rd), "ldpc\t$rd", []> {
+  let Uses = [PC];
+}
+
+def STPC : Inst2Op<0b1001, (outs), (ins CPURegs:$rd), "stpc\t$rd", []> {
+  let Defs = [PC];
+}
+
+// 2Op
+
+// TODO: convert to ArithLogic ???
+def MOVE
+    : Inst2Op<0b01000, 0b0000, (outs CPURegs:$rd), (ins CPURegs:$rs), "move\t$rs, $rd", []> {
+  // let Defs = [PSR];
+}
+
+// mem2
+
+// WORD load
+def ldwRR : LoadM<0b0000, "ldw", load, memRR, addrRR, 0>;
+def ldw : LoadM<0b0000, "ldw", load, mem, addr, 0>;
+
+// BYTE load zero extend
+def ldbRR : LoadM<0b0001, "ldb", zextloadi8, memRR, addrRR, 0>;
+def ldb : LoadM<0b0001, "ldb", zextloadi8, mem, addr, 0>;
+def : Pat<(i16(extloadi8 addrRR:$src)), (ldbRR addrRR:$src)>;
+def : Pat<(i16(extloadi8 addr:$src)), (ldb addr:$src)>;
+
+// BYTE load sign extend
+def ldsbRR : LoadM<0b0010, "ldsb", sextloadi8, memRR, addrRR, 0>;
+def ldsb : LoadM<0b0010, "ldsb", sextloadi8, mem, addr, 0>;
+
+
+
+// WORD store
+def stwRR : StoreM<0b0110, "stw", store, memRR, addrRR, 0>;
+def stw : StoreM<0b0110, "stw", store, mem, addr, 0>;
+
+// BYTE store truncate
+def stbRR : StoreM<0b0111, "stb", truncstorei8, memRR, addrRR, 0>;
+def stb : StoreM<0b0111, "stb", truncstorei8, mem, addr, 0>;
+
+
+
+// imm6
 
 def immZext6 : ImmLeaf<i16, [{return (Imm >= -64) && (Imm <= 63);}]>;
 
@@ -62,18 +169,115 @@ class arithLogicRi<string asm_instr, SDNode OpNode>
 }
 // end thanks avr
 
-def NEG : CDMInst<(outs CPURegs:$rd), (ins CPURegs:$rs),
-              "neg\t$rs, $rd", []>{
-  let Defs = [PSR];
-}
-
-def : Pat<(i16(sub 0, i16:$val)), (NEG $val)>;
-
 def ADDI : arithLogicRi<"add", add>;
 def SUBI : arithLogicRi<"sub", sub>;
 
 def : Pat<(add i16:$src1, imm6_neg:$src2), (SUBI i16:$src1,
                                                (imm16_neg_XFORM imm:$src2))>;
+
+
+def load_a : AlignedLoad<load>;
+def store_a : AlignedStore<store>;
+
+// Selected in SelectAddr
+def mem : Operand<iPTR> {
+  let PrintMethod = "printMemOperand";
+  // Why not more(GRPOUT)
+  let MIOperandInfo = (ops CPURegs,
+      simm16); // second operand SHOULD be always zero
+  let EncoderMethod = "getMemEncoding";
+}
+
+def memRR : Operand<iPTR> {
+  let PrintMethod = "printMemRROperand";
+  let MIOperandInfo = (ops CPURegs, CPURegs);
+}
+
+let Uses = [FP] in {
+  // stack words
+  def lsw : LoadMStack<"lsw", load_a, mem, addr_on_frame, 0>;
+  def ssw : StoreMStack<"ssw", store_a, mem, addr_on_frame, 0>;
+  // stack bytes
+  def ssb : StoreMStack<"ssb", truncstorei8, mem, addr_on_frame, 0>;
+  def lsb : LoadMStack<"lsb", zextloadi8, mem, addr_on_frame, 0>;
+  def lssb : LoadMStack<"lssb", sextloadi8, mem, addr_on_frame, 0>;
+}
+def : Pat<(i16(extloadi8 addr_on_frame:$src)), (lsb addr_on_frame:$src)>;
+
+def CMPI : CDMInst<(outs), (ins CPURegs:$r, i16imm:$imm), "cmp\t$r, $imm", []> {
+  let Defs = [PSR];
+}
+
+def TST : CDMInst<(outs), (ins CPURegs:$rs), "tst\t$rs", []> {
+  let Defs = [PSR];
+} // that is cmpi rs 0
+
+// imm9
+
+let Uses = [SP], Defs = [SP] in def ADDSP : InstImm9<(outs), (ins simm16:$imm), "addsp\t$imm", []>;
+
+// mem3
+
+// branches
+
+def brtarget : Operand<OtherVT> { let OperandType = "OPERAND_MEMORY"; }
+
+def BR : CDMInst<(outs), (ins brtarget:$addr), "br\t$addr", [(br bb:$addr)]> {
+  let isBranch = 1;
+  let isTerminator = 1;
+  let isBarrier = 1;
+}
+
+// branch indirect
+def stpc
+    : CDMInst<(outs), (ins CPURegs:$rs), "stpc\t$rs", [(brind CPURegs:$rs)]> {
+  let isBranch = 1;
+  let isTerminator = 1;
+  let isBarrier = 1;
+  let isIndirectBranch = 1;
+}
+
+// def
+// class CondBR<string instr_asm>: CDMInst<(outs), (ins SR:$psr,
+// brtarget:$addr),
+//                                         !strconcat(instr_asm, "\t$addr"),
+//                                         []>{
+//                                           let isBranch = 1;
+//                                           let isTerminator = 1;
+//                                         }
+
+def cond_val : Operand<OtherVT> { let PrintMethod = "printCondCode"; }
+
+def cdmize_cond : SDNodeXForm<cond, [{
+  return CurDAG->getTargetConstant(CCToCondOp(N->get()), N, MVT::i16);
+}]>;
+
+def BCond : CDMInst<(outs), (ins cond_val:$cond, brtarget:$addr),
+                    "b$cond\t$addr", []> {
+  let isTerminator = 1;
+  let isBranch = 1;
+  let Uses = [PSR];
+}
+
+def PseudoBCondRR : CDMPseudo<(outs), (ins cond_val:$cnd, CPURegs:$lhs, CPURegs:$rhs, brtarget:$addr), "", []>{
+  let isTerminator = 1;
+  let isBranch = 1;
+  let Uses = [PSR];
+}
+
+def PseudoBCondRI : CDMPseudo<(outs), (ins cond_val:$cnd, CPURegs:$lhs, i16imm:$rhs, brtarget:$addr), "", []>{
+  let isTerminator = 1;
+  let isBranch = 1;
+  let Uses = [PSR];
+}
+
+def : Pat<(brcc cond:$cnd, CPURegs:$lhs, immZext6:$rhs, bb:$target),
+          (PseudoBCondRI (cdmize_cond $cnd), CPURegs:$lhs, immZext6:$rhs, brtarget:$target)>;
+
+def : Pat<(brcc cond:$cnd, CPURegs:$lhs, CPURegs:$rhs, bb:$target),
+          (PseudoBCondRR (cdmize_cond $cnd), CPURegs:$lhs, CPURegs:$rhs, brtarget:$target)>;
+
+// shifts
 
 // Shift amount
 def shamt : Operand<i16>;
@@ -196,103 +400,14 @@ defm SHL_EXT64 : ShiftExt64<shl_ext64>;
 defm SHR_EXT64 : ShiftExt64<srl_ext64>;
 defm SHRA_EXT64 : ShiftExt64<sra_ext64>;
 
-// load
-class AlignedLoad<PatFrag Node> : PatFrag<(ops node:$ptr), (Node node:$ptr), [{
-  LoadSDNode *LD = cast<LoadSDNode>(N);
-  return LD->getMemoryVT().getSizeInBits()/8 <= LD->getAlign().value();
-}]>;
-class AlignedStore<PatFrag Node>
-    : PatFrag<(ops node:$val, node:$ptr), (Node node:$val, node:$ptr), [{
-  StoreSDNode *SD = cast<StoreSDNode>(N);
-  return SD->getMemoryVT().getSizeInBits()/8 <= SD->getAlign().value();
-}]>;
+// alu2
 
-def load_a : AlignedLoad<load>;
-def store_a : AlignedStore<store>;
-
-class LoadMStack<string instr_asm, PatFrag OpNode, Operand MemOperand,
-                 ComplexPattern AddrPattern, bit Pseudo>
-    : CDMInst<(outs CPURegs:$ra), (ins MemOperand:$addr),
-              !strconcat(instr_asm, "\t$ra, $addr"),
-              [(set CPURegs:$ra, (OpNode AddrPattern:$addr))]> {
-  let isPseudo = Pseudo;
+def NEG : CDMInst<(outs CPURegs:$rd), (ins CPURegs:$rs),
+              "neg\t$rs, $rd", []>{
+  let Defs = [PSR];
 }
 
-class StoreMStack<string instr_asm, PatFrag OpNode, Operand MemOperand,
-                  ComplexPattern AddrPattern, bit Pseudo>
-    : CDMInst<(outs), (ins CPURegs:$ra, MemOperand:$addr),
-              !strconcat(instr_asm, "\t$ra, $addr"),
-              [(OpNode CPURegs:$ra, AddrPattern:$addr)]> {
-  let isPseudo = Pseudo;
-}
-
-def simm16 : Operand<i16> {}
-
-// def uimm16: Operand<ui16>{
-
-// }
-
-// Selected in SelectAddr
-def mem : Operand<iPTR> {
-  let PrintMethod = "printMemOperand";
-  // Why not more(GRPOUT)
-  let MIOperandInfo = (ops CPURegs,
-      simm16); // second operand SHOULD be always zero
-  let EncoderMethod = "getMemEncoding";
-}
-
-def memRR : Operand<iPTR> {
-  let PrintMethod = "printMemRROperand";
-  let MIOperandInfo = (ops CPURegs, CPURegs);
-}
-
-let Uses = [FP] in {
-  // stack words
-  def lsw : LoadMStack<"lsw", load_a, mem, addr_on_frame, 0>;
-  def ssw : StoreMStack<"ssw", store_a, mem, addr_on_frame, 0>;
-  // stack bytes
-  def ssb : StoreMStack<"ssb", truncstorei8, mem, addr_on_frame, 0>;
-  def lsb : LoadMStack<"lsb", zextloadi8, mem, addr_on_frame, 0>;
-  def lssb : LoadMStack<"lssb", sextloadi8, mem, addr_on_frame, 0>;
-}
-def : Pat<(i16(extloadi8 addr_on_frame:$src)), (lsb addr_on_frame:$src)>;
-
-// TODO: use TABLES?
-class LoadM<string instr_asm, PatFrag OpNode, Operand MemOperand,
-            ComplexPattern AddrPattern, bit Pseudo>
-    : CDMInst<(outs CPURegs:$ra), (ins MemOperand:$addr),
-              !strconcat(instr_asm, "\t$addr, $ra"),
-              [(set CPURegs:$ra, (OpNode AddrPattern:$addr))]> {
-  let isPseudo = Pseudo;
-}
-
-class StoreM<string instr_asm, PatFrag OpNode, Operand MemOperand,
-             ComplexPattern AddrPattern, bit Pseudo>
-    : CDMInst<(outs), (ins CPURegs:$ra, MemOperand:$addr),
-              !strconcat(instr_asm, "\t$addr, $ra"),
-              [(OpNode CPURegs:$ra, AddrPattern:$addr)]> {
-  let isPseudo = Pseudo;
-}
-
-// WORD store
-def stwRR : StoreM<"stw", store, memRR, addrRR, 0>;
-def stw : StoreM<"stw", store, mem, addr, 0>;
-// WORD load
-def ldwRR : LoadM<"ldw", load, memRR, addrRR, 0>;
-def ldw : LoadM<"ldw", load, mem, addr, 0>;
-
-// BYTE load zero extend
-def ldbRR : LoadM<"ldb", zextloadi8, memRR, addrRR, 0>;
-def ldb : LoadM<"ldb", zextloadi8, mem, addr, 0>;
-// BYTE load sign extend
-def ldsbRR : LoadM<"ldsb", sextloadi8, memRR, addrRR, 0>;
-def ldsb : LoadM<"ldsb", sextloadi8, mem, addr, 0>;
-// BYTE store truncate
-def stbRR : StoreM<"stb", truncstorei8, memRR, addrRR, 0>;
-def stb : StoreM<"stb", truncstorei8, mem, addr, 0>;
-
-def : Pat<(i16(extloadi8 addrRR:$src)), (ldbRR addrRR:$src)>;
-def : Pat<(i16(extloadi8 addr:$src)), (ldb addr:$src)>;
+def : Pat<(i16(sub 0, i16:$val)), (NEG $val)>;
 
 // TODO: ArithLogic?
 // TODO: Why not just sext?
@@ -302,6 +417,52 @@ def Sext : CDMInst<(outs CPURegs:$rd), (ins CPURegs:$rs), "sxt\t$rs, $rd", []> {
 
 def : Pat<(i16(sext_inreg i16:$val, i8)), (Sext $val)>;
 
+
+// alu3
+
+class arithLogicR<string asm_instr, SDNode OpNode, bit isComm = 0>
+    : CDMInst<(outs CPURegs:$rd), (ins CPURegs:$rs0, CPURegs:$rs1),
+              !strconcat(asm_instr, " $rs0, $rs1, $rd"),
+              [(set CPURegs:$rd, (OpNode CPURegs:$rs0, CPURegs:$rs1))]> {
+  let isCommutable = isComm;
+  let isReMaterializable = 1;
+  let Defs = [PSR];
+}
+
+def ADD : arithLogicR<"add", add, 1>;
+def SUB : arithLogicR<"sub", sub, 0>;
+
+def AND : arithLogicR<"and", and, 1>;
+def OR : arithLogicR<"or", or, 1>;
+def XOR : arithLogicR<"xor", xor, 1>;
+
+def load_frame_adderss
+    : CDMInst<(outs CPURegs:$rd), (ins CPURegs:$rs), "add\t$rs, fp, $rd", []> {
+  let isCodeGenOnly = true;
+  let Uses = [FP];
+}
+
+def : Pat<(i16 addr_on_frame:$addr), (load_frame_adderss(ldi CPURegs:$addr))>;
+
+
+//alu3_ind
+
+def CMP : CDMInst<(outs), (ins CPURegs:$ra, CPURegs:$rb), "cmp\t$ra, $rb", []> {
+  let Defs = [PSR];
+}
+
+
+
+// misc
+
+// TODO: maybe use PSR from ALU  instructions in branches?
+// def : Pat<(brcond CPURegs:$cond, brtarget:$addr), ()>mo
+
+// def : Pat<(brcond (i16 (setlt CPURegs:$ra, CPURegs:$rb)), bb:$dst),
+//           (BLT (CMP CPURegs:$ra, CPURegs:$rb), bb:$dst)>;
+
+
+// -------------------------------------------------------------------------------------------
 // sextloadi8
 // zextloadi8
 // truncstorei8
@@ -311,82 +472,10 @@ def : Pat<(i16(sext_inreg i16:$val, i8)), (Sext $val)>;
 // mem:$addr), "ldw\t$addr, $ra", [(set CPURegs:$ra,(load addr:$addr))]>; ldi
 
 def imm16 : PatLeaf<(imm), [{return isInt<16>(N->getValue());}]>;
-class LoadImm<Operand Imm>
-    : CDMInst<(outs CPURegs:$ra), (ins Imm:$imm), "ldi\t$ra, $imm", []> {
-  // TODO; what is this?
-  let isReMaterializable = 1;
-  // COSTYL
-  // let Defs = [PSR];
-}
 
-def ldi : LoadImm<simm16>;
 
 let isReturn = 1, isTerminator = 1, isBarrier = 1,
     hasCtrlDep = 1 in def PseudoRet : CDMPseudo<(outs), (ins), "", [(CDMRet)]>;
-
-/*
- TODO: RET, RetLR
- LD: LoadM32 -> LoadM -> FMem -> FL -> CpuoInst -> Instruction
- My LD: LoadM32 -> LoadM -> CDMInst
-*/
-def load_sym : SDNode<"CDMISD::LOAD_SYM", SDTIntUnaryOp>;
-def : Pattern<(i16(load_sym tglobaladdr:$addr)), [(ldi $addr)]>;
-def : Pattern<(i16(load_sym tjumptable:$addr)), [(ldi $addr)]>;
-
-def my_cool_pat_for_ldi : Pat<(i16 imm:$imm), (ldi imm:$imm)>;
-
-class RetBase<string instr_asm> : CDMInst<(outs), (ins), instr_asm, []> {
-  // TODO: check this flags
-  let isReturn = 1;
-  let isCodeGenOnly = 1;
-  let hasCtrlDep = 1;
-  let hasExtraSrcRegAllocReq = 1;
-  let isBranch = 1;
-  let isTerminator = 1;
-  let isBarrier = 1;
-}
-
-def rts : RetBase<"rts">;
-def rti : RetBase<"rti">;
-
-def brtarget : Operand<OtherVT> { let OperandType = "OPERAND_MEMORY"; }
-
-def BR : CDMInst<(outs), (ins brtarget:$addr), "br\t$addr", [(br bb:$addr)]> {
-  let isBranch = 1;
-  let isTerminator = 1;
-  let isBarrier = 1;
-}
-
-// branch indirect
-def stpc
-    : CDMInst<(outs), (ins CPURegs:$rs), "stpc\t$rs", [(brind CPURegs:$rs)]> {
-  let isBranch = 1;
-  let isTerminator = 1;
-  let isBarrier = 1;
-  let isIndirectBranch = 1;
-}
-
-// def
-// class CondBR<string instr_asm>: CDMInst<(outs), (ins SR:$psr,
-// brtarget:$addr),
-//                                         !strconcat(instr_asm, "\t$addr"),
-//                                         []>{
-//                                           let isBranch = 1;
-//                                           let isTerminator = 1;
-//                                         }
-
-def cond_val : Operand<OtherVT> { let PrintMethod = "printCondCode"; }
-
-def cdmize_cond : SDNodeXForm<cond, [{
-  return CurDAG->getTargetConstant(CCToCondOp(N->get()), N, MVT::i16);
-}]>;
-
-def BCond : CDMInst<(outs), (ins cond_val:$cond, brtarget:$addr),
-                    "b$cond\t$addr", []> {
-  let isTerminator = 1;
-  let isBranch = 1;
-  let Uses = [PSR];
-}
 
 def PseudoSelectCC
     : CDMPseudo<(outs CPURegs:$dst),
@@ -416,57 +505,6 @@ def : Pat<(selectcc CPURegs:$lhs, CPURegs:$rhs, CPURegs:$vtrue, CPURegs:$vfalse,
           (PseudoSelectCC CPURegs:$lhs, CPURegs:$rhs, CPURegs:$vtrue,
               CPURegs:$vfalse, (cdmize_cond $cnd))>;
 
-def PseudoBCondRR : CDMPseudo<(outs), (ins cond_val:$cnd, CPURegs:$lhs, CPURegs:$rhs, brtarget:$addr), "", []>{
-  let isTerminator = 1;
-  let isBranch = 1;
-  let Uses = [PSR];
-}
-
-def PseudoBCondRI : CDMPseudo<(outs), (ins cond_val:$cnd, CPURegs:$lhs, i16imm:$rhs, brtarget:$addr), "", []>{
-  let isTerminator = 1;
-  let isBranch = 1;
-  let Uses = [PSR];
-}
-
-def : Pat<(brcc cond:$cnd, CPURegs:$lhs, immZext6:$rhs, bb:$target),
-          (PseudoBCondRI (cdmize_cond $cnd), CPURegs:$lhs, immZext6:$rhs, brtarget:$target)>;
-
-def : Pat<(brcc cond:$cnd, CPURegs:$lhs, CPURegs:$rhs, bb:$target),
-          (PseudoBCondRR (cdmize_cond $cnd), CPURegs:$lhs, CPURegs:$rhs, brtarget:$target)>;
-
-def CMP : CDMInst<(outs), (ins CPURegs:$ra, CPURegs:$rb), "cmp\t$ra, $rb", []> {
-  let Defs = [PSR];
-}
-
-def CMPI : CDMInst<(outs), (ins CPURegs:$r, i16imm:$imm), "cmp\t$r, $imm", []> {
-  let Defs = [PSR];
-}
-
-def TST : CDMInst<(outs), (ins CPURegs:$rs), "tst\t$rs", []> {
-  let Defs = [PSR];
-}
-
-// TODO: maybe use PSR from ALU  instructions in branches?
-// def : Pat<(brcond CPURegs:$cond, brtarget:$addr), ()>mo
-
-// def : Pat<(brcond (i16 (setlt CPURegs:$ra, CPURegs:$rb)), bb:$dst),
-//           (BLT (CMP CPURegs:$ra, CPURegs:$rb), bb:$dst)>;
-def calltarget : Operand<iPTR> {
-  let OperandType = "OPERAND_PCREL";
-  // let PrintMethod = "printCallTarget";
-}
-
-def JSR : CDMInst<(outs), (ins calltarget:$target, variable_ops),
-                  "jsr\t$target", []> {
-  let isCall = 1;
-}
-
-def JSRR : CDMInst<(outs), (ins CPURegs:$rs, variable_ops), "jsrr\t$rs", []> {
-  let isCall = 1;
-}
-
-def : Pat<(CDMCall(i16 tglobaladdr:$target)), (JSR tglobaladdr:$target)>;
-def : Pat<(CDMCall(i16 texternalsym:$target)), (JSR texternalsym:$target)>;
 
 def uimm16 : Operand<i16>;
 def SDT_CDMCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i16>]>;
@@ -488,44 +526,3 @@ let Defs = [SP], Uses = [SP] in {
             "!ADJCALLSTACKUP $amt1", [(callseq_end timm:$amt1, timm:$amt2)]>;
 }
 
-// TODO: convert to ArithLogic ???
-def MOVE
-    : CDMInst<(outs CPURegs:$rd), (ins CPURegs:$rs), "move\t$rs, $rd", []> {
-  // let Defs = [PSR];
-}
-
-// push, pop, ldsp, addsp
-// TODO: this is not selected automatically, probably there should be something
-// more
-let Uses = [SP], Defs = [SP] in {
-  def POP : CDMInst<(outs CPURegs:$rd), (ins), "pop\t$rd", []> {
-    let mayLoad = 1;
-  }
-
-  def PUSH : CDMInst<(outs), (ins CPURegs:$rs), "push\t$rs", []> {
-    let mayStore = 1;
-  }
-
-  def ADDSP : CDMInst<(outs), (ins simm16:$imm), "addsp\t$imm", []>;
-
-  def ADDSPR : CDMInst<(outs), (ins CPURegs:$rd), "addsp\t$rd", []>;
-}
-
-def LDSP : CDMInst<(outs CPURegs:$rd), (ins), "ldsp\t$rd", []> {
-  let Uses = [SP];
-}
-
-def STSP : CDMInst<(outs), (ins CPURegs:$rd), "stsp\t$rd", []> {
-  let Defs = [SP];
-}
-
-
-
-
-def load_frame_adderss
-    : CDMInst<(outs CPURegs:$rd), (ins CPURegs:$rs), "add\t$rs, fp, $rd", []> {
-  let isCodeGenOnly = true;
-  let Uses = [FP];
-}
-
-def : Pat<(i16 addr_on_frame:$addr), (load_frame_adderss(ldi CPURegs:$addr))>;
