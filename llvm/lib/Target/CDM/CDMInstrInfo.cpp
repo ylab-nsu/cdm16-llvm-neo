@@ -95,9 +95,9 @@ bool CDMInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 }
 
 void CDMInstrInfo::expandRet(MachineBasicBlock &MBB, MachineInstr &MI) const {
-  auto Opcode = CDM::rts;
+  auto Opcode = CDM::RTS;
   if (MBB.getParent()->getFunction().getCallingConv() == CallingConv::CdmIsr) {
-    Opcode = CDM::rti;
+    Opcode = CDM::RTI;
   }
   BuildMI(MBB, MI, MI.getDebugLoc(), get(Opcode));
 }
@@ -117,10 +117,10 @@ void CDMInstrInfo::expandBCond(MachineBasicBlock &MBB, MachineInstr &MI) const {
 
   if (MI.getOpcode() == CDM::PseudoBCondRR) {
     Bundler.append(
-        BuildMI(*MBB.getParent(), DL, get(CDM::CMP)).add(LHS).add(RHS));
+        BuildMI(*MBB.getParent(), DL, get(CDM::CMPReg)).add(LHS).add(RHS));
   } else {
     Bundler.append(
-        BuildMI(*MBB.getParent(), DL, get(CDM::CMPI)).add(LHS).add(RHS));
+        BuildMI(*MBB.getParent(), DL, get(CDM::CMPImm6)).add(LHS).add(RHS));
   }
 
   Bundler.append(BuildMI(*MBB.getParent(), DL, get(CDM::BCond))
@@ -262,10 +262,10 @@ void CDMInstrInfo::adjustStackPtr(int64_t Amount, MachineBasicBlock &MBB,
   int64_t Rest = Amount;
 
   for (; Rest < -1024 || Rest >= 1024; Rest -= ImmLimit) {
-    BuildMI(MBB, I, DL, get(CDM::ADDSP)).addImm(ImmLimit);
+    BuildMI(MBB, I, DL, get(CDM::ADDSPImm9)).addImm(ImmLimit);
   }
 
-  BuildMI(MBB, I, DL, get(CDM::ADDSP)).addImm(Rest);
+  BuildMI(MBB, I, DL, get(CDM::ADDSPImm9)).addImm(Rest);
 }
 
 } // namespace llvm

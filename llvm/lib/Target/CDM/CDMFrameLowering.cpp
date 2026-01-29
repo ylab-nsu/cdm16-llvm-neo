@@ -87,8 +87,8 @@ void CDMFrameLowering::emitPrologue(MachineFunction &MF,
 
   if (StackSize > StackSizeThreshold) {
     BuildMI(MBB, MBBI, DL, TII->get(CDM::PUSH)).addReg(CDM::R0);
-    BuildMI(MBB, MBBI, DL, TII->get(CDM::ldi), CDM::R0).addImm(-StackSize + 2);
-    BuildMI(MBB, MBBI, DL, TII->get(CDM::ADDSPR)).addReg(CDM::R0);
+    BuildMI(MBB, MBBI, DL, TII->get(CDM::LDIImm16), CDM::R0).addImm(-StackSize + 2);
+    BuildMI(MBB, MBBI, DL, TII->get(CDM::ADDSPReg)).addReg(CDM::R0);
     BuildMI(MBB, MBBI, DL, TII->get(CDM::lsw), CDM::R0).addImm(0);
 
     return;

@@ -3,7 +3,9 @@
 //
 
 #include "CDMInstPrinter.h"
-#include <map>
+#include "CDMInstrInfo.h"
+#include "MCTargetDesc/CDMAsmStreamer.h"
+#include "MCTargetDesc/CDMMCTargetDesc.h"
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCExpr.h"
@@ -13,16 +15,15 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <map>
+
 using namespace llvm;
 #define PRINT_ALIAS_INSTR
 #include "CDMGenAsmWriter.inc"
-#include "CDMInstrInfo.h"
-#include "MCTargetDesc/CDMAsmStreamer.h"
 
 void CDMInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                StringRef Annot, const MCSubtargetInfo &STI,
                                raw_ostream &O) {
-  // TODO: printAliasInst()?
   printInstruction(MI, Address, O);
   printAnnotation(O, Annot);
 }
@@ -47,17 +48,6 @@ void CDMInstPrinter::printOperand(const MCInst *MI, unsigned int OpNo,
   llvm_unreachable("Unknown operand type");
 }
 
-void CDMInstPrinter::printMemOperand(const MCInst *MI, unsigned int OpNo,
-                                     raw_ostream &O) {
-  if (MI->getOperand(OpNo + 1).isImm()) {
-    assert(MI->getOperand(OpNo + 1).getImm() == 0 &&
-           "Mem operand can't have non-zero offset");
-  }
-  printOperand(MI, OpNo, O);
-}
-void CDMInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
-  OS << StringRef(const_cast<CDMInstPrinter *>(this)->getRegisterName(Reg));
-}
 void CDMInstPrinter::printCondCode(const MCInst *MI, unsigned int OpNo,
                                    raw_ostream &O) {
   using namespace llvm;
@@ -69,6 +59,20 @@ void CDMInstPrinter::printCondCode(const MCInst *MI, unsigned int OpNo,
   };
   O << CondMap.at((CDMCOND::CondOp)MI->getOperand(OpNo).getImm());
 }
+
+void CDMInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
+  OS << StringRef(const_cast<CDMInstPrinter *>(this)->getRegisterName(Reg));
+}
+
+void CDMInstPrinter::printMemOperand(const MCInst *MI, unsigned int OpNo,
+                                     raw_ostream &O) {
+  if (MI->getOperand(OpNo + 1).isImm()) {
+    assert(MI->getOperand(OpNo + 1).getImm() == 0 &&
+           "Mem operand can't have non-zero offset");
+  }
+  printOperand(MI, OpNo, O);
+}
+
 void CDMInstPrinter::printMemRROperand(const MCInst *MI, unsigned int OpNo,
                                        raw_ostream &O) {
   printOperand(MI, OpNo, O);

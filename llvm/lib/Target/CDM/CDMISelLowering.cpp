@@ -884,7 +884,7 @@ CDMISelLowering::emitShiftLoop(MachineInstr &MI, MachineBasicBlock *MBB) const {
   if (RegCount == 1) {
     ShiftOp.addImm(1);
   }
-  BuildMI(LoopBB, DL, TII->get(CDM::SUBI), ShiftAmtReg2)
+  BuildMI(LoopBB, DL, TII->get(CDM::SUBImm6), ShiftAmtReg2)
       .addReg(ShiftAmtReg)
       .addImm(1);
 

@@ -1,8 +1,5 @@
 class CDMInst<dag outs, dag ins, string asmstr, list<dag> pattern>
     : Instruction {
-  // Inst and Size: for tablegen(... -gen-emitter) and
-  // tablegen(... -gen-disassembler) in CMakeLists.txt
-
   let Namespace = "CDM";
 
   let OutOperandList = outs;
@@ -29,6 +26,7 @@ class CDMPseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
     : CDMInst16<outs, ins, asmstr, pattern> {
   let isCodeGenOnly = 1;
   let isPseudo = 1;
+  let Inst = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -45,34 +43,16 @@ class Inst0Op<bits<4> f, dag outs, dag ins, string asmstr,
 }
 
 //===----------------------------------------------------------------------===//
-// Call subroutine with label: <|oooo|cxxx|xxxx|ffff|kkkk|kkkk|kkkk|kkkk|>
-// o = opcode (5 bits)
-// x = ignored bits (7 bits)
-// f = secondary opcode (4 bits)
-// k = constant (16 bits)
+// 0op instruction with 16-bit immediate constant.
 //===----------------------------------------------------------------------===//
-class InstJsr<bits<4> f, dag outs, dag ins, string asmstr,
+class Inst0OpImm16<bits<4> f, dag outs, dag ins, string asmstr,
             list<dag> pattern>: CDMInst32<outs, ins, asmstr, pattern> {
-  bits<16> k;
+  bits<16> imm;
 
-  let Inst{31 - 27} = 0b00000;
-  let Inst{26 - 20} = 0b0000000;
-  let Inst{19 - 16} = f;
-  let Inst{15 - 0} = k;
-}
-
-//===----------------------------------------------------------------------===//
-// Return with base pointer
-//===----------------------------------------------------------------------===//
-class RetBase<bits<4> f, string instr_asm> : CDMInst0Op<f, (outs), (ins), instr_asm, []> {
-  // TODO: check this flags
-  let isReturn = 1;
-  let isCodeGenOnly = 1;
-  let hasCtrlDep = 1;
-  let hasExtraSrcRegAllocReq = 1;
-  let isBranch = 1;
-  let isTerminator = 1;
-  let isBarrier = 1;
+  let Inst{31 - 16} = imm;
+  let Inst{15 - 11} = 0b00000;
+  let Inst{10 - 4} = 0b0000000;
+  let Inst{3 - 0} = f;
 }
 
 //===----------------------------------------------------------------------===//
@@ -83,7 +63,7 @@ class RetBase<bits<4> f, string instr_asm> : CDMInst0Op<f, (outs), (ins), instr_
 // d = first operand (3 bits)
 //===----------------------------------------------------------------------===//
 class Inst1Op<bits<4> f, dag outs, dag ins, string asmstr,
-            list<dag> pattern> : CDMInst<outs, ins, asmstr, pattern> {
+            list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
   bits<3> rd;
 
   let Inst{15 - 13} = 0b001;
@@ -92,48 +72,59 @@ class Inst1Op<bits<4> f, dag outs, dag ins, string asmstr,
   let Inst{2 - 0} = rd;
 }
 
-class InstLdi<bits<4> f, dag outs, dag ins, string asmstr,
-            list<dag> pattern> : Inst1Op<f, outs, ins, asmstr, pattern> {
+//===----------------------------------------------------------------------===//
+// 1op instruction with 16-bit immediate constant.
+//===----------------------------------------------------------------------===//
+class Inst1OpImm16<bits<4> f, dag outs, dag ins, string asmstr,
+            list<dag> pattern> : CDMInst32<outs, ins, asmstr, pattern> {
   bits<16> imm;
-  let Size = 4;
-  let isReMaterializable = 1;
+  bits<3> rd;
+
+  let Inst{31 - 16} = imm;
+  let Inst{15 - 13} = 0b001;
+  let Inst{12 - 7} = 0b000000;
+  let Inst{6 - 3} = f;
+  let Inst{2 - 0} = rd;
 }
 
 //===----------------------------------------------------------------------===//
-// Instruction with 2 operands (groups 2op and mem2): <|oooo|cxff|ffrr|rddd|>
+// Instruction with 2 operands: <|oooo|cxff|ffrr|rddd|>
 // o = opcode (5 bits)
 // x = ignored bits (1 bit)
 // f = secondary opcode (4 bits)
 // r = source (3 bits)
 // d = destination (3 bits)
 //===----------------------------------------------------------------------===//
-class Inst2Op<bits<5>opcode, bits<4> f, dag outs, dag ins, string asmstr,
-            list<dag> pattern> : CDMInst<outs, ins, asmstr, pattern> {
+class Inst2Op<bits<4> f, dag outs, dag ins, string asmstr,
+            list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
   bits<3> rs;
   bits<3> rd;
 
-  let Inst{15 - 11} = opcode;
+  let Inst{15 - 11} = 0b01000;
   let Inst{10} = 0b0;
   let Inst{9 - 6} = f;
   let Inst{5 - 3} = rs;
   let Inst{2 - 0} = rd;
 }
 
-// TODO: use TABLES?
-class LoadM<bits<4> f, string instr_asm, PatFrag OpNode, Operand MemOperand,
-            ComplexPattern AddrPattern, bit Pseudo>
-    : Inst2Op<0b01010, f, (outs CPURegs:$ra), (ins MemOperand:$addr),
-              !strconcat(instr_asm, "\t$addr, $ra"),
-              [(set CPURegs:$ra, (OpNode AddrPattern:$addr))]> {
-  let isPseudo = Pseudo;
-}
+//===----------------------------------------------------------------------===//
+// Memory instruction with 2 operands: <|oooo|cxff|ffrr|rddd|>
+// o = opcode (5 bits)
+// x = ignored bits (1 bit)
+// f = secondary opcode (4 bits)
+// r = source (3 bits)
+// d = destination (3 bits)
+//===----------------------------------------------------------------------===//
+class InstMem2<bits<4> f, dag outs, dag ins, string asmstr,
+            list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
+  bits<3> rs;
+  bits<3> rd;
 
-class StoreM<bits<4> f, string instr_asm, PatFrag OpNode, Operand MemOperand,
-             ComplexPattern AddrPattern, bit Pseudo>
-    : Inst2Op<0b01010, f, opcode, f(outs), (ins CPURegs:$ra, MemOperand:$addr),
-              !strconcat(instr_asm, "\t$addr, $ra"),
-              [(OpNode CPURegs:$ra, AddrPattern:$addr)]> {
-  let isPseudo = Pseudo;
+  let Inst{15 - 11} = 0b01010;
+  let Inst{10} = 0b0;
+  let Inst{9 - 6} = f;
+  let Inst{5 - 3} = rs;
+  let Inst{2 - 0} = rd;
 }
 
 //===----------------------------------------------------------------------===//
@@ -144,13 +135,13 @@ class StoreM<bits<4> f, string instr_asm, PatFrag OpNode, Operand MemOperand,
 // d = destination (3 bits)
 //===----------------------------------------------------------------------===//
 class InstImm6<bits<4> f, dag outs, dag ins, string asmstr,
-            list<dag> pattern> : CDMInst<outs, ins, asmstr, pattern> {
-  bits<6> k;
+            list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
+  bits<6> imm;
   bits<3> rd;
 
   let Inst{15 - 13} = 0b011;
   let Inst{12 - 9} = f;
-  let Inst{8 - 3} = k;
+  let Inst{8 - 3} = imm;
   let Inst{2 - 0} = rd;
 }
 
@@ -161,12 +152,12 @@ class InstImm6<bits<4> f, dag outs, dag ins, string asmstr,
 // K = constant data (9 bits)
 //===----------------------------------------------------------------------===//
 class InstImm9<bits<4> f, dag outs, dag ins, string asmstr,
-            list<dag> pattern> : CDMInst<outs, ins, asmstr, pattern> {
-  bits<9> k;
+            list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
+  bits<9> imm;
 
   let Inst{15 - 13} = 0b100;
   let Inst{12 - 9} = f;
-  let Inst{8 - 0} = k;
+  let Inst{8 - 0} = imm;
 }
 
 //===----------------------------------------------------------------------===//
@@ -178,7 +169,7 @@ class InstImm9<bits<4> f, dag outs, dag ins, string asmstr,
 // d = destination(3 bits)
 //===----------------------------------------------------------------------===//
 class InstMem3< bits<3> f, dag outs, dag ins, string asmstr,
-            list<dag> pattern> : CDMInst<outs, ins, asmstr, pattern> {
+            list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
   bits<3> rs1;
   bits<3> rs0;
   bits<3> rd;
@@ -197,7 +188,7 @@ class InstMem3< bits<3> f, dag outs, dag ins, string asmstr,
 // c = condition (4 bits)
 //===----------------------------------------------------------------------===//
 class InstAbsBr<dag outs, dag ins, string asmstr,
-            list<dag> pattern> : CDMInst<outs, ins, asmstr, pattern> {
+            list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
   bits<4> c;
 
   let Inst{15 - 11} = 0b00001;
@@ -212,7 +203,7 @@ class InstAbsBr<dag outs, dag ins, string asmstr,
 // K = constant data (9 bits)
 //===----------------------------------------------------------------------===//
 class InstRelBr<bits<3>opcode, dag outs, dag ins, string asmstr,
-            list<dag> pattern> : CDMInst<outs, ins, asmstr, pattern> {
+            list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
   bits<4> c;
   bits<9> k;
 
@@ -229,15 +220,15 @@ class InstRelBr<bits<3>opcode, dag outs, dag ins, string asmstr,
 // s = source (3 bits)
 // d = destination (3 bits)
 //===----------------------------------------------------------------------===//
-class InstShift<bits<3> f, dag outs, dag ins, string asmstr,
-            list<dag> pattern> : CDMInst<outs, ins, asmstr, pattern> {
-  bits<3> sh;
+class InstShifts<bits<3> f, dag outs, dag ins, string asmstr,
+            list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
+  bits<3> shamt;
   bits<3> rs;
   bits<3> rd;
 
   let Inst{15 - 12} = 0b0001;
   let Inst{11 - 9} = f;
-  let Inst{8 - 6} = sh;
+  let Inst{8 - 6} = shamt;
   let Inst{5 - 3} = rs;
   let Inst{2 - 0} = rd;
 }
@@ -251,7 +242,7 @@ class InstShift<bits<3> f, dag outs, dag ins, string asmstr,
 // d = destination (3 bits)
 //===----------------------------------------------------------------------===//
 class InstAlu2<bits<3> f, dag outs, dag ins, string asmstr,
-            list<dag> pattern> : CDMInst<outs, ins, asmstr, pattern> {
+            list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
   bits<3> rs;
   bits<3> rd;
 
@@ -271,7 +262,7 @@ class InstAlu2<bits<3> f, dag outs, dag ins, string asmstr,
 // d = destination (3 bits)
 //===----------------------------------------------------------------------===//
 class InstAlu3<bits<3> f, dag outs, dag ins, string asmstr,
-            list<dag> pattern> : CDMInst<outs, ins, asmstr, pattern> {
+            list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
   bits<3> rs1;
   bits<3> rs0;
   bits<3> rd;
@@ -292,7 +283,7 @@ class InstAlu3<bits<3> f, dag outs, dag ins, string asmstr,
 // d = destination (3 bits)
 //===----------------------------------------------------------------------===//
 class InstAlu3Ind<bits<3> f, dag outs, dag ins, string asmstr,
-            list<dag> pattern> : CDMInst<outs, ins, asmstr, pattern> {
+            list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
   bits<3> rs;
   bits<3> rd;
 
@@ -302,33 +293,3 @@ class InstAlu3Ind<bits<3> f, dag outs, dag ins, string asmstr,
   let Inst{5 - 3} = rs;
   let Inst{2 - 0} = rd;
 }
-
-
-// misc
-
-class AlignedLoad<PatFrag Node> : PatFrag<(ops node:$ptr), (Node node:$ptr), [{
-  LoadSDNode *LD = cast<LoadSDNode>(N);
-  return LD->getMemoryVT().getSizeInBits()/8 <= LD->getAlign().value();
-}]>;
-class AlignedStore<PatFrag Node>
-    : PatFrag<(ops node:$val, node:$ptr), (Node node:$val, node:$ptr), [{
-  StoreSDNode *SD = cast<StoreSDNode>(N);
-  return SD->getMemoryVT().getSizeInBits()/8 <= SD->getAlign().value();
-}]>;
-
-class LoadMStack<string instr_asm, PatFrag OpNode, Operand MemOperand,
-                 ComplexPattern AddrPattern, bit Pseudo>
-    : CDMInst<(outs CPURegs:$ra), (ins MemOperand:$addr),
-              !strconcat(instr_asm, "\t$ra, $addr"),
-              [(set CPURegs:$ra, (OpNode AddrPattern:$addr))]> {
-  let isPseudo = Pseudo;
-}
-
-class StoreMStack<string instr_asm, PatFrag OpNode, Operand MemOperand,
-                  ComplexPattern AddrPattern, bit Pseudo>
-    : CDMInst<(outs), (ins CPURegs:$ra, MemOperand:$addr),
-              !strconcat(instr_asm, "\t$ra, $addr"),
-              [(OpNode CPURegs:$ra, AddrPattern:$addr)]> {
-  let isPseudo = Pseudo;
-}
-

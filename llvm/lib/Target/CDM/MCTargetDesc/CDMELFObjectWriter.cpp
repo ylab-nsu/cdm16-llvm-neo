@@ -22,7 +22,7 @@ public:
 };
 
 CDMELFObjectWriter::CDMELFObjectWriter(uint8_t OSABI)
-    : MCELFObjectTargetWriter(false, OSABI, ELF::EM_CDM, true) {}
+    : MCELFObjectTargetWriter(false, OSABI, ELF::EM_CDM, false) {}
 
 unsigned CDMELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                           const MCValue &Target,

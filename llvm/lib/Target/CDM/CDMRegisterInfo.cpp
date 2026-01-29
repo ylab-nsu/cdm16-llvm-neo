@@ -125,7 +125,7 @@ bool CDMRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
         report_fatal_error("Couldn't find register to use");
     }
 
-    BuildMI(MBB, II, II->getDebugLoc(), InstrInfo->get(CDM::ldi), OffsetReg)
+    BuildMI(MBB, II, II->getDebugLoc(), InstrInfo->get(CDM::LDIImm16), OffsetReg)
         .addImm(FpOffset);
 
     BuildMI(MBB, II, II->getDebugLoc(), InstrInfo->get(SubstitutionOpc))

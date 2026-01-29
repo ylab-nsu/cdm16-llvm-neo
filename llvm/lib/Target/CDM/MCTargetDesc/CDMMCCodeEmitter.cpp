@@ -3,8 +3,10 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/EndianStream.h"
@@ -24,6 +26,10 @@ public:
 
   ~CDMMCCodeEmitter() override = default;
 
+  uint64_t getMachineOpValue(const MCInst &MI, const MCOperand &MO,
+                             SmallVectorImpl<MCFixup> &Fixups,
+                             const MCSubtargetInfo &STI) const;
+
   void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
@@ -33,10 +39,128 @@ public:
   uint64_t getBinaryCodeForInstr(const MCInst &MI,
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const;
+
+private:
+  /// Encodes an imm16 operand.
+  unsigned encodeImm16(const MCInst &MI, unsigned OpNo,
+                       SmallVectorImpl<MCFixup> &Fixups,
+                       const MCSubtargetInfo &STI) const;
+
+  /// Encodes an immediate operand for bit shift instructions.
+  unsigned encodeShamt(const MCInst &MI, unsigned OpNo,
+                       SmallVectorImpl<MCFixup> &Fixups,
+                       const MCSubtargetInfo &STI) const;
+
+  /// Encodes a word offset for imm9 variations of addsp and jsr.
+  signed encodeWordOffset(const MCInst &MI, unsigned OpNo,
+                          SmallVectorImpl<MCFixup> &Fixups,
+                          const MCSubtargetInfo &STI) const;
+
+  /// Adjusts the opcode of imm6 and imm9 instrucions
+  /// based on the sign of the immediate.
+  unsigned adjustImmOpCode(const MCInst &MI, unsigned EncodedValue,
+                             const MCSubtargetInfo &STI) const;
 };
 
-
 } // end anonymous namespace
+
+static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
+                     const MCExpr *Value, uint16_t Kind) {
+  bool PCRel = false;
+  Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));
+}
+
+uint64_t CDMMCCodeEmitter::getMachineOpValue(const MCInst &MI,
+                                             const MCOperand &MO,
+                                             SmallVectorImpl<MCFixup> &Fixups,
+                                             const MCSubtargetInfo &STI) const {
+
+  if (MO.isReg())
+    return Ctx.getRegisterInfo()->getEncodingValue(MO.getReg());
+
+  if (MO.isImm())
+    return MO.getImm();
+
+  llvm_unreachable("Unhandled expression!");
+  return 0;
+}
+
+unsigned CDMMCCodeEmitter::encodeImm16(const MCInst &MI, unsigned OpNo,
+                                       SmallVectorImpl<MCFixup> &Fixups,
+                                       const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  // If the destination is an immediate, there is nothing to do.
+  if (MO.isImm())
+    return MO.getImm();
+
+  assert(MO.isExpr() && "encodeImm16 expects only expressions or immediates");
+  const MCExpr *Expr = MO.getExpr();
+
+  addFixup(Fixups, 2, Expr, FK_Data_2);
+  return 0;
+}
+
+unsigned CDMMCCodeEmitter::encodeShamt(const MCInst &MI, unsigned OpNo,
+                                       SmallVectorImpl<MCFixup> &Fixups,
+                                       const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  int64_t Value;
+  if (!MO.evaluateAsConstantImm(Value)) {
+    llvm_unreachable("Unsupported shift amount operand!");
+  }
+  if (Value == 0) {
+    llvm_unreachable("Invalid shift amount!");
+  }
+  return Value - 1;
+}
+
+signed CDMMCCodeEmitter::encodeWordOffset(const MCInst &MI, unsigned OpNo,
+                                          SmallVectorImpl<MCFixup> &Fixups,
+                                          const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  int64_t Value;
+  if (!MO.evaluateAsConstantImm(Value)) {
+    llvm_unreachable("Unsupported word offset operand!");
+  }
+  if (Value % 2) {
+    llvm_unreachable("Invalid word offset!");
+  }
+  return Value >> 1;
+}
+
+unsigned CDMMCCodeEmitter::adjustImmOpCode(const MCInst &MI,
+                                             unsigned EncodedValue,
+                                             const MCSubtargetInfo &STI) const {
+  unsigned OpNo;
+  switch (MI.getOpcode()) {
+    default:
+      OpNo = 0;
+      break;
+    case CDM::ADDImm6:
+      OpNo = 2;
+      break;
+    case CDM::CMPImm6:
+      OpNo = 1;
+      break;
+    case CDM::ADDSPImm9:
+      OpNo = 0;
+      break;
+  }
+
+  int64_t Value;
+  const MCOperand &MO = MI.getOperand(OpNo);
+  if (!MO.evaluateAsConstantImm(Value)) {
+    llvm_unreachable("Unsupported imm6/imm9 operand!");
+  }
+
+  if (Value < 0) {
+    EncodedValue += 1 << 9;
+  }
+  return EncodedValue;
+}
 
 void CDMMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                          SmallVectorImpl<char> &CB,
@@ -61,7 +185,8 @@ void CDMMCCodeEmitter::encodeInstruction(const MCInst &MI,
   }
 }
 
-MCCodeEmitter *llvm::createCDMMCCodeEmitter(const MCInstrInfo &MCII, MCContext &Ctx) {
+MCCodeEmitter *llvm::createCDMMCCodeEmitter(const MCInstrInfo &MCII,
+                                            MCContext &Ctx) {
   return new CDMMCCodeEmitter(MCII, Ctx);
 }
 
