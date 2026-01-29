@@ -120,7 +120,7 @@ def parse_test(filepath, processor_info):
     files.append(filepath.absolute())
   elif filepath.is_dir():
     for file in filter(Path.is_file, filepath.iterdir()):
-      files.append(file)
+      files.append(file.absolute())
   else:
     raise ValueError("Expected path to regular file or directory")
   
@@ -128,7 +128,7 @@ def parse_test(filepath, processor_info):
   commons = Path(__file__).parent.parent.parent.absolute() / "commons"
   for file in filter(Path.is_file, commons.iterdir()):
     if not file.stem in map(lambda f : f.stem, files):
-      files.append(file)
+      files.append(file.absolute())
   
   # Parse all directives
   for file in filter(lambda f : f.suffix == '.c', files):
