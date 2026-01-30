@@ -19,7 +19,7 @@ namespace {
 
 class CDM final: public TargetInfo {
 public:
-    CDM(Ctx &ctx): TargetInfo(ctx) { return; }
+    CDM(Ctx &ctx);
     RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
     void relocate(uint8_t *loc, const Relocation &rel,
@@ -27,6 +27,10 @@ public:
     int64_t getImplicitAddend(const uint8_t *buf,
                 RelType type) const override;
 };
+}
+
+CDM::CDM(Ctx &ctx): TargetInfo(ctx) {
+    defaultImageBase = 0x00000;
 }
 
 RelExpr CDM::getRelExpr(RelType type, const Symbol &s,
