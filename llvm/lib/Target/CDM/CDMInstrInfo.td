@@ -306,7 +306,7 @@ def MOVE : Inst2Op<0b0000, (outs CPURegs:$rd), (ins CPURegs:$rs), "move\t$rs, $r
 // TODO: use TABLES?
 class LoadM<string instr_asm, PatFrag OpNode, Operand MemOperand,
             ComplexPattern AddrPattern, bit Pseudo>
-    : CDMPseudo<(outs CPURegs:$rd), (ins MemOperand:$rs),
+    : CDMInst16<(outs CPURegs:$rd), (ins MemOperand:$rs),
               !strconcat(instr_asm, "\t$rs, $rd"),
               [(set CPURegs:$rd, (OpNode AddrPattern:$rs))]> {
   let isPseudo = Pseudo;
@@ -314,7 +314,7 @@ class LoadM<string instr_asm, PatFrag OpNode, Operand MemOperand,
 
 class StoreM<string instr_asm, PatFrag OpNode, Operand MemOperand,
              ComplexPattern AddrPattern, bit Pseudo>
-    : CDMPseudo<(outs), (ins CPURegs:$rd, MemOperand:$rs),
+    : CDMInst16<(outs), (ins CPURegs:$rd, MemOperand:$rs),
               !strconcat(instr_asm, "\t$rs, $rd"),
               [(OpNode CPURegs:$rd, AddrPattern:$rs)]> {
   let isPseudo = Pseudo;
