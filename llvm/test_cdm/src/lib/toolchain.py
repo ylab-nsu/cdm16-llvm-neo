@@ -36,7 +36,8 @@ def clang_compile(filepath, clang_path, include_paths, opt_level):
   # print(' '.join(clang_args), end = "\n\n")
 
   if not clang_proc.returncode == 0:
-    os.remove(str(output_path))
+    if os.path.exists(str(output_path)):
+      os.remove(str(output_path))
     raise CompilationError(f"Failed when tried to compile {str(filepath)} with return code {clang_proc.returncode}\nStdout:\n{clang_proc.stdout.decode()}\nStderr:\n{clang_proc.stderr.decode()}")
   return output_path
 
@@ -55,7 +56,8 @@ def clang_compile_and_assemble(filepath, clang_path, include_paths, opt_level):
   # print(' '.join(clang_args), end = "\n\n")
 
   if not clang_proc.returncode == 0:
-    os.remove(str(output_path))
+    if os.path.exists(str(output_path)):
+      os.remove(str(output_path))
     raise CompilationError(f"Failed when tried to compile and assemble {str(filepath)} with return code {clang_proc.returncode}\nStdout:\n{clang_proc.stdout.decode()}\nStderr:\n{clang_proc.stderr.decode()}")
   return output_path
 
@@ -79,7 +81,8 @@ def cocas_assemble(filepath):
                               stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE)
   if not cocas_proc.returncode == 0:
-    os.remove(str(output_path))
+    if os.path.exists(str(output_path)):
+      os.remove(str(output_path))
     raise CocasError(f"Failed when tried to assemble {str(filepath)} with return code {cocas_proc.returncode}\nStdout:\n{cocas_proc.stdout.decode()}\nStderr:\n{cocas_proc.stderr.decode()}")
 
   return output_path
@@ -102,7 +105,8 @@ def cocas_assemble_and_link(cocas_input):
                               stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE)
   if not cocas_proc.returncode == 0:
-    os.remove(str(output_path))
+    if os.path.exists(str(output_path)):
+      os.remove(str(output_path))
     raise CocasError(f"Failed when tried to assemble and link {' '.join(map(str, cocas_input))} with return code {cocas_proc.returncode}\nStdout:\n{cocas_proc.stdout.decode()}\nStderr:\n{cocas_proc.stderr.decode()}")
 
   return output_path
