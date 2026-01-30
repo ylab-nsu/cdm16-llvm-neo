@@ -55,6 +55,11 @@ def imm16 : Operand<i16> {
   let EncoderMethod = "encodeImm16";
 }
 
+// 6-bit negated constant for SUBImm6
+def imm6Neg : Operand<i16> {
+  let EncoderMethod = "encodeImmNeg";
+}
+
 // 16-bit constant branch target
 def brTarget16 : Operand<OtherVT> {
   let OperandType = "OPERAND_MEMORY";
@@ -385,16 +390,14 @@ let Defs = [PSR], isReMaterializable = 1, Constraints = "$rs = $rd" in {
   // Computes rd + imm6 and puts result in rd.
   def ADDImm6 : InstImm6<0b1100, (outs CPURegs:$rd), (ins CPURegs:$rs, i16imm:$imm), "add\t$rs, $imm",
                          [(set CPURegs:$rd, (add CPURegs:$rs, immZext6:$imm))]> {
-    let PostEncoderMethod = "adjustImmOpCode";
+    let PostEncoderMethod = "adjustImmOpCode<2, 9, false>";
   }
 
-  // TODO Expand this
   // Subtract immediate
   // Computes rd - imm6 and puts result in rd.
-  // Expands to: add rd, -imm6
-  def SUBImm6 : CDMPseudo<(outs CPURegs:$rd), (ins CPURegs:$rs, i16imm:$imm), "sub\t$rs, $imm",
+  def SUBImm6 : InstImm6<0b1100, (outs CPURegs:$rd), (ins CPURegs:$rs, imm6Neg:$imm), "sub\t$rs, $imm",
                          [(set CPURegs:$rd, (sub CPURegs:$rs, immZext6:$imm))]> {
-    let isCodeGenOnly = 0;
+    let PostEncoderMethod = "adjustImmOpCode<2, 9, true>";
   }
 }
 
@@ -403,7 +406,7 @@ let Defs = [PSR], isReMaterializable = 1, Constraints = "$rs = $rd" in {
 // and thus compares numbers rd and imm6.
 def CMPImm6 : InstImm6<0b1110, (outs), (ins CPURegs:$rd, i16imm:$imm), "cmp\t$rd, $imm", []> {
   let Defs = [PSR];
-  let PostEncoderMethod = "adjustImmOpCode";
+  let PostEncoderMethod = "adjustImmOpCode<1, 9, false>";
 }
 
 // Test register
@@ -419,7 +422,7 @@ def TST : InstAlias<"tst\t$rd", (CMPImm6 CPURegs:$rd, 0)>;
 def ADDSPImm9 : InstImm9<0b0100, (outs), (ins wordOffset:$imm), "addsp\t$imm", []> {
   let Uses = [SP];
   let Defs = [SP];
-  let PostEncoderMethod = "adjustImmOpCode";
+  let PostEncoderMethod = "adjustImmOpCode<0, 9, false>";
 }
 
 //===----------------------------------------------------------------------===//

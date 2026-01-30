@@ -10,6 +10,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/Register.h"
 
+#include "llvm/Support/ErrorHandling.h"
 #define GET_INSTRINFO_CTOR_DTOR
 #include "CDMGenInstrInfo.inc"
 

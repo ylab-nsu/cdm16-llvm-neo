@@ -11,6 +11,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/EndianStream.h"
 
+#include "llvm/Support/ErrorHandling.h"
 using namespace llvm;
 
 namespace {
@@ -41,6 +42,11 @@ public:
                                  const MCSubtargetInfo &STI) const;
 
 private:
+  /// Encodes an immediate operand as 2's complement.
+  unsigned encodeImmNeg(const MCInst &MI, unsigned OpNo,
+                        SmallVectorImpl<MCFixup> &Fixups,
+                        const MCSubtargetInfo &STI) const;
+
   /// Encodes an imm16 operand.
   unsigned encodeImm16(const MCInst &MI, unsigned OpNo,
                        SmallVectorImpl<MCFixup> &Fixups,
@@ -58,8 +64,9 @@ private:
 
   /// Adjusts the opcode of imm6 and imm9 instrucions
   /// based on the sign of the immediate.
+  template <unsigned OpNo, unsigned BitOffset, bool Negate>
   unsigned adjustImmOpCode(const MCInst &MI, unsigned EncodedValue,
-                             const MCSubtargetInfo &STI) const;
+                           const MCSubtargetInfo &STI) const;
 };
 
 } // end anonymous namespace
@@ -83,6 +90,16 @@ uint64_t CDMMCCodeEmitter::getMachineOpValue(const MCInst &MI,
 
   llvm_unreachable("Unhandled expression!");
   return 0;
+}
+
+unsigned CDMMCCodeEmitter::encodeImmNeg(const MCInst &MI, unsigned OpNo,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  if (!MO.isImm()) {
+    llvm_unreachable("encodeImmNeg expects only immediates");
+  }
+  return -MO.getImm();
 }
 
 unsigned CDMMCCodeEmitter::encodeImm16(const MCInst &MI, unsigned OpNo,
@@ -131,33 +148,18 @@ signed CDMMCCodeEmitter::encodeWordOffset(const MCInst &MI, unsigned OpNo,
   return Value >> 1;
 }
 
+template <unsigned OpNo, unsigned BitOffset, bool Negate>
 unsigned CDMMCCodeEmitter::adjustImmOpCode(const MCInst &MI,
-                                             unsigned EncodedValue,
-                                             const MCSubtargetInfo &STI) const {
-  unsigned OpNo;
-  switch (MI.getOpcode()) {
-    default:
-      OpNo = 0;
-      break;
-    case CDM::ADDImm6:
-      OpNo = 2;
-      break;
-    case CDM::CMPImm6:
-      OpNo = 1;
-      break;
-    case CDM::ADDSPImm9:
-      OpNo = 0;
-      break;
-  }
-
+                                           unsigned EncodedValue,
+                                           const MCSubtargetInfo &STI) const {
   int64_t Value;
   const MCOperand &MO = MI.getOperand(OpNo);
   if (!MO.evaluateAsConstantImm(Value)) {
     llvm_unreachable("Unsupported imm6/imm9 operand!");
   }
 
-  if (Value < 0) {
-    EncodedValue += 1 << 9;
+  if ((Value < 0 && !Negate) || (Value > 0 && Negate)) {
+    EncodedValue += 1 << BitOffset;
   }
   return EncodedValue;
 }
