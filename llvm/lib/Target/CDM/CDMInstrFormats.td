@@ -187,13 +187,15 @@ class InstMem3< bits<3> f, dag outs, dag ins, string asmstr,
 // x = ignored bits (7 bits)
 // c = condition (4 bits)
 //===----------------------------------------------------------------------===//
-class InstAbsBr<dag outs, dag ins, string asmstr,
-            list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
-  bits<4> c;
+class InstBrAbs<dag outs, dag ins, string asmstr,
+            list<dag> pattern> : CDMInst32<outs, ins, asmstr, pattern> {
+  bits<4> cond;
+  bits<16> imm;
 
+  let Inst{31 - 16} = imm;
   let Inst{15 - 11} = 0b00001;
   let Inst{10 - 4} = 0b0000000;
-  let Inst{3 - 0} = c;
+  let Inst{3 - 0} = cond;
 }
 
 //===----------------------------------------------------------------------===//
@@ -202,7 +204,7 @@ class InstAbsBr<dag outs, dag ins, string asmstr,
 // c = condition (4 bits)
 // K = constant data (9 bits)
 //===----------------------------------------------------------------------===//
-class InstRelBr<bits<3>opcode, dag outs, dag ins, string asmstr,
+class InstBrRel<bits<3>opcode, dag outs, dag ins, string asmstr,
             list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
   bits<4> c;
   bits<9> k;

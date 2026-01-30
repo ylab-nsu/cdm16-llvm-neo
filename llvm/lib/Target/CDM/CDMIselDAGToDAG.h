@@ -54,6 +54,12 @@ private:
 			return CDMCOND::EQ;
 		case ISD::CondCode::SETNE:
 			return CDMCOND::NE;
+		case ISD::CondCode::SETTRUE:
+		case ISD::CondCode::SETTRUE2:
+			return CDMCOND::TRUE;
+		case ISD::CondCode::SETFALSE:
+		case ISD::CondCode::SETFALSE2:
+			return CDMCOND::FALSE;
 		default:
 			llvm_unreachable("Unknown branch condition");
 	}

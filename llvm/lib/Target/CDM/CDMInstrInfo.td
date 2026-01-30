@@ -52,11 +52,13 @@ def callseq_end
 
 // 16-bit constant
 def imm16 : Operand<i16> {
-    let EncoderMethod = "encodeImm16";
+  let EncoderMethod = "encodeImm16";
 }
 
-def brtarget : Operand<OtherVT> {
+// 16-bit constant branch target
+def brTarget16 : Operand<OtherVT> {
   let OperandType = "OPERAND_MEMORY";
+  let EncoderMethod = "encodeImm16";
 }
 
 // Condition code operand used in conditional branch instrcutions.
@@ -424,7 +426,8 @@ def ADDSPImm9 : InstImm9<0b0100, (outs), (ins wordOffset:$imm), "addsp\t$imm", [
 // br_abs format
 //===----------------------------------------------------------------------===//
 
-def BR : CDMInst16<(outs), (ins brtarget:$addr), "br\t$addr", [(br bb:$addr)]> {
+def BR : InstBrAbs<(outs), (ins brTarget16:$imm), "br\t$imm", [(br bb:$imm)]> {
+  let cond = 0xE;
   let isBranch = 1;
   let isTerminator = 1;
   let isBarrier = 1;
@@ -434,30 +437,12 @@ def cdmize_cond : SDNodeXForm<cond, [{
   return CurDAG->getTargetConstant(CCToCondOp(N->get()), N, MVT::i16);
 }]>;
 
-def BCond : CDMInst16<(outs), (ins condCode:$cond, brtarget:$addr),
-                    "b$cond\t$addr", []> {
+def BCond : InstBrAbs<(outs), (ins condCode:$cond, brTarget16:$imm),
+                    "b$cond\t$imm", []> {
   let isTerminator = 1;
   let isBranch = 1;
   let Uses = [PSR];
 }
-
-def PseudoBCondRR : CDMPseudo<(outs), (ins condCode:$cnd, CPURegs:$lhs, CPURegs:$rhs, brtarget:$addr), "", []>{
-  let isTerminator = 1;
-  let isBranch = 1;
-  let Uses = [PSR];
-}
-
-def PseudoBCondRI : CDMPseudo<(outs), (ins condCode:$cnd, CPURegs:$lhs, i16imm:$rhs, brtarget:$addr), "", []>{
-  let isTerminator = 1;
-  let isBranch = 1;
-  let Uses = [PSR];
-}
-
-def : Pat<(brcc cond:$cnd, CPURegs:$lhs, immZext6:$rhs, bb:$target),
-          (PseudoBCondRI (cdmize_cond $cnd), CPURegs:$lhs, immZext6:$rhs, brtarget:$target)>;
-
-def : Pat<(brcc cond:$cnd, CPURegs:$lhs, CPURegs:$rhs, bb:$target),
-          (PseudoBCondRR (cdmize_cond $cnd), CPURegs:$lhs, CPURegs:$rhs, brtarget:$target)>;
 
 //===----------------------------------------------------------------------===//
 // shifts format
@@ -675,25 +660,40 @@ let Defs = [PSR] in {
   def BIT : InstAlu3Ind<0b110, (outs), (ins CPURegs:$rs, CPURegs:$rd), "bit\t$rs, $rd", []>;
 }
 
-// misc
+//===----------------------------------------------------------------------===//
+// Branch/select pseudos
+//===----------------------------------------------------------------------===//
+
+def PseudoBCondRR
+    : CDMPseudo<(outs), (ins condCode:$cnd, CPURegs:$lhs, CPURegs:$rhs, brTarget16:$target), "bcondrr", []> {
+  let isTerminator = 1;
+  let isBranch = 1;
+  let Uses = [PSR];
+}
+
+def PseudoBCondRI
+    : CDMPseudo<(outs), (ins condCode:$cnd, CPURegs:$lhs, i16imm:$rhs, brTarget16:$target), "bcondri", []> {
+  let isTerminator = 1;
+  let isBranch = 1;
+  let Uses = [PSR];
+}
 
 def PseudoSelectCC
     : CDMPseudo<(outs CPURegs:$dst),
-              (ins CPURegs:$lhs, CPURegs:$rhs, CPURegs:$vtrue, CPURegs:$vfalse,
-                  condCode:$cnd),
-              "",
-              []> {
+                (ins CPURegs:$lhs, CPURegs:$rhs, CPURegs:$vtrue, CPURegs:$vfalse, condCode:$cnd), "selectcc", []> {
   let usesCustomInserter = true;
 }
 
 def PseudoSelectCCI
     : CDMPseudo<(outs CPURegs:$dst),
-              (ins CPURegs:$lhs, i16imm:$rhs, CPURegs:$vtrue, CPURegs:$vfalse,
-                  condCode:$cnd),
-              "",
-              []> {
+                (ins CPURegs:$lhs, i16imm:$rhs, CPURegs:$vtrue, CPURegs:$vfalse, condCode:$cnd), "selectcci", []> {
   let usesCustomInserter = true;
 }
+def : Pat<(brcc cond:$cnd, CPURegs:$lhs, immZext6:$rhs, bb:$target),
+          (PseudoBCondRI (cdmize_cond $cnd), CPURegs:$lhs, immZext6:$rhs, brTarget16:$target)>;
+
+def : Pat<(brcc cond:$cnd, CPURegs:$lhs, CPURegs:$rhs, bb:$target),
+          (PseudoBCondRR (cdmize_cond $cnd), CPURegs:$lhs, CPURegs:$rhs, brTarget16:$target)>;
 
 def : Pat<(selectcc CPURegs:$lhs, immZext6:$rhs, CPURegs:$vtrue, CPURegs:$vfalse,
               cond:$cnd),
@@ -706,11 +706,10 @@ def : Pat<(selectcc CPURegs:$lhs, CPURegs:$rhs, CPURegs:$vtrue, CPURegs:$vfalse,
               CPURegs:$vfalse, (cdmize_cond $cnd))>;
 
 let Defs = [SP], Uses = [SP] in {
-  def ADJCALLSTACKDOWN : CDMPseudo<(outs), (ins imm16:$amt1, imm16:$amt2),
-                                   "!ADJCALLSTACKDOWN $amt1",
-                                   [(callseq_start timm:$amt1, timm:$amt2)]>;
+  def ADJCALLSTACKDOWN
+      : CDMPseudo<(outs), (ins imm16:$amt1, imm16:$amt2),
+                  "!ADJCALLSTACKDOWN $amt1", [(callseq_start timm:$amt1, timm:$amt2)]>;
   def ADJCALLSTACKUP
-      : CDMPseudo<
-            (outs), (ins imm16:$amt1, imm16:$amt2),
-            "!ADJCALLSTACKUP $amt1", [(callseq_end timm:$amt1, timm:$amt2)]>;
+      : CDMPseudo<(outs), (ins imm16:$amt1, imm16:$amt2),
+                  "!ADJCALLSTACKUP $amt1", [(callseq_end timm:$amt1, timm:$amt2)]>;
 }

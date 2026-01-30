@@ -16,22 +16,26 @@ namespace llvm {
 
 namespace CDMCOND {
 enum CondOp {
-  // signed
-  LT, // <
-  LE, // <=
-  GT, // >
-  GE, // >=
-
-  // unsigned
-  LO, // <
-  LS, // <=
-  HI, // >
-  HS, // >=
-
-  // other
-  EQ, // ==
-  NE, // !=
-
+  EQ = 0x0,    // equal
+  NE = 0x1,    // not equal
+  Z = EQ,      // zero
+  NZ = NE,     // not zero
+  HS = 0x2,    // unsigned greater or equal
+  LO = 0x3,    // unsigned less
+  CS = HS,     // carry flag is set
+  CC = LO,     // carry flag is not set
+  MI = 0x4,    // negative
+  PL = 0x5,    // positive
+  VS = 0x6,    // overflow flag is set
+  VC = 0x7,    // overflow flag is not set
+  HI = 0x8,    // unsigned greater
+  LS = 0x9,    // unsigned less than or equal
+  GE = 0xA,    // signed greater or equal
+  LT = 0xB,    // signed less than
+  GT = 0xC,    // signed greater
+  LE = 0xD,    // signed less than or equal
+  TRUE = 0xE,  // always true
+  FALSE = 0xF, // always false
 };
 
 } // namespace CDMCOND
