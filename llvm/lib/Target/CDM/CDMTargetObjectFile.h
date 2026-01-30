@@ -10,6 +10,8 @@ namespace llvm {
 
 class CDMTargetObjectFile : public TargetLoweringObjectFileELF {
 public:
+  unsigned getTextSectionAlignment() const override { return 2; }
+
   void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
 };
 
