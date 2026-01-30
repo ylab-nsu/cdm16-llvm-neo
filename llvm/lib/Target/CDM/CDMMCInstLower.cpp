@@ -12,9 +12,9 @@
 #include "llvm/MC/MCExpr.h"
 
 namespace llvm {
-CDMMCInstLower::CDMMCInstLower(CDMAsmPrinter &AsmPrinter)
-    : AsmPrinter(AsmPrinter) {}
-void CDMMCInstLower::initialize(MCContext *C) { Ctx = C; }
+CDMMCInstLower::CDMMCInstLower(MCContext &C, CDMAsmPrinter &AsmPrinter)
+    : Ctx(C), AsmPrinter(AsmPrinter) {}
+
 void CDMMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   OutMI.setOpcode(MI->getOpcode());
 
@@ -27,6 +27,7 @@ void CDMMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
     }
   }
 }
+
 MCOperand CDMMCInstLower::lowerOperand(const MachineOperand &MO,
                                        int Offset) const {
   auto MOType = MO.getType();
@@ -47,6 +48,7 @@ MCOperand CDMMCInstLower::lowerOperand(const MachineOperand &MO,
   }
   return MCOperand();
 }
+
 MCOperand CDMMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
                                              int Offset) const {
   MCSymbolRefExpr::VariantKind Kind =
@@ -80,18 +82,19 @@ MCOperand CDMMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
     llvm_unreachable("<unknown operand type>");
   }
 
-  const MCExpr *Expr = MCSymbolRefExpr::create(Symbol, Kind, *Ctx);
+  const MCExpr *Expr = MCSymbolRefExpr::create(Symbol, Kind, Ctx);
 
   if (Offset) {
     // Assume offset is never negative.
     //    llvm_unreachable("I am still unsure what is an offset");
 
     Expr = Offset > 0 ? MCBinaryExpr::createAdd(
-                            Expr, MCConstantExpr::create(Offset, *Ctx), *Ctx)
+                            Expr, MCConstantExpr::create(Offset, Ctx), Ctx)
                       : MCBinaryExpr::createSub(
-                            Expr, MCConstantExpr::create(-Offset, *Ctx), *Ctx);
+                            Expr, MCConstantExpr::create(-Offset, Ctx), Ctx);
   }
 
   return MCOperand::createExpr(Expr);
 }
+
 } // namespace llvm

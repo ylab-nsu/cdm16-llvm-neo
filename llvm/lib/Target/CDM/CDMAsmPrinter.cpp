@@ -125,6 +125,8 @@ void CDMAsmPrinter::emitInstruction(const MachineInstr *Instr) {
     }
   }
 
+  CDMMCInstLower MCInstLower(OutContext, *this);
+
   MachineBasicBlock::const_instr_iterator I = Instr->getIterator();
   MachineBasicBlock::const_instr_iterator E = Instr->getParent()->instr_end();
 
@@ -143,45 +145,6 @@ void CDMAsmPrinter::emitInstruction(const MachineInstr *Instr) {
     MCInstLower.lower(&*I, TmpInst0);
     OutStreamer->emitInstruction(TmpInst0, getSubtargetInfo());
   } while ((++I != E) && I->isInsideBundle());
-}
-
-void CDMAsmPrinter::emitFunctionBodyStart() {
-  MCInstLower.initialize(&MF->getContext());
-  // TODO
-}
-
-void CDMAsmPrinter::emitFunctionBodyEnd() {
-  // TODO
-}
-
-void CDMAsmPrinter::emitFunctionEntryLabel() {
-  OutStreamer->emitLabel(CurrentFnSym);
-}
-
-void CDMAsmPrinter::emitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const {
-  // not needed (stub)
-}
-
-void CDMAsmPrinter::emitFunctionHeader() {
-  // If something is missing, check original implementation
-  // We don't want to emit anything here, but we want to preserve some of the
-  // original functionality
-  const Function &F = MF->getFunction();
-
-  OutStreamer->getCommentOS()
-      << "-- Begin function "
-      << GlobalValue::dropLLVMManglingEscape(F.getName()) << '\n';
-
-  // Print out constants referenced by the function
-  emitConstantPool();
-
-  if (MF->front().isBeginSection())
-    MF->setSection(getObjFileLowering().getUniqueSectionForFunction(F, TM));
-  else
-    MF->setSection(getObjFileLowering().SectionForGlobal(&F, TM));
-  OutStreamer->switchSection(MF->getSection());
-
-  emitFunctionEntryLabel();
 }
 
 void CDMAsmPrinter::emitStartOfAsmFile(Module &Module) {
