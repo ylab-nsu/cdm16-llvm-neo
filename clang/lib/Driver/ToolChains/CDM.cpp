@@ -60,21 +60,12 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Add output file
   CmdArgs.push_back("-o");
-  // If output is final output, specified by user, don't change it's filename
-  Arg *FinalOutput = Args.getLastArg(options::OPT_o);
-  if (FinalOutput &&
-      std::strcmp(FinalOutput->getValue(), Output.getFilename()) == 0) {
-    CmdArgs.push_back(Args.MakeArgString(Output.getFilename()));
-  } else {
-    CmdArgs.push_back(
-        Args.MakeArgString(getCDMToolChain().getInputFilename(Output)));
-  }
+  CmdArgs.push_back(Args.MakeArgString(Output.getFilename()));
 
   // Add all input files
   for (const auto &II : Inputs) {
     if (II.isFilename()) {
-      CmdArgs.push_back(
-          Args.MakeArgString(getCDMToolChain().getInputFilename(II)));
+      CmdArgs.push_back(Args.MakeArgString(II.getFilename()));
     }
   }
 
@@ -168,18 +159,6 @@ CDMToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   }
 
   return DAL;
-}
-
-std::string CDMToolChain::getInputFilename(const InputInfo &Input) const {
-  std::string filename = Input.getFilename();
-
-  // We must use .obj for object files, because cocas need this suffix
-  // to recognize filetype
-  if (Input.getType() == types::TY_Object) {
-    return filename.substr(0, filename.find_last_of('.')) + ".obj";
-  }
-
-  return filename;
 }
 
 void CDMToolChain::AddClangSystemIncludeArgs(

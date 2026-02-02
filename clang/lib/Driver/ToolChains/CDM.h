@@ -45,8 +45,6 @@ public:
   // generate non-PIC code
   bool isPICDefaultForced() const override { return true; }
 
-  std::string getInputFilename(const InputInfo &Input) const override;
-
   llvm::opt::DerivedArgList *
   TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
                 Action::OffloadKind DeviceOffloadKind) const override;
