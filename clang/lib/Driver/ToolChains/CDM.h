@@ -29,7 +29,7 @@ public:
   CDMToolChain(const Driver &D, const llvm::Triple &Triple,
                const llvm::opt::ArgList &Args);
 
-  // CdM toolchain hasn't integrated assembler, it must use cocas
+  // CdM toolchain doesn't have integrated assembler, it must use cocas
   bool useIntegratedAs() const override { return false; }
 
   bool isPICDefault() const override { return false; }
