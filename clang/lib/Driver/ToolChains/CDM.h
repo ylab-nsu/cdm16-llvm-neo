@@ -31,7 +31,6 @@ public:
 
   // CdM toolchain hasn't integrated assembler, it must use cocas
   bool useIntegratedAs() const override { return false; }
-  bool useIntegratedBackend() const override { return true; }
 
   bool isPICDefault() const override { return false; }
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override {
