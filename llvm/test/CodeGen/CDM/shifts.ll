@@ -11,7 +11,7 @@ entry:
 ; CHECK: br [[LABEL2:.*]]
 ; CHECK-NEXT: [[LABEL1:.*]]:
 ; CHECK: shra r0, r0, 1
-; CHECK-NEXT: sub r1, 1
+; CHECK-NEXT: add r1, -1
 ; CHECK-NEXT: [[LABEL2]]:
 ; CHECK: cmp r1, 0
 ; CHECK-NEXT: bgt [[LABEL1]]
@@ -29,7 +29,7 @@ entry:
 ; CHECK: br [[LABEL2:.*]]
 ; CHECK-NEXT: [[LABEL1:.*]]:
 ; CHECK: shra r0, r0, 1
-; CHECK-NEXT: sub r1, 1
+; CHECK-NEXT: add r1, -1
 ; CHECK-NEXT: [[LABEL2]]:
 ; CHECK: cmp r1, 0
 ; CHECK-NEXT: bgt [[LABEL1]]
@@ -45,7 +45,7 @@ entry:
 ; CHECK-NEXT: [[LABEL1:.*]]:
 ; CHECK: shra r1, r1, 1
 ; CHECK-NEXT: rcr r0, r0, 1
-; CHECK-NEXT: sub r2, 1
+; CHECK-NEXT: add r2, -1
 ; CHECK-NEXT: [[LABEL2]]:
 ; CHECK: cmp r2, 0
 ; CHECK-NEXT: bgt [[LABEL1]]
@@ -64,7 +64,7 @@ entry:
 ; CHECK-NEXT: rcr r2, r2, 1
 ; CHECK-NEXT: rcr r1, r1, 1
 ; CHECK-NEXT: rcr r0, r0, 1
-; CHECK-NEXT: sub [[REG]], 1
+; CHECK-NEXT: add [[REG]], -1
 ; CHECK-NEXT: [[LABEL2]]:
 ; CHECK: cmp [[REG]], 0
 ; CHECK-NEXT: bgt [[LABEL1]]

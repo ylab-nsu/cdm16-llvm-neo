@@ -17,6 +17,7 @@ entry:
 define i16 @foo(i16 %a) #1 {
 entry:
 ; CHECK-LABEL: foo>
+; CHECK-NEXT: # @foo
 ; CHECK-NEXT: # %bb.0:
 ; CHECK-NEXT: push fp
 ; CHECK-NEXT: ldsp fp

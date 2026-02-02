@@ -26,6 +26,7 @@ entry:
 define i16 @main() #0 {
 entry:
 ; CHECK-LABEL: main>
+; CHECK-NEXT: # @main
 ; CHECK-NEXT: # %bb.0:
 ; CHECK-NEXT: push fp
 ; CHECK-NEXT: ldsp fp
