@@ -76,7 +76,8 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
     }
     // Add builtins
     for (const char *obj : getCDMToolChain().getBuiltinNames()) {
-      CmdArgs.push_back(getCDMToolChain().getCompilerRTArgString(Args, obj, ToolChain::FT_Object));
+      CmdArgs.push_back(getCDMToolChain().getCompilerRTArgString(
+          Args, obj, ToolChain::FT_Object));
     }
 
     std::vector<std::string> libSearchDirs =

@@ -21,7 +21,8 @@ class LLVM_LIBRARY_VISIBILITY CDMToolChain : public ToolChain {
   // TODO: Add object files from standard lib
   const std::vector<const char *> StdLibObjs = {};
   // TODO: Add names of builtins to link
-  // Each name <name> corresponds to file <clang_resources_dir>/lib/cdm/clang_rt.<name>.o
+  // Each name <name> corresponds to file
+  // <clang_resources_dir>/lib/cdm/clang_rt.<name>.o
   const std::vector<const char *> BuiltinNames = {};
 
 public:
@@ -30,11 +31,7 @@ public:
 
   // CdM hasn't integrated assembler, it must use cocas
   bool useIntegratedAs() const override { return false; }
-  // CdM hasn't integrated obj emitter
-  bool useIntegratedBackend() const override { return false; }
-  bool IsIntegratedBackendDefault() const override { return false; }
-  bool IsIntegratedBackendSupported() const override { return false; }
-  bool IsNonIntegratedBackendSupported() const override { return true; }
+  bool useIntegratedBackend() const override { return true; }
 
   bool isPICDefault() const override { return false; }
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override {
@@ -58,7 +55,9 @@ public:
   std::optional<std::string> getCocasPath() const { return CocasPath; }
   std::optional<std::string> getIncludePath() const { return IncludePath; }
   const std::vector<const char *> &getStdLibObjs() const { return StdLibObjs; }
-  const std::vector<const char *> &getBuiltinNames() const { return BuiltinNames; }
+  const std::vector<const char *> &getBuiltinNames() const {
+    return BuiltinNames;
+  }
 
 protected:
   Tool *buildAssembler() const override; // cocas
