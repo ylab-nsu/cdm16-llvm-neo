@@ -146,7 +146,7 @@ CDMToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 
   // TODO: Remove this when C debug info emitting to objects in cocas got done
 
-  // Remove all debug-related option and warn user about their ignorance
+  // Remove all debug-related options and warn user, that they're ignored
   for (Arg *A : Args) {
     if (A->getOption().matches(options::OPT_DebugInfo_Group)) {
       getDriver().Diag(clang::diag::warn_drv_unsupported_option_for_target)

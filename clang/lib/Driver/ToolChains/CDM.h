@@ -18,7 +18,7 @@ class LLVM_LIBRARY_VISIBILITY CDMToolChain : public ToolChain {
 
   std::optional<std::string> CocasPath; // Cocas executable path
   std::optional<std::string> IncludePath;
-  // TODO: Add object files from standard lib
+  // TODO: Add standard lib object files
   const std::vector<const char *> StdLibObjs = {};
   // TODO: Add names of builtins to link
   // Each name <name> corresponds to file
@@ -29,7 +29,7 @@ public:
   CDMToolChain(const Driver &D, const llvm::Triple &Triple,
                const llvm::opt::ArgList &Args);
 
-  // CdM hasn't integrated assembler, it must use cocas
+  // CdM toolchain hasn't integrated assembler, it must use cocas
   bool useIntegratedAs() const override { return false; }
   bool useIntegratedBackend() const override { return true; }
 
@@ -38,7 +38,7 @@ public:
     return false;
   }
 
-  // We don't have PIE or PIC, so ignore all PIC-related flags and always
+  // We don't have PIE or PIC, so we must ignore all PIC-related flags and always
   // generate non-PIC code
   bool isPICDefaultForced() const override { return true; }
 
