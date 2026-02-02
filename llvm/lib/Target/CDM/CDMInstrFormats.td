@@ -206,12 +206,12 @@ class InstBrAbs<dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 class InstBrRel<bits<3>opcode, dag outs, dag ins, string asmstr,
             list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
-  bits<4> c;
-  bits<9> k;
+  bits<4> cond;
+  bits<9> imm;
 
   let Inst{15 - 13} = opcode;
-  let Inst{12 - 9} = c;
-  let Inst{8 - 0} = k;
+  let Inst{12 - 9} = cond;
+  let Inst{8 - 0} = imm;
 }
 
 //===----------------------------------------------------------------------===//

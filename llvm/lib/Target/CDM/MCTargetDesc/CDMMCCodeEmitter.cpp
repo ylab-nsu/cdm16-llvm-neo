@@ -1,5 +1,5 @@
-#include "MCTargetDesc/CDMMCTargetDesc.h"
 #include "MCTargetDesc/CDMFixupKinds.h"
+#include "MCTargetDesc/CDMMCTargetDesc.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
@@ -43,34 +43,31 @@ public:
                                  const MCSubtargetInfo &STI) const;
 
 private:
-  /// Encodes an immediate operand as 2's complement.
-  unsigned encodeImmNeg(const MCInst &MI, unsigned OpNo,
+  /// Encodes an immediate operand (symbol only).
+  template <unsigned FixupKind, unsigned Offset>
+  unsigned encodeBranchTarget(const MCInst &MI, unsigned OpNo,
                         SmallVectorImpl<MCFixup> &Fixups,
                         const MCSubtargetInfo &STI) const;
 
-  /// Encodes an imm9 relative call target operand.
-  unsigned encodeImm9CallTarget(const MCInst &MI, unsigned OpNo,
-                                SmallVectorImpl<MCFixup> &Fixups,
-                                const MCSubtargetInfo &STI) const;
-
-  /// Encodes an imm16 operand.
-  unsigned encodeImm16(const MCInst &MI, unsigned OpNo,
-                       SmallVectorImpl<MCFixup> &Fixups,
-                       const MCSubtargetInfo &STI) const;
+  /// Encodes an immediate operand.
+  template <unsigned FixupKind, unsigned Offset>
+  unsigned encodeImm(const MCInst &MI, unsigned OpNo,
+                     SmallVectorImpl<MCFixup> &Fixups,
+                     const MCSubtargetInfo &STI) const;
 
   /// Encodes an immediate operand for bit shift instructions.
   unsigned encodeShamt(const MCInst &MI, unsigned OpNo,
                        SmallVectorImpl<MCFixup> &Fixups,
                        const MCSubtargetInfo &STI) const;
 
-  /// Encodes a word offset for imm9 variations of addsp and jsr.
-  signed encodeWordOffset(const MCInst &MI, unsigned OpNo,
-                          SmallVectorImpl<MCFixup> &Fixups,
-                          const MCSubtargetInfo &STI) const;
+  /// Encodes a stack offset for addsp imm9.
+  signed encodeStackOffset(const MCInst &MI, unsigned OpNo,
+                           SmallVectorImpl<MCFixup> &Fixups,
+                           const MCSubtargetInfo &STI) const;
 
   /// Adjusts the opcode of imm6 and imm9 instrucions
   /// based on the sign of the immediate.
-  template <unsigned OpNo, unsigned BitOffset, bool Negate>
+  template <unsigned OpNo, unsigned BitOffset>
   unsigned adjustImmOpCode(const MCInst &MI, unsigned EncodedValue,
                            const MCSubtargetInfo &STI) const;
 };
@@ -81,15 +78,16 @@ static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
                      const MCExpr *Value, uint16_t Kind) {
   bool PCRel;
   switch (Kind) {
-    default:
-      PCRel = false;
-      break;
-    case FK_Data_2:
-      PCRel = false;
-      break;
-    case CDM::fixup_cdm_call_imm9:
-      PCRel = true;
-      break;
+  default:
+    PCRel = false;
+    break;
+  case FK_Data_2:
+    PCRel = false;
+    break;
+  case CDM::fixup_call_imm9:
+  case CDM::fixup_branch_imm9:
+    PCRel = true;
+    break;
   }
   Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));
 }
@@ -109,42 +107,33 @@ uint64_t CDMMCCodeEmitter::getMachineOpValue(const MCInst &MI,
   return 0;
 }
 
-unsigned CDMMCCodeEmitter::encodeImmNeg(const MCInst &MI, unsigned OpNo,
-                                        SmallVectorImpl<MCFixup> &Fixups,
-                                        const MCSubtargetInfo &STI) const {
+template <unsigned FixupKind, unsigned Offset>
+unsigned CDMMCCodeEmitter::encodeBranchTarget(const MCInst &MI, unsigned OpNo,
+                                     SmallVectorImpl<MCFixup> &Fixups,
+                                     const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
-  if (!MO.isImm()) {
-    llvm_unreachable("encodeImmNeg expects only immediates");
-  }
-  return -MO.getImm();
+
+  assert(MO.isExpr() && "encodeBranchTarget expects only expressions");
+  const MCExpr *Expr = MO.getExpr();
+
+  addFixup(Fixups, Offset, Expr, FixupKind);
+  return 0;
 }
 
-unsigned CDMMCCodeEmitter::encodeImm16(const MCInst &MI, unsigned OpNo,
-                                       SmallVectorImpl<MCFixup> &Fixups,
-                                       const MCSubtargetInfo &STI) const {
+template <unsigned FixupKind, unsigned Offset>
+unsigned CDMMCCodeEmitter::encodeImm(const MCInst &MI, unsigned OpNo,
+                                     SmallVectorImpl<MCFixup> &Fixups,
+                                     const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
 
   // If the destination is an immediate, there is nothing to do.
   if (MO.isImm())
     return MO.getImm();
 
-  assert(MO.isExpr() && "encodeImm16 expects only expressions or immediates");
+  assert(MO.isExpr() && "encodeImm expects only expressions or immediates");
   const MCExpr *Expr = MO.getExpr();
 
-  addFixup(Fixups, 2, Expr, FK_Data_2);
-  return 0;
-}
-
-unsigned
-CDMMCCodeEmitter::encodeImm9CallTarget(const MCInst &MI, unsigned OpNo,
-                                       SmallVectorImpl<MCFixup> &Fixups,
-                                       const MCSubtargetInfo &STI) const {
-  const MCOperand &MO = MI.getOperand(OpNo);
-
-  assert(MO.isExpr() && "encodeImm9CallTarget expects only expressions");
-  const MCExpr *Expr = MO.getExpr();
-
-  addFixup(Fixups, 0, Expr, CDM::fixup_cdm_call_imm9);
+  addFixup(Fixups, Offset, Expr, FixupKind);
   return 0;
 }
 
@@ -163,9 +152,9 @@ unsigned CDMMCCodeEmitter::encodeShamt(const MCInst &MI, unsigned OpNo,
   return Value - 1;
 }
 
-signed CDMMCCodeEmitter::encodeWordOffset(const MCInst &MI, unsigned OpNo,
-                                          SmallVectorImpl<MCFixup> &Fixups,
-                                          const MCSubtargetInfo &STI) const {
+signed CDMMCCodeEmitter::encodeStackOffset(const MCInst &MI, unsigned OpNo,
+                                           SmallVectorImpl<MCFixup> &Fixups,
+                                           const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
 
   int64_t Value;
@@ -178,7 +167,7 @@ signed CDMMCCodeEmitter::encodeWordOffset(const MCInst &MI, unsigned OpNo,
   return Value >> 1;
 }
 
-template <unsigned OpNo, unsigned BitOffset, bool Negate>
+template <unsigned OpNo, unsigned BitOffset>
 unsigned CDMMCCodeEmitter::adjustImmOpCode(const MCInst &MI,
                                            unsigned EncodedValue,
                                            const MCSubtargetInfo &STI) const {
@@ -188,7 +177,7 @@ unsigned CDMMCCodeEmitter::adjustImmOpCode(const MCInst &MI,
     llvm_unreachable("Unsupported imm6/imm9 operand!");
   }
 
-  if ((Value < 0 && !Negate) || (Value > 0 && Negate)) {
+  if (Value < 0) {
     EncodedValue += 1 << BitOffset;
   }
   return EncodedValue;

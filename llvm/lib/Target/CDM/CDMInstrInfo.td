@@ -52,23 +52,30 @@ def callseq_end
 
 // 9-bit relative JSR call target
 def imm9CallTarget : Operand<i16> {
-  let EncoderMethod = "encodeImm9CallTarget";
+  let OperandType = "OPERAND_PCREL";
+  let EncoderMethod = "encodeBranchTarget<CDM::fixup_call_imm9, 0>";
 }
 
-// 16-bit constant
+// 9-bit relative branch target
+def imm9BrTarget : Operand<OtherVT> {
+  let OperandType = "OPERAND_PCREL";
+  let EncoderMethod = "encodeBranchTarget<CDM::fixup_branch_imm9, 0>";
+}
+
+// 9-bit stack offset for addsp
+def imm9StackOffset : Operand<i16> {
+  let EncoderMethod = "encodeStackOffset";
+}
+
+// 16-bit generic constant
 def imm16 : Operand<i16> {
-  let EncoderMethod = "encodeImm16";
-}
-
-// 6-bit negated constant for SUBImm6
-def imm6Neg : Operand<i16> {
-  let EncoderMethod = "encodeImmNeg";
+  let EncoderMethod = "encodeImm<FK_Data_2, 2>";
 }
 
 // 16-bit constant branch target
-def brTarget16 : Operand<OtherVT> {
+def imm16BrTarget : Operand<OtherVT> {
   let OperandType = "OPERAND_MEMORY";
-  let EncoderMethod = "encodeImm16";
+  let EncoderMethod = "encodeBranchTarget<FK_Data_2, 2>";
 }
 
 // Condition code operand used in conditional branch instrcutions.
@@ -115,10 +122,9 @@ def shamt : Operand<i16> {
 def Imm1_8Leaf : ImmLeaf<i16, [{return (Imm >= 1) && (Imm <= 8);}]>;
 def Imm9_16Leaf : ImmLeaf<i16, [{return (Imm >= 9) && (Imm <= 16);}]>;
 
-// Word offset for addsp instruction with imm9.
-def wordOffset : Operand<i16> {
-  let EncoderMethod = "encodeWordOffset";
-}
+def cdmizeCondXform : SDNodeXForm<cond, [{
+  return CurDAG->getTargetConstant(CCToCondOp(N->get()), N, MVT::i16);
+}]>;
 
 //===----------------------------------------------------------------------===//
 //===----------------------------------------------------------------------===//
@@ -154,7 +160,7 @@ def DI: Inst0Op<0b0111, (outs), (ins), "di", []>;
 // Jump to subroutine (imm16 absolute address)
 // Pushes PC to stack and then does unconditional
 // absolute branch to address imm16.
-def JSRImm16 : Inst0OpImm16<0b1000, (outs), (ins imm16:$imm), "jsr\t$imm", []> {
+def JSRImm16 : Inst0OpImm16<0b1000, (outs), (ins imm16BrTarget:$imm), "jsr\t$imm", []> {
   let isCall = 1;
 }
 
@@ -393,14 +399,15 @@ let Defs = [PSR], isReMaterializable = 1, Constraints = "$rs = $rd" in {
   // Computes rd + imm6 and puts result in rd.
   def ADDImm6 : InstImm6<0b1100, (outs CPURegs:$rd), (ins CPURegs:$rs, i16imm:$imm), "add\t$rs, $imm",
                          [(set CPURegs:$rd, (add CPURegs:$rs, immZext6:$imm))]> {
-    let PostEncoderMethod = "adjustImmOpCode<2, 9, false>";
+    let PostEncoderMethod = "adjustImmOpCode<2, 9>";
   }
 
   // Subtract immediate
   // Computes rd - imm6 and puts result in rd.
-  def SUBImm6 : InstImm6<0b1100, (outs CPURegs:$rd), (ins CPURegs:$rs, imm6Neg:$imm), "sub\t$rs, $imm",
-                         [(set CPURegs:$rd, (sub CPURegs:$rs, immZext6:$imm))]> {
-    let PostEncoderMethod = "adjustImmOpCode<2, 9, true>";
+  // Expands to add rd, -imm6
+  def SUBImm6 : CDMPseudo<(outs CPURegs:$rd), (ins CPURegs:$rs, i16imm:$imm), "sub\t$rs, $imm", []> {
+    let isCodeGenOnly = 0;
+    let isAsmParserOnly = 1;
   }
 }
 
@@ -409,7 +416,7 @@ let Defs = [PSR], isReMaterializable = 1, Constraints = "$rs = $rd" in {
 // and thus compares numbers rd and imm6.
 def CMPImm6 : InstImm6<0b1110, (outs), (ins CPURegs:$rd, i16imm:$imm), "cmp\t$rd, $imm", []> {
   let Defs = [PSR];
-  let PostEncoderMethod = "adjustImmOpCode<1, 9, false>";
+  let PostEncoderMethod = "adjustImmOpCode<1, 9>";
 }
 
 // Test register
@@ -422,10 +429,10 @@ def TST : InstAlias<"tst\t$rd", (CMPImm6 CPURegs:$rd, 0)>;
 
 // Add immediate to SP
 // Adds imm bytes to SP.
-def ADDSPImm9 : InstImm9<0b0100, (outs), (ins wordOffset:$imm), "addsp\t$imm", []> {
+def ADDSPImm9 : InstImm9<0b0100, (outs), (ins imm9StackOffset:$imm), "addsp\t$imm", []> {
   let Uses = [SP];
   let Defs = [SP];
-  let PostEncoderMethod = "adjustImmOpCode<0, 9, false>";
+  let PostEncoderMethod = "adjustImmOpCode<0, 9>";
 }
 
 // Jump to subroutine (imm9 offset)
@@ -441,18 +448,40 @@ def : Pat<(CDMCall(i16 texternalsym:$target)), (JSRImm9 texternalsym:$target)>;
 // br_abs format
 //===----------------------------------------------------------------------===//
 
-def BR : InstBrAbs<(outs), (ins brTarget16:$imm), "br\t$imm", [(br bb:$imm)]> {
+// Absolute branch
+// Loads imm16 to PC, passing control to the instruction located at the address imm16.
+def BRImm16 : InstBrAbs<(outs), (ins imm16BrTarget:$imm), "br\t$imm", []> {
   let cond = 0xE;
   let isBranch = 1;
   let isTerminator = 1;
   let isBarrier = 1;
 }
 
-def cdmize_cond : SDNodeXForm<cond, [{
-  return CurDAG->getTargetConstant(CCToCondOp(N->get()), N, MVT::i16);
-}]>;
+// Absolute conditional branch
+// Loads imm16 to PC if the specified condition is true.
+def BCondImm16 : InstBrAbs<(outs), (ins condCode:$cond, imm16BrTarget:$imm),
+                    "b$cond\t$imm", []> {
+  let isTerminator = 1;
+  let isBranch = 1;
+  let Uses = [PSR];
+}
 
-def BCond : InstBrAbs<(outs), (ins condCode:$cond, brTarget16:$imm),
+//===----------------------------------------------------------------------===//
+// br_rel format
+//===----------------------------------------------------------------------===//
+
+// Absolute branch
+// Loads imm16 to PC, passing control to the instruction located at the address imm16.
+def BRImm9 : InstBrRel<0b110, (outs), (ins imm9BrTarget:$imm), "br\t$imm", [(br bb:$imm)]> {
+  let cond = 0xE;
+  let isBranch = 1;
+  let isTerminator = 1;
+  let isBarrier = 1;
+}
+
+// Absolute conditional branch
+// Loads imm16 to PC if the specified condition is true.
+def BCondImm9 : InstBrRel<0b110, (outs), (ins condCode:$cond, imm9BrTarget:$imm),
                     "b$cond\t$imm", []> {
   let isTerminator = 1;
   let isBranch = 1;
@@ -680,14 +709,14 @@ let Defs = [PSR] in {
 //===----------------------------------------------------------------------===//
 
 def PseudoBCondRR
-    : CDMPseudo<(outs), (ins condCode:$cnd, CPURegs:$lhs, CPURegs:$rhs, brTarget16:$target), "bcondrr", []> {
+    : CDMPseudo<(outs), (ins condCode:$cnd, CPURegs:$lhs, CPURegs:$rhs, imm16BrTarget:$target), "bcondrr", []> {
   let isTerminator = 1;
   let isBranch = 1;
   let Uses = [PSR];
 }
 
 def PseudoBCondRI
-    : CDMPseudo<(outs), (ins condCode:$cnd, CPURegs:$lhs, i16imm:$rhs, brTarget16:$target), "bcondri", []> {
+    : CDMPseudo<(outs), (ins condCode:$cnd, CPURegs:$lhs, i16imm:$rhs, imm16BrTarget:$target), "bcondri", []> {
   let isTerminator = 1;
   let isBranch = 1;
   let Uses = [PSR];
@@ -705,20 +734,20 @@ def PseudoSelectCCI
   let usesCustomInserter = true;
 }
 def : Pat<(brcc cond:$cnd, CPURegs:$lhs, immZext6:$rhs, bb:$target),
-          (PseudoBCondRI (cdmize_cond $cnd), CPURegs:$lhs, immZext6:$rhs, brTarget16:$target)>;
+          (PseudoBCondRI (cdmizeCondXform $cnd), CPURegs:$lhs, immZext6:$rhs, imm16BrTarget:$target)>;
 
 def : Pat<(brcc cond:$cnd, CPURegs:$lhs, CPURegs:$rhs, bb:$target),
-          (PseudoBCondRR (cdmize_cond $cnd), CPURegs:$lhs, CPURegs:$rhs, brTarget16:$target)>;
+          (PseudoBCondRR (cdmizeCondXform $cnd), CPURegs:$lhs, CPURegs:$rhs, imm16BrTarget:$target)>;
 
 def : Pat<(selectcc CPURegs:$lhs, immZext6:$rhs, CPURegs:$vtrue, CPURegs:$vfalse,
               cond:$cnd),
           (PseudoSelectCCI CPURegs:$lhs, immZext6:$rhs, CPURegs:$vtrue,
-              CPURegs:$vfalse, (cdmize_cond $cnd))>;
+              CPURegs:$vfalse, (cdmizeCondXform $cnd))>;
 
 def : Pat<(selectcc CPURegs:$lhs, CPURegs:$rhs, CPURegs:$vtrue, CPURegs:$vfalse,
               cond:$cnd),
           (PseudoSelectCC CPURegs:$lhs, CPURegs:$rhs, CPURegs:$vtrue,
-              CPURegs:$vfalse, (cdmize_cond $cnd))>;
+              CPURegs:$vfalse, (cdmizeCondXform $cnd))>;
 
 let Defs = [SP], Uses = [SP] in {
   def ADJCALLSTACKDOWN

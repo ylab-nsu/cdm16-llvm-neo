@@ -7,7 +7,8 @@ namespace llvm {
 namespace CDM {
 
 enum Fixups {
-  fixup_cdm_call_imm9 = FirstTargetFixupKind,
+  fixup_call_imm9 = FirstTargetFixupKind,
+  fixup_branch_imm9,
   LastTargetFixupKind,
   NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind
 };

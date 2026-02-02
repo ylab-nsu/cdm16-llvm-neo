@@ -870,7 +870,7 @@ CDMISelLowering::emitShiftLoop(MachineInstr &MI, MachineBasicBlock *MBB) const {
   // RemBB:
   // ...
 
-  BuildMI(MBB, DL, TII->get(CDM::BR)).addMBB(CheckBB);
+  BuildMI(MBB, DL, TII->get(CDM::BRImm9)).addMBB(CheckBB);
 
   auto ShiftOp = BuildMI(LoopBB, DL, TII->get(Opc));
   for (int RegIndex = 0; RegIndex < RegCount; RegIndex++) {
@@ -884,9 +884,9 @@ CDMISelLowering::emitShiftLoop(MachineInstr &MI, MachineBasicBlock *MBB) const {
   if (RegCount == 1) {
     ShiftOp.addImm(1);
   }
-  BuildMI(LoopBB, DL, TII->get(CDM::SUBImm6), ShiftAmtReg2)
+  BuildMI(LoopBB, DL, TII->get(CDM::ADDImm6), ShiftAmtReg2)
       .addReg(ShiftAmtReg)
-      .addImm(1);
+      .addImm(-1);
 
   for (int RegIndex = 0; RegIndex < RegCount; RegIndex++) {
     BuildMI(CheckBB, DL, TII->get(CDM::PHI), ShiftRegs[RegIndex])

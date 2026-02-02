@@ -124,7 +124,7 @@ void CDMInstrInfo::expandBCond(MachineBasicBlock &MBB, MachineInstr &MI) const {
         BuildMI(*MBB.getParent(), DL, get(CDM::CMPImm6)).add(LHS).add(RHS));
   }
 
-  Bundler.append(BuildMI(*MBB.getParent(), DL, get(CDM::BCond))
+  Bundler.append(BuildMI(*MBB.getParent(), DL, get(CDM::BCondImm9))
                      .add(CondCode)
                      .addMBB(Target.getMBB()));
 

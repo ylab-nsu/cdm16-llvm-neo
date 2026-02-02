@@ -19,15 +19,22 @@ CDMAsmBackend::createObjectTargetWriter() const {
 void CDMAsmBackend::adjustFixupValue(const MCFixup &Fixup,
                                      const MCValue &Target, uint64_t &Value,
                                      MCContext *Ctx) const {
+  int64_t &Offset = reinterpret_cast<int64_t&>(Value);
   switch (Fixup.getKind()) {
   default:
     llvm_unreachable("invalid fixup");
-  case CDM::fixup_cdm_call_imm9:
+  case CDM::fixup_branch_imm9:
     // Instructions are 2-byte aligned, so divide by 2.
     // Also subtract 1 instruction because CDM increments PC after relative
-    // branches. Keep 9 bits + 1 extra bit for the sign, which is actually part
-    // of op_type.
-    Value = ((signed)Value / 2 - 1) & 0x3ff;
+    // branches. Keep 9 bits, set sign bit when offset is nonnegative.
+    Offset = ((Offset / 2 - 1) & 0x1ff) | (Offset >= 0 ? 0x2000 : 0);
+    break;
+  case CDM::fixup_call_imm9:
+    // Same as previous.
+    // Instructions are 2-byte aligned, so divide by 2.
+    // Also subtract 1 instruction because CDM increments PC after relative
+    // branches. Keep 9 bits, set sign bit when offset is negative.
+    Offset = ((Offset / 2 - 1) & 0x1ff) | (Offset < 0 ? 0x200 : 0);
     break;
   case FK_Data_2:
     // No need for adjustment.
@@ -79,7 +86,8 @@ std::optional<MCFixupKind> CDMAsmBackend::getFixupKind(StringRef Name) const {
 MCFixupKindInfo CDMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[CDM::NumTargetFixupKinds] = {
       // name                    offset  bits  flags
-      {"fixup_cdm_call_imm9", 0, 10, 0}, // 10th bit is needed to fix up op_type
+      {"fixup_call_imm9", 0, 10, 0},   // 10th bit is needed to fix up op_type
+      {"fixup_branch_imm9", 0, 14, 0}, // 14th bit is needed to fix up opcode
   };
 
   // Fixup kinds from .reloc directive are like R_AVR_NONE. They do not require
@@ -118,6 +126,8 @@ bool CDMAsmBackend::mayNeedRelaxation(unsigned Opcode,
   default:
     return false;
   case CDM::JSRImm9:
+  case CDM::BCondImm9:
+  case CDM::BRImm9:
     return true;
   }
 }
@@ -128,7 +138,8 @@ bool CDMAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
   switch (Fixup.getKind()) {
   default:
     return false;
-  case CDM::fixup_cdm_call_imm9:
+  case CDM::fixup_call_imm9:
+  case CDM::fixup_branch_imm9:
     return Offset <= -1024 || Offset > 1024;
   }
 }
@@ -140,6 +151,10 @@ static unsigned getRelaxedOpcode(unsigned Opcode, ArrayRef<MCOperand> Operands,
     return Opcode;
   case CDM::JSRImm9:
     return CDM::JSRImm16;
+  case CDM::BRImm9:
+    return CDM::BRImm16;
+  case CDM::BCondImm9:
+    return CDM::BCondImm16;
   }
 }
 
@@ -149,9 +164,16 @@ void CDMAsmBackend::relaxInstruction(MCInst &Inst,
   switch (Inst.getOpcode()) {
   default:
     llvm_unreachable("Opcode not expected!");
+  case CDM::BRImm9:
   case CDM::JSRImm9: {
     Res.setOpcode(getRelaxedOpcode(Inst.getOpcode(), Inst.getOperands(), STI));
     Res.addOperand(Inst.getOperand(0));
+    break;
+  }
+  case CDM::BCondImm9: {
+    Res.setOpcode(getRelaxedOpcode(Inst.getOpcode(), Inst.getOperands(), STI));
+    Res.addOperand(Inst.getOperand(0));
+    Res.addOperand(Inst.getOperand(1));
     break;
   }
   }
