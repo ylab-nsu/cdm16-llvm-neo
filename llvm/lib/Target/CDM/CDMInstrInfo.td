@@ -50,6 +50,11 @@ def callseq_end
 // CDM Operands, Complex Patterns and Transformations Definitions.
 //===----------------------------------------------------------------------===//
 
+// 9-bit relative JSR call target
+def imm9CallTarget : Operand<i16> {
+  let EncoderMethod = "encodeImm9CallTarget";
+}
+
 // 16-bit constant
 def imm16 : Operand<i16> {
   let EncoderMethod = "encodeImm16";
@@ -149,11 +154,9 @@ def DI: Inst0Op<0b0111, (outs), (ins), "di", []>;
 // Jump to subroutine (imm16 absolute address)
 // Pushes PC to stack and then does unconditional
 // absolute branch to address imm16.
-def JSR : Inst0OpImm16<0b1000, (outs), (ins imm16:$imm), "jsr\t$imm", []> {
+def JSRImm16 : Inst0OpImm16<0b1000, (outs), (ins imm16:$imm), "jsr\t$imm", []> {
   let isCall = 1;
 }
-def : Pat<(CDMCall(i16 tglobaladdr:$target)), (JSR tglobaladdr:$target)>;
-def : Pat<(CDMCall(i16 texternalsym:$target)), (JSR texternalsym:$target)>;
 
 let isTerminator = 1, isReturn = 1, isBarrier = 1 in {
   // Generic return pseudo
@@ -424,6 +427,15 @@ def ADDSPImm9 : InstImm9<0b0100, (outs), (ins wordOffset:$imm), "addsp\t$imm", [
   let Defs = [SP];
   let PostEncoderMethod = "adjustImmOpCode<0, 9, false>";
 }
+
+// Jump to subroutine (imm9 offset)
+// Pushes PC to stack and then does unconditional
+// absolute branch to address PC + (imm * 2) + 2.
+def JSRImm9 : InstImm9<0b0110, (outs), (ins imm9CallTarget:$imm), "jsr\t$imm", []> {
+  let isCall = 1;
+}
+def : Pat<(CDMCall(i16 tglobaladdr:$target)), (JSRImm9 tglobaladdr:$target)>;
+def : Pat<(CDMCall(i16 texternalsym:$target)), (JSRImm9 texternalsym:$target)>;
 
 //===----------------------------------------------------------------------===//
 // br_abs format

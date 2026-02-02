@@ -1,9 +1,11 @@
 #include "MCTargetDesc/CDMAsmBackend.h"
+#include "CDMFixupKinds.h"
 #include "MCTargetDesc/CDMMCTargetDesc.h"
 
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCELFObjectWriter.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
 
@@ -14,6 +16,25 @@ CDMAsmBackend::createObjectTargetWriter() const {
   return createCDMELFObjectWriter(MCELFObjectTargetWriter::getOSABI(OSType));
 }
 
+void CDMAsmBackend::adjustFixupValue(const MCFixup &Fixup,
+                                     const MCValue &Target, uint64_t &Value,
+                                     MCContext *Ctx) const {
+  switch (Fixup.getKind()) {
+  default:
+    llvm_unreachable("invalid fixup");
+  case CDM::fixup_cdm_call_imm9:
+    // Instructions are 2-byte aligned, so divide by 2.
+    // Also subtract 1 instruction because CDM increments PC after relative
+    // branches. Keep 9 bits + 1 extra bit for the sign, which is actually part
+    // of op_type.
+    Value = ((signed)Value / 2 - 1) & 0x3ff;
+    break;
+  case FK_Data_2:
+    // No need for adjustment.
+    break;
+  }
+}
+
 void CDMAsmBackend::applyFixup(const MCFragment &Fragment, const MCFixup &Fixup,
                                const MCValue &Target,
                                MutableArrayRef<char> Data, uint64_t Value,
@@ -21,9 +42,10 @@ void CDMAsmBackend::applyFixup(const MCFragment &Fragment, const MCFixup &Fixup,
   if (!IsResolved)
     Asm->getWriter().recordRelocation(Fragment, Fixup, Target, Value);
 
+  adjustFixupValue(Fixup, Target, Value, &getContext());
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
-  unsigned NumBits = Info.TargetSize + Info.TargetOffset;
 
+  unsigned NumBits = Info.TargetSize + Info.TargetOffset;
   auto NumBytes = (NumBits / 8) + ((NumBits % 8) == 0 ? 0 : 1);
 
   // Shift the value into position.
@@ -57,7 +79,7 @@ std::optional<MCFixupKind> CDMAsmBackend::getFixupKind(StringRef Name) const {
 MCFixupKindInfo CDMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[CDM::NumTargetFixupKinds] = {
       // name                    offset  bits  flags
-      {"fixup_cdm_imm9_pcrel ", 0, 9, 0},
+      {"fixup_cdm_call_imm9", 0, 10, 0}, // 10th bit is needed to fix up op_type
   };
 
   // Fixup kinds from .reloc directive are like R_AVR_NONE. They do not require
@@ -87,6 +109,53 @@ bool CDMAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
     OS.write("\xff\xdf", 2);
   }
   return true;
+}
+
+bool CDMAsmBackend::mayNeedRelaxation(unsigned Opcode,
+                                      ArrayRef<MCOperand> Operands,
+                                      const MCSubtargetInfo &STI) const {
+  switch (Opcode) {
+  default:
+    return false;
+  case CDM::JSRImm9:
+    return true;
+  }
+}
+
+bool CDMAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
+                                         uint64_t Value) const {
+  int64_t Offset = int64_t(Value);
+  switch (Fixup.getKind()) {
+  default:
+    return false;
+  case CDM::fixup_cdm_call_imm9:
+    return Offset <= -1024 || Offset > 1024;
+  }
+}
+
+static unsigned getRelaxedOpcode(unsigned Opcode, ArrayRef<MCOperand> Operands,
+                                 const MCSubtargetInfo &STI) {
+  switch (Opcode) {
+  default:
+    return Opcode;
+  case CDM::JSRImm9:
+    return CDM::JSRImm16;
+  }
+}
+
+void CDMAsmBackend::relaxInstruction(MCInst &Inst,
+                                     const MCSubtargetInfo &STI) const {
+  MCInst Res;
+  switch (Inst.getOpcode()) {
+  default:
+    llvm_unreachable("Opcode not expected!");
+  case CDM::JSRImm9: {
+    Res.setOpcode(getRelaxedOpcode(Inst.getOpcode(), Inst.getOperands(), STI));
+    Res.addOperand(Inst.getOperand(0));
+    break;
+  }
+  }
+  Inst = std::move(Res);
 }
 
 MCAsmBackend *createCDMAsmBackend(const Target &T, const MCSubtargetInfo &STI,

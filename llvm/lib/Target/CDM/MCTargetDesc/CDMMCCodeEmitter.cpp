@@ -1,4 +1,5 @@
 #include "MCTargetDesc/CDMMCTargetDesc.h"
+#include "MCTargetDesc/CDMFixupKinds.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
@@ -47,6 +48,11 @@ private:
                         SmallVectorImpl<MCFixup> &Fixups,
                         const MCSubtargetInfo &STI) const;
 
+  /// Encodes an imm9 relative call target operand.
+  unsigned encodeImm9CallTarget(const MCInst &MI, unsigned OpNo,
+                                SmallVectorImpl<MCFixup> &Fixups,
+                                const MCSubtargetInfo &STI) const;
+
   /// Encodes an imm16 operand.
   unsigned encodeImm16(const MCInst &MI, unsigned OpNo,
                        SmallVectorImpl<MCFixup> &Fixups,
@@ -73,7 +79,18 @@ private:
 
 static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
                      const MCExpr *Value, uint16_t Kind) {
-  bool PCRel = false;
+  bool PCRel;
+  switch (Kind) {
+    default:
+      PCRel = false;
+      break;
+    case FK_Data_2:
+      PCRel = false;
+      break;
+    case CDM::fixup_cdm_call_imm9:
+      PCRel = true;
+      break;
+  }
   Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));
 }
 
@@ -115,6 +132,19 @@ unsigned CDMMCCodeEmitter::encodeImm16(const MCInst &MI, unsigned OpNo,
   const MCExpr *Expr = MO.getExpr();
 
   addFixup(Fixups, 2, Expr, FK_Data_2);
+  return 0;
+}
+
+unsigned
+CDMMCCodeEmitter::encodeImm9CallTarget(const MCInst &MI, unsigned OpNo,
+                                       SmallVectorImpl<MCFixup> &Fixups,
+                                       const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  assert(MO.isExpr() && "encodeImm9CallTarget expects only expressions");
+  const MCExpr *Expr = MO.getExpr();
+
+  addFixup(Fixups, 0, Expr, CDM::fixup_cdm_call_imm9);
   return 0;
 }
 

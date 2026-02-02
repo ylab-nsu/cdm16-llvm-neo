@@ -30,6 +30,16 @@ public:
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 
+  bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
+                         const MCSubtargetInfo &STI) const override;
+  bool fixupNeedsRelaxation(const MCFixup &Fixup,
+                            uint64_t Value) const override;
+  void relaxInstruction(MCInst &Inst,
+                        const MCSubtargetInfo &STI) const override;
+
+  void adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
+                        uint64_t &Value, MCContext *Ctx) const;
+
 private:
   Triple::OSType OSType;
 };
