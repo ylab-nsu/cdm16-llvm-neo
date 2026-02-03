@@ -75,17 +75,6 @@ static MCInstPrinter *createCDMMCInstPrinter(const Triple &T,
   return new CDMInstPrinter(MAI, MII, MRI);
 }
 
-static MCTargetStreamer *createCDMAsmTargetStreamer(MCStreamer &S,
-                                                    formatted_raw_ostream &OS,
-                                                    MCInstPrinter *InstPrint) {
-  return new CDMTargetAsmStreamer(S, OS);
-}
-
-static MCTargetStreamer *
-createCDMObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
-  return new CDMTargetStreamer(S);
-}
-
 static MCStreamer *createCDMAsmStreamer(
     MCContext &Context, std::unique_ptr<formatted_raw_ostream> OS,
     std::unique_ptr<MCInstPrinter> IP, std::unique_ptr<MCCodeEmitter> CE,
@@ -100,6 +89,25 @@ static MCStreamer *createCDMAsmStreamer(
                                  std::move(CE), std::move(MAB));
 }
 
+static MCTargetStreamer *createCDMAsmTargetStreamer(MCStreamer &S,
+                                                    formatted_raw_ostream &OS,
+                                                    MCInstPrinter *InstPrint) {
+  auto TT = S.getContext().getTargetTriple();
+  if (TT.getEnvironment() == llvm::Triple::Cocas) {
+    return new CDMTargetAsmStreamer(S, OS);
+  }
+  return new CDMTargetStreamer(S);
+}
+
+static MCTargetStreamer *
+createCDMObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
+  return new CDMTargetStreamer(S);
+}
+
+static MCTargetStreamer *createCDMNullTargetStreamer(MCStreamer &S) {
+  return new CDMTargetStreamer(S);
+}
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCDMTargetMC() {
   RegisterMCAsmInfoFn X(getTheCDMTarget(), createCDMMCAsmInfo);
 
@@ -109,11 +117,15 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCDMTargetMC() {
                                           createCDMMCSubtargetInfo);
   TargetRegistry::RegisterMCInstPrinter(getTheCDMTarget(),
                                         createCDMMCInstPrinter);
+
+  TargetRegistry::RegisterAsmStreamer(getTheCDMTarget(), createCDMAsmStreamer);
   TargetRegistry::RegisterAsmTargetStreamer(getTheCDMTarget(),
                                             createCDMAsmTargetStreamer);
   TargetRegistry::RegisterObjectTargetStreamer(getTheCDMTarget(),
                                                createCDMObjectTargetStreamer);
-  TargetRegistry::RegisterAsmStreamer(getTheCDMTarget(), createCDMAsmStreamer);
+  TargetRegistry::RegisterNullTargetStreamer(getTheCDMTarget(),
+                                             createCDMNullTargetStreamer);
+
   TargetRegistry::RegisterMCCodeEmitter(getTheCDMTarget(),
                                         createCDMMCCodeEmitter);
   TargetRegistry::RegisterMCAsmBackend(getTheCDMTarget(), createCDMAsmBackend);
