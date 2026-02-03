@@ -14,6 +14,7 @@
 #include "ToolChains/Arch/RISCV.h"
 #include "ToolChains/BareMetal.h"
 #include "ToolChains/CSKYToolChain.h"
+#include "ToolChains/Cocas.h"
 #include "ToolChains/CDM.h"
 #include "ToolChains/Clang.h"
 #include "ToolChains/CrossWindows.h"
@@ -6974,8 +6975,12 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         TC = std::make_unique<toolchains::CSKYToolChain>(*this, Target, Args);
         break;
       case llvm::Triple::cdm:
-        TC = std::make_unique<toolchains::CDMToolChain>(*this, Target, Args);
-	break;
+        if (Target.getEnvironment() == llvm::Triple::Cocas) {
+          TC = std::make_unique<toolchains::CocasToolChain>(*this, Target, Args);
+        } else {
+          TC = std::make_unique<toolchains::CDMToolChain>(*this, Target, Args);
+        }
+	      break;
       default:
         if (toolchains::BareMetal::handlesTarget(Target))
           TC = std::make_unique<toolchains::BareMetal>(*this, Target, Args);

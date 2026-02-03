@@ -46,7 +46,6 @@ add_clang_library(clangDriver
   ToolChains/AMDGPUOpenMP.cpp
   ToolChains/AVR.cpp
   ToolChains/BareMetal.cpp
-  ToolChains/CDM.cpp
   ToolChains/Clang.cpp
   ToolChains/CommonArgs.cpp
   ToolChains/CrossWindows.cpp
@@ -90,6 +89,7 @@ add_clang_library(clangDriver
   ToolChains/PPCFreeBSD.cpp
   ToolChains/InterfaceStubs.cpp
   ToolChains/ZOS.cpp
+  ToolChains/Cocas.cpp
   ToolChains/CDM.cpp
   Types.cpp
   XRayArgs.cpp

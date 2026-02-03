@@ -4,6 +4,7 @@
 #include "CDMTargetStreamer.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -80,7 +81,8 @@ static MCTargetStreamer *createCDMAsmTargetStreamer(MCStreamer &S,
   return new CDMTargetAsmStreamer(S, OS);
 }
 
-static MCTargetStreamer *createCDMObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
+static MCTargetStreamer *
+createCDMObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
   return new CDMTargetStreamer(S);
 }
 
@@ -88,8 +90,14 @@ static MCStreamer *createCDMAsmStreamer(
     MCContext &Context, std::unique_ptr<formatted_raw_ostream> OS,
     std::unique_ptr<MCInstPrinter> IP, std::unique_ptr<MCCodeEmitter> CE,
     std::unique_ptr<MCAsmBackend> MAB) {
-  return new CDMAsmStreamer(Context, std::move(OS), std::move(IP),
-                            std::move(CE), std::move(MAB));
+  auto TT = Context.getTargetTriple();
+  if (TT.getEnvironment() == llvm::Triple::Cocas) {
+    return new CDMAsmStreamer(Context, std::move(OS), std::move(IP),
+                              std::move(CE), std::move(MAB));
+  }
+
+  return llvm::createAsmStreamer(Context, std::move(OS), std::move(IP),
+                                 std::move(CE), std::move(MAB));
 }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCDMTargetMC() {
@@ -104,8 +112,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCDMTargetMC() {
   TargetRegistry::RegisterAsmTargetStreamer(getTheCDMTarget(),
                                             createCDMAsmTargetStreamer);
   TargetRegistry::RegisterObjectTargetStreamer(getTheCDMTarget(),
-                                            createCDMObjectTargetStreamer);
+                                               createCDMObjectTargetStreamer);
   TargetRegistry::RegisterAsmStreamer(getTheCDMTarget(), createCDMAsmStreamer);
-  TargetRegistry::RegisterMCCodeEmitter(getTheCDMTarget(), createCDMMCCodeEmitter);
+  TargetRegistry::RegisterMCCodeEmitter(getTheCDMTarget(),
+                                        createCDMMCCodeEmitter);
   TargetRegistry::RegisterMCAsmBackend(getTheCDMTarget(), createCDMAsmBackend);
 }

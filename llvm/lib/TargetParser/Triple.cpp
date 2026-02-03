@@ -390,6 +390,8 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
     return "llvm";
   case Mlibc:
     return "mlibc";
+  case Cocas:
+    return "cocas";
   }
 
   llvm_unreachable("Invalid EnvironmentType!");
@@ -775,6 +777,7 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
       .StartsWith("pauthtest", Triple::PAuthTest)
       .StartsWith("llvm", Triple::LLVM)
       .StartsWith("mlibc", Triple::Mlibc)
+      .StartsWith("cocas", Triple::Cocas)
       .Default(Triple::UnknownEnvironment);
 }
 

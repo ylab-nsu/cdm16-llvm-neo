@@ -307,7 +307,9 @@ public:
 
     PAuthTest,
 
-    LastEnvironmentType = PAuthTest
+    Cocas,
+
+    LastEnvironmentType = Cocas
   };
   enum ObjectFormatType {
     UnknownObjectFormat,
