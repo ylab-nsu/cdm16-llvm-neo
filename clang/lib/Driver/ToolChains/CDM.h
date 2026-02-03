@@ -40,9 +40,9 @@ protected:
 namespace tools {
 namespace CDM {
 
-class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
+class LLVM_LIBRARY_VISIBILITY LldLinker final : public Tool {
 public:
-  Linker(const ToolChain &TC)
+  LldLinker(const ToolChain &TC)
       : Tool("CDM::Linker", "ld.lld", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }

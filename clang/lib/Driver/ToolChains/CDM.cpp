@@ -8,10 +8,10 @@ using namespace clang::driver::toolchains;
 using namespace clang::driver::tools;
 
 Tool *CDMToolChain::buildLinker() const {
-  return new tools::CDM::Linker(*this);
+  return new tools::CDM::LldLinker(*this);
 }
 
-void CDM::Linker::ConstructJob(Compilation &C, const JobAction &JA,
+void CDM::LldLinker::ConstructJob(Compilation &C, const JobAction &JA,
                                const InputInfo &Output,
                                const InputInfoList &Inputs,
                                const llvm::opt::ArgList &Args,
