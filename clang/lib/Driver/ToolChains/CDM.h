@@ -21,6 +21,8 @@ public:
 
   const char *getDefaultLinker() const override { return "ld.lld"; }
 
+  bool HasNativeLLVMSupport() const override { return true; }
+
   bool isPICDefault() const override { return false; }
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override {
     return false;
@@ -42,8 +44,7 @@ namespace CDM {
 
 class LLVM_LIBRARY_VISIBILITY LldLinker final : public Tool {
 public:
-  LldLinker(const ToolChain &TC)
-      : Tool("CDM::Linker", "ld.lld", TC) {}
+  LldLinker(const ToolChain &TC) : Tool("CDM::Linker", "ld.lld", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
 

@@ -171,6 +171,8 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
   default:
     return StringRef();
 
+  case cdm:         return "cdm";
+
   case aarch64:
   case aarch64_be:
   case aarch64_32:  return "aarch64";
@@ -430,6 +432,7 @@ static Triple::ArchType parseBPFArch(StringRef ArchName) {
 Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
   Triple::ArchType BPFArch(parseBPFArch(Name));
   return StringSwitch<Triple::ArchType>(Name)
+    .Case("cdm", cdm)
     .Case("aarch64", aarch64)
     .Case("aarch64_be", aarch64_be)
     .Case("aarch64_32", aarch64_32)
@@ -1936,6 +1939,7 @@ Triple Triple::getBigEndianArchVariant() const {
   if (!isLittleEndian())
     return T;
   switch (getArch()) {
+  case Triple::cdm:
   case Triple::UnknownArch:
   case Triple::amdgcn:
   case Triple::amdil64:
@@ -2035,6 +2039,7 @@ Triple Triple::getLittleEndianArchVariant() const {
 
 bool Triple::isLittleEndian() const {
   switch (getArch()) {
+  case Triple::cdm:
   case Triple::aarch64:
   case Triple::aarch64_32:
   case Triple::amdgcn:
