@@ -1,4 +1,4 @@
-// RUN: clang -target cdm -O1 -S -o /dev/stdout %s | FileCheck %s
+// RUN: clang -target cdm-cocas -O1 -S -o /dev/stdout %s | FileCheck %s
 
 // Test for struct by val passing:
 // - Caller allocates struct on stack

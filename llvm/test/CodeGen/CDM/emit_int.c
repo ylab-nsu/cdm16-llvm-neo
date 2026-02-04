@@ -1,4 +1,4 @@
-// RUN: clang -target cdm -O0 -S -o /dev/stdout %s | FileCheck %s
+// RUN: clang -target cdm-cocas -O0 -S -o /dev/stdout %s | FileCheck %s
 
 // Test emission of various integer constants in assembly
 
