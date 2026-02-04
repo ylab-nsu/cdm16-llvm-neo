@@ -23,10 +23,10 @@ def place_all_absolute_sections(absolute_sections):
 
 def clang_compile(filepath, clang_path, include_paths, opt_level):
   output_file = tempfile.NamedTemporaryFile(suffix = '.asm', delete=False)
-  output_path = Path(output_file.name) 
+  output_path = Path(output_file.name)
   output_file.close()
 
-  clang_args = [str(clang_path), '-target', 'cdm', '-S', f'-O{opt_level}', '-o', str(output_path)]
+  clang_args = [str(clang_path), '-target', 'cdm-unknown-cocas', '-S', f'-O{opt_level}', '-o', str(output_path)]
   for i in include_paths:
       clang_args.append('-I')
       clang_args.append(str(i))
@@ -43,10 +43,10 @@ def clang_compile(filepath, clang_path, include_paths, opt_level):
 
 def clang_compile_and_assemble(filepath, clang_path, include_paths, opt_level):
   output_file = tempfile.NamedTemporaryFile(suffix = '.obj', delete=False)
-  output_path = Path(output_file.name) 
+  output_path = Path(output_file.name)
   output_file.close()
 
-  clang_args = [str(clang_path), '-target', 'cdm', '-c', f'-O{opt_level}', '-o', str(output_path)]
+  clang_args = [str(clang_path), '-target', 'cdm-unknown-cocas', '-c', f'-O{opt_level}', '-o', str(output_path)]
   for i in include_paths:
       clang_args.append('-I')
       clang_args.append(str(i))
@@ -63,7 +63,7 @@ def clang_compile_and_assemble(filepath, clang_path, include_paths, opt_level):
 
 def cocas_assemble(filepath):
   output_file = tempfile.NamedTemporaryFile(suffix = '.obj', delete=False)
-  output_path = Path(output_file.name) 
+  output_path = Path(output_file.name)
   output_file.close()
 
   #print(' '.join([".venv/bin/cocas","-t","cdm16","-o", str(output_path), ] + [str(i) for i in cocas_input]))
@@ -89,7 +89,7 @@ def cocas_assemble(filepath):
 
 def cocas_assemble_and_link(cocas_input):
   output_file = tempfile.NamedTemporaryFile(suffix = '.img', delete=False)
-  output_path = Path(output_file.name) 
+  output_path = Path(output_file.name)
   output_file.close()
 
   #print(' '.join([".venv/bin/cocas","-t","cdm16","-o", str(output_path), ] + [str(i) for i in cocas_input]))

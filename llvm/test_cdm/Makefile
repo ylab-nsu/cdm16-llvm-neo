@@ -17,7 +17,7 @@ $(VENV_DIR):
 	$(VENV_DIR)/bin/pip install -r requirements.txt
 
 $(COMMONS_DIR)/src/%.asm: $(COMMONS_DIR)/src/%.c
-	$(CLANG) -S -target cdm -O3 -I $(INCLUDE_DIR) -o $@ $^
+	$(CLANG) -S -target cdm-unknown-cocas -O3 -I $(INCLUDE_DIR) -o $@ $^
 
 $(COMMONS_DIR)/%.obj: $(COMMONS_DIR)/src/%.asm
 	$(VENV_DIR)/bin/cocas -c -t cdm16 -o $@ $^

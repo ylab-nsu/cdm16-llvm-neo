@@ -1,5 +1,6 @@
 import argparse
 import sys
+import shutil
 from lib.tests_runner import run_tests_producers
 from lib.exceptions import CocoemuServerError
 from lib.exceptions import TestParsingError
@@ -15,7 +16,7 @@ if __name__ == "__main__":
   args = parser.parse_args()
 
   try:
-    _, fails = run_tests_producers(args.port, args.tests_dir, args.clang, args.include_paths, [run_end_to_end_tests, run_clang_driver_tests])
+    _, fails = run_tests_producers(args.port, args.tests_dir, shutil.which(args.clang), args.include_paths, [run_end_to_end_tests, run_clang_driver_tests])
     sys.exit(1 if fails else 0)
   except KeyboardInterrupt:
     print("")
