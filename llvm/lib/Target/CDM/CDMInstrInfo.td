@@ -85,32 +85,27 @@ def condCode : Operand<OtherVT> {
 
 // reg address operand used in simple load/store
 // instructions.
-def mem : Operand<iPTR> {
-  let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops CPURegs, imm16);
-  // Immediate offset should always be equal to zero
+def memReg : Operand<iPTR> {
+  let MIOperandInfo = (ops CPURegs);
+  let OperandType = "OPERAND_MEMORY";
 }
 
 // reg+reg address operand used in load/store
-// instructions.
-def memRR : Operand<iPTR> {
-  let PrintMethod = "printMemRROperand";
+// instructions with 3 operands.
+def mem2Reg : Operand<iPTR> {
   let MIOperandInfo = (ops CPURegs, CPURegs);
+  let OperandType = "OPERAND_MEMORY";
+  let PrintMethod = "printMem2RegOperand";
 }
 
 // reg address pattern.
-def addr : ComplexPattern<iPTR, 2, "SelectAddr", [], []> {
-   let WantsParent = true;
-}
+def addr : ComplexPattern<iPTR, 1, "SelectAddr", [], []>;
 
 // reg+reg address pattern.
-def addrRR : ComplexPattern<iPTR, 2, "SelectAddrRR", [], []>;
+def addr2Reg : ComplexPattern<iPTR, 2, "SelectAddr2Reg", [], []>;
 
 // Frame-relative address pattern.
-def addrFrame : ComplexPattern<iPTR, 2,
-       "SelectAddrFrameIndex", [frameindex], []> {
-   let WantsParent = true;
-}
+def addrFrame : ComplexPattern<iPTR, 1, "SelectAddrFrameIndex", [frameindex], []>;
 
 // Small immediate value between 1 and 8 used in shift instructions.
 // Encoded as val - 1.
@@ -309,47 +304,68 @@ def STPC : Inst1Op<0b1001, (outs), (ins CPURegs:$rd), "stpc\t$rd", [(brind CPURe
 def MOVE : Inst2Op<0b0000, (outs CPURegs:$rd), (ins CPURegs:$rs), "move\t$rs, $rd", []>;
 
 //===----------------------------------------------------------------------===//
-// mem2 format
+// mem2/mem3 format
 //===----------------------------------------------------------------------===//
 
-// TODO: use TABLES?
-class LoadM<string instr_asm, PatFrag OpNode, Operand MemOperand,
-            ComplexPattern AddrPattern, bit Pseudo>
-    : CDMInst16<(outs CPURegs:$rd), (ins MemOperand:$rs),
-              !strconcat(instr_asm, "\t$rs, $rd"),
-              [(set CPURegs:$rd, (OpNode AddrPattern:$rs))]> {
-  let isPseudo = Pseudo;
+multiclass CDMLoad<bits<3> opcode, string mnem, SDPatternOperator OpNode> {
+    // reg addressing mode
+    def "" : InstMem2<{0, opcode}, (outs CPURegs:$rd), (ins memReg:$rs),
+              !strconcat(mnem, "\t$rs, $rd"),
+              [(set CPURegs:$rd, (OpNode addr:$rs))]>;
+
+    // reg+reg addressing mode
+    def "2Reg" : InstMem3<opcode, (outs CPURegs:$rd), (ins (mem2Reg $rs0, $rs1):$regs),
+              !strconcat(mnem, "\t$regs, $rd"),
+              [(set CPURegs:$rd, (OpNode addr2Reg:$regs))]>;
 }
 
-class StoreM<string instr_asm, PatFrag OpNode, Operand MemOperand,
-             ComplexPattern AddrPattern, bit Pseudo>
-    : CDMInst16<(outs), (ins CPURegs:$rd, MemOperand:$rs),
-              !strconcat(instr_asm, "\t$rs, $rd"),
-              [(OpNode CPURegs:$rd, AddrPattern:$rs)]> {
-  let isPseudo = Pseudo;
+multiclass CDMStore<bits<3> opcode, string mnem, SDPatternOperator OpNode> {
+    // reg addressing mode
+    def "" : InstMem2<{0, opcode}, (outs), (ins CPURegs:$rd, memReg:$rs),
+              !strconcat(mnem, "\t$rs, $rd"),
+              [(OpNode CPURegs:$rd, addr:$rs)]>;
+
+    // reg+reg addressing mode
+    def "2Reg" : InstMem3<opcode, (outs), (ins CPURegs:$rd, (mem2Reg $rs0, $rs1):$regs),
+              !strconcat(mnem, "\t$regs, $rd"),
+              [(OpNode CPURegs:$rd, addr2Reg:$regs)]>;
 }
 
-// WORD load
-def ldwRR : LoadM<"ldw", load, memRR, addrRR, 0>;
-def ldw : LoadM<"ldw", load, mem, addr, 0>;
+// Load word
+// Loads 2 bytes from data memory pointed by rs to rd.
+defm LDW : CDMLoad<0b000, "ldw", load>;
 
-// BYTE load zero extend
-def ldbRR : LoadM<"ldb", zextloadi8, memRR, addrRR, 0>;
-def ldb : LoadM<"ldb", zextloadi8, mem, addr, 0>;
-def : Pat<(i16(extloadi8 addrRR:$src)), (ldbRR addrRR:$src)>;
-def : Pat<(i16(extloadi8 addr:$src)), (ldb addr:$src)>;
+// Load unsigned byte
+// Loads a byte from data memory pointed by rs to rd.
+defm LDB : CDMLoad<0b001, "ldb", zextloadi8>;
 
-// BYTE load sign extend
-def ldsbRR : LoadM<"ldsb", sextloadi8, memRR, addrRR, 0>;
-def ldsb : LoadM<"ldsb", sextloadi8, mem, addr, 0>;
+// Load signed byte
+// Loads a byte from data memory pointed by rs to rd with sext.
+defm LDSB : CDMLoad<0b010, "ldsb", sextloadi8>;
 
-// WORD store
-def stwRR : StoreM<"stw", store, memRR, addrRR, 0>;
-def stw : StoreM<"stw", store, mem, addr, 0>;
+// Load constant word
+// Loads 2 bytes from program memory pointed by rs to rd.
+defm LCW : CDMLoad<0b011, "lcw", null_frag>;
 
-// BYTE store truncate
-def stbRR : StoreM<"stb", truncstorei8, memRR, addrRR, 0>;
-def stb : StoreM<"stb", truncstorei8, mem, addr, 0>;
+// Load constant unsigned byte
+// Loads a byte from program memory pointed by rs to rd.
+defm LCB : CDMLoad<0b100, "lcb", null_frag>;
+
+// Load constant signed byte
+// Loads a byte from program memory pointed by rs to rd with sext.
+defm LCSB : CDMLoad<0b101, "lcsb", null_frag>;
+
+// Store word
+// Stores 2 bytes from rd to data memory pointed by rs.
+defm STW : CDMStore<0b110, "stw", store>;
+
+// Store byte
+// Stores the least significant byte of rd to data memory pointed by rs.
+defm STB : CDMStore<0b111, "stb", truncstorei8>;
+
+// These patterns are needed for selecting "load anyext from i8"
+def : Pat<(i16(extloadi8 addr2Reg:$addr)), (LDB2Reg addr2Reg:$addr)>;
+def : Pat<(i16(extloadi8 addr:$addr)), (LDB addr:$addr)>;
 
 //===----------------------------------------------------------------------===//
 // imm6 format
@@ -385,12 +401,12 @@ class StoreMStack<string instr_asm, PatFrag OpNode, Operand MemOperand,
 
 let Uses = [FP] in {
   // stack words
-  def lsw : LoadMStack<"lsw", load_a, mem, addrFrame, 0>;
-  def ssw : StoreMStack<"ssw", store_a, mem, addrFrame, 0>;
+  def lsw : LoadMStack<"lsw", load_a, memReg, addrFrame, 0>;
+  def ssw : StoreMStack<"ssw", store_a, memReg, addrFrame, 0>;
   // stack bytes
-  def ssb : StoreMStack<"ssb", truncstorei8, mem, addrFrame, 0>;
-  def lsb : LoadMStack<"lsb", zextloadi8, mem, addrFrame, 0>;
-  def lssb : LoadMStack<"lssb", sextloadi8, mem, addrFrame, 0>;
+  def ssb : StoreMStack<"ssb", truncstorei8, memReg, addrFrame, 0>;
+  def lsb : LoadMStack<"lsb", zextloadi8, memReg, addrFrame, 0>;
+  def lssb : LoadMStack<"lssb", sextloadi8, memReg, addrFrame, 0>;
 }
 def : Pat<(i16(extloadi8 addrFrame:$src)), (lsb addrFrame:$src)>;
 

@@ -97,9 +97,9 @@ bool CDMRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // Opcode -> (Opcode, MemSize)
   static const std::map<unsigned, std::pair<unsigned, int>>
       FPRelSubstitutionOpcsTable = {
-          {CDM::ssw, {CDM::stwRR, 2}},   {CDM::lsw, {CDM::ldwRR, 2}},
-          {CDM::ssb, {CDM::stbRR, 1}},   {CDM::lsb, {CDM::ldbRR, 1}},
-          {CDM::lssb, {CDM::ldsbRR, 1}},
+          {CDM::ssw, {CDM::STW2Reg, 2}},   {CDM::lsw, {CDM::LDW2Reg, 2}},
+          {CDM::ssb, {CDM::STB2Reg, 1}},   {CDM::lsb, {CDM::LDB2Reg, 1}},
+          {CDM::lssb, {CDM::LDSB2Reg, 1}},
       };
 
   const auto Opcode = MI.getOpcode();
@@ -125,7 +125,8 @@ bool CDMRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
         report_fatal_error("Couldn't find register to use");
     }
 
-    BuildMI(MBB, II, II->getDebugLoc(), InstrInfo->get(CDM::LDIImm16), OffsetReg)
+    BuildMI(MBB, II, II->getDebugLoc(), InstrInfo->get(CDM::LDIImm16),
+            OffsetReg)
         .addImm(FpOffset);
 
     BuildMI(MBB, II, II->getDebugLoc(), InstrInfo->get(SubstitutionOpc))

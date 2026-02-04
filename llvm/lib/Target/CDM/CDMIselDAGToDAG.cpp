@@ -24,9 +24,7 @@ using namespace llvm;
 
 char CDMDagToDagIselLegacy::ID = 0;
 
-StringRef CDMDagToDagIselLegacy::getPassName() const {
-    return PASS_NAME;
-}
+StringRef CDMDagToDagIselLegacy::getPassName() const { return PASS_NAME; }
 
 void CDMDagToDagIsel::Select(SDNode *N) {
 
@@ -56,14 +54,32 @@ bool CDMDagToDagIsel::trySelect(SDNode *Node) {
   return false; // TODO: actually select
 }
 
-bool CDMDagToDagIsel::SelectAddrFrameIndex(SDNode *Parent, SDValue Addr,
-                                           SDValue &Base, SDValue &Offset) {
-  EVT ValTy = Addr.getValueType();
-  SDLoc DL(Addr);
+bool CDMDagToDagIsel::SelectAddr(SDValue N, SDValue &Base) {
+  if (isa<FrameIndexSDNode>(N)) {
+    return false;
+  }
 
-  if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
+  Base = N;
+  return true;
+}
+
+bool CDMDagToDagIsel::SelectAddr2Reg(SDValue N, SDValue &Base,
+                                     SDValue &Offset) {
+  if (N.getOpcode() == ISD::ADD) {
+    Base = N.getOperand(0);
+    Offset = N.getOperand(1);
+    return true;
+  }
+
+  return false;
+}
+
+bool CDMDagToDagIsel::SelectAddrFrameIndex(SDValue N, SDValue &Base) {
+  EVT ValTy = N.getValueType();
+  SDLoc DL(N);
+
+  if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(N)) {
     Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
-    Offset = CurDAG->getTargetConstant(0, DL, ValTy);
     return true;
   }
 
@@ -119,40 +135,7 @@ bool CDMDagToDagIsel::trySelectPointerCall(SDNode *N) {
   return true;
 }
 
-bool CDMDagToDagIsel::SelectAddr(SDNode *Parent, SDValue Addr, SDValue &Base,
-                                 SDValue &Offset) {
-  if (isa<FrameIndexSDNode>(Addr)) {
-    return false;
-  }
-
-  if (Addr->getOpcode() == ISD::GlobalAddress) {
-    Base = Addr;
-    Offset = CurDAG->getTargetConstant(0, SDLoc(Addr), Addr.getValueType());
-    return true;
-  }
-
-  // TODO: maybe I should be more careful here
-  Base = Addr;
-  Offset = CurDAG->getTargetConstant(0, SDLoc(Addr), Addr.getValueType());
-  return true;
-  //  LLVM_DEBUG(errs() << "[LEADP] Cant select address\n");
-  //  return false;
-}
-
-// thanks, Sparc
-bool CDMDagToDagIsel::SelectAddrRR(SDValue Addr, SDValue &Base,
-                                   SDValue &Offset) {
-  if (Addr.getOpcode() == ISD::ADD) {
-    Base = Addr.getOperand(0);
-    Offset = Addr.getOperand(1);
-    return true;
-  }
-
-  return false;
-}
-
 FunctionPass *llvm::createCDMISelDagLegacy(llvm::CDMTargetMachine &TM,
                                            CodeGenOptLevel OptLevel) {
   return new CDMDagToDagIselLegacy(TM, OptLevel);
 }
-
