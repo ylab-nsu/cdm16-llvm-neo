@@ -26,7 +26,7 @@ def clang_compile(filepath, clang_path, include_paths, opt_level):
   output_path = Path(output_file.name)
   output_file.close()
 
-  clang_args = [str(clang_path), '-target', 'cdm-unknown-cocas', '-S', f'-O{opt_level}', '-o', str(output_path)]
+  clang_args = [str(clang_path), '-target', 'cdm-cocas', '-S', f'-O{opt_level}', '-o', str(output_path)]
   for i in include_paths:
       clang_args.append('-I')
       clang_args.append(str(i))
@@ -46,7 +46,7 @@ def clang_compile_and_assemble(filepath, clang_path, include_paths, opt_level):
   output_path = Path(output_file.name)
   output_file.close()
 
-  clang_args = [str(clang_path), '-target', 'cdm-unknown-cocas', '-c', f'-O{opt_level}', '-o', str(output_path)]
+  clang_args = [str(clang_path), '-target', 'cdm-cocas', '-c', f'-O{opt_level}', '-o', str(output_path)]
   for i in include_paths:
       clang_args.append('-I')
       clang_args.append(str(i))
