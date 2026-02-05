@@ -36,6 +36,11 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
   if (JA.getKind() == Action::AssembleJobClass) {
     CmdArgs.push_back("-c");
   }
+  // If job kinde is link and incremental linking requested
+  // "Merge" objects
+  if (JA.getKind() == Action::LinkJobClass && Args.hasArg(options::OPT_r)) {
+    CmdArgs.push_back("-m");
+  }
 
   // If -g flag provided, add --debug flag
   if (Args.hasArg(options::OPT_g_Flag)) {
@@ -72,7 +77,8 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
   if (JA.getKind() == Action::LinkJobClass) {
     // Add object files from standard lib
     for (const char *obj : getCocasToolChain().getStdLibObjs()) {
-      CmdArgs.push_back(Args.MakeArgString(getCocasToolChain().GetFilePath(obj)));
+      CmdArgs.push_back(
+          Args.MakeArgString(getCocasToolChain().GetFilePath(obj)));
     }
     // Add builtins
     for (const char *obj : getCocasToolChain().getBuiltinNames()) {
@@ -116,7 +122,7 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
 }
 
 CocasToolChain::CocasToolChain(const Driver &D, const llvm::Triple &Triple,
-                           const llvm::opt::ArgList &Args)
+                               const llvm::opt::ArgList &Args)
     : ToolChain(D, Triple, Args) {
   char *CocasEnv = std::getenv("COCAS");
 
@@ -140,8 +146,8 @@ CocasToolChain::CocasToolChain(const Driver &D, const llvm::Triple &Triple,
 
 DerivedArgList *
 CocasToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
-                            StringRef BoundArch,
-                            Action::OffloadKind DeviceOffloadKind) const {
+                              StringRef BoundArch,
+                              Action::OffloadKind DeviceOffloadKind) const {
   DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
 
   // TODO: Remove this when C debug info emitting to objects in cocas got done
