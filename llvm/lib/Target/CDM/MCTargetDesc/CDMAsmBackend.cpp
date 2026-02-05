@@ -26,15 +26,19 @@ void CDMAsmBackend::adjustFixupValue(const MCFixup &Fixup,
   case CDM::fixup_branch_imm9:
     // Instructions are 2-byte aligned, so divide by 2.
     // Also subtract 1 instruction because CDM increments PC after relative
-    // branches. Keep 9 bits, set sign bit when offset is nonnegative.
-    Offset = ((Offset / 2 - 1) & 0x1ff) | (Offset >= 0 ? 0x2000 : 0);
+    // branches.
+    Offset = Offset / 2 - 1;
+    // Keep 9 bits, set sign bit when offset is nonnegative.
+    Offset = (Offset & 0x1ff) | (Offset >= 0 ? 0x2000 : 0);
     break;
   case CDM::fixup_call_imm9:
     // Same as previous.
     // Instructions are 2-byte aligned, so divide by 2.
     // Also subtract 1 instruction because CDM increments PC after relative
-    // branches. Keep 9 bits, set sign bit when offset is negative.
-    Offset = ((Offset / 2 - 1) & 0x1ff) | (Offset < 0 ? 0x200 : 0);
+    // branches.
+    Offset = Offset / 2 - 1;
+    // Keep 9 bits, set sign bit when offset is negative.
+    Offset = (Offset & 0x1ff) | (Offset < 0 ? 0x200 : 0);
     break;
   case FK_Data_2:
     // No need for adjustment.
