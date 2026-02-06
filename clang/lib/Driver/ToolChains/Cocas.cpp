@@ -75,6 +75,10 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (JA.getKind() == Action::LinkJobClass) {
+    if (!Args.hasArg(options::OPT_nostartfiles)) {
+      CmdArgs.push_back(
+          Args.MakeArgString(getCocasToolChain().GetFilePath("crt0.o")));
+    }
     // Add object files from standard lib
     for (const char *obj : getCocasToolChain().getStdLibObjs()) {
       CmdArgs.push_back(
