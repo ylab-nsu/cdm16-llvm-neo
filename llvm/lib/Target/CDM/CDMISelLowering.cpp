@@ -49,9 +49,9 @@ CDMISelLowering::CDMISelLowering(const CDMTargetMachine &TM,
 
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
   for (MVT VT : MVT::integer_valuetypes()) {
-    setLoadExtAction(ISD::EXTLOAD,  VT, MVT::i1,  Promote);
-    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i1,  Promote);
-    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1,  Promote);
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i1, Promote);
+    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i1, Promote);
+    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
   }
 
   // Conditional operations are expanded to BR_CC
@@ -206,6 +206,7 @@ CDMISelLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                              const SDLoc &DL, SelectionDAG &DAG) const {
   SmallVector<CCValAssign, 16> RVLocs;
   MachineFunction &MF = DAG.getMachineFunction();
+  CDMFunctionInfo *CFI = MF.getInfo<CDMFunctionInfo>();
 
   // CCState - Info about the registers and stack slot.
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, *DAG.getContext());
@@ -244,7 +245,6 @@ CDMISelLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   }
 
   if (MF.getFunction().hasStructRetAttr()) {
-    CDMFunctionInfo *CFI = MF.getInfo<CDMFunctionInfo>();
     Register Reg = CFI->getSRetReturnReg();
     if (!Reg) {
       llvm_unreachable("sret virtual register not created in the entry block");
@@ -262,8 +262,8 @@ CDMISelLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   if (Flag.getNode())
     RetOps.push_back(Flag);
 
-  // Return on Cpu0 is always a "ret $lr"
-  return DAG.getNode(CDMISD::Ret, DL, MVT::Other, RetOps);
+  unsigned RetOpcode = CFI->isInterruptHandler() ? CDMISD::RTI : CDMISD::RTS;
+  return DAG.getNode(RetOpcode, DL, MVT::Other, RetOps);
 }
 
 bool CDMISelLowering::CanLowerReturn(
@@ -280,8 +280,9 @@ bool CDMISelLowering::CanLowerReturn(
     return "CDMISD::" #x
 const char *CDMISelLowering::getTargetNodeName(unsigned int Opcode) const {
   switch (Opcode) {
-    NODE_NAME(Ret);
-    NODE_NAME(Call);
+    NODE_NAME(RTS);
+    NODE_NAME(RTI);
+    NODE_NAME(CALL);
     NODE_NAME(LOAD_SYM);
     NODE_NAME(SHL_EXT32);
     NODE_NAME(SRL_EXT32);
@@ -441,7 +442,7 @@ SDValue CDMISelLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
   // Returns a chain and a flag for retval copy to use.
-  Chain = DAG.getNode(CDMISD::Call, Loc, NodeTys, Ops);
+  Chain = DAG.getNode(CDMISD::CALL, Loc, NodeTys, Ops);
   InFlag = Chain.getValue(1);
 
   Chain = DAG.getCALLSEQ_END(Chain,

@@ -112,9 +112,6 @@ bool CDMInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   switch (MI.getDesc().getOpcode()) {
   default:
     return false;
-  case CDM::PseudoRet:
-    expandRet(MBB, MI);
-    break;
   case CDM::PseudoBCondRI:
   case CDM::PseudoBCondRR:
     expandBCond(MBB, MI);
@@ -131,14 +128,6 @@ bool CDMInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
   MBB.erase(MI);
   return true;
-}
-
-void CDMInstrInfo::expandRet(MachineBasicBlock &MBB, MachineInstr &MI) const {
-  auto Opcode = CDM::RTS;
-  if (MBB.getParent()->getFunction().getCallingConv() == CallingConv::CdmIsr) {
-    Opcode = CDM::RTI;
-  }
-  BuildMI(MBB, MI, MI.getDebugLoc(), get(Opcode));
 }
 
 void CDMInstrInfo::expandBCond(MachineBasicBlock &MBB, MachineInstr &MI) const {

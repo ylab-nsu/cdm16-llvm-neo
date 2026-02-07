@@ -36,7 +36,7 @@ void CDMDagToDagIsel::Select(SDNode *N) {
     return;
   }
 
-  if (N->getOpcode() == CDMISD::Call) {
+  if (N->getOpcode() == CDMISD::CALL) {
     // Generate JSRR if needed, otherwise fall to
     // default tablegen pattern matching
     if (trySelectPointerCall(N))

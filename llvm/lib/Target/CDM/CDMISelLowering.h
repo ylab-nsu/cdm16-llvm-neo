@@ -18,13 +18,14 @@ enum NodeType {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
 
   // Return
-  Ret,
+  RTS,
+  RTI,
 
   // Call
-  Call,
+  CALL,
 
   LOAD_SYM,
-  
+
   // Extended shifts
   SHL_EXT32,
   SRL_EXT32,
@@ -75,10 +76,13 @@ private:
   SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVAARG(SDValue Op, SelectionDAG &DAG);
   SDValue lowerShifts(SDValue Op, SelectionDAG &DAG) const;
-  
-  MachineBasicBlock *emitPseudoSelectCC(MachineInstr &MI, MachineBasicBlock *MBB) const;
-  MachineBasicBlock *emitShiftLargeAmt(MachineInstr &MI, MachineBasicBlock *MBB) const;
-  MachineBasicBlock *emitShiftLoop(MachineInstr &MI, MachineBasicBlock *MBB) const;
+
+  MachineBasicBlock *emitPseudoSelectCC(MachineInstr &MI,
+                                        MachineBasicBlock *MBB) const;
+  MachineBasicBlock *emitShiftLargeAmt(MachineInstr &MI,
+                                       MachineBasicBlock *MBB) const;
+  MachineBasicBlock *emitShiftLoop(MachineInstr &MI,
+                                   MachineBasicBlock *MBB) const;
 
   const CDMSubtarget &Subtarget;
   const unsigned StackReserved = 4 * 2u;

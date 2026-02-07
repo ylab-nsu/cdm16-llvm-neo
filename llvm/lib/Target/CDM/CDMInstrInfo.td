@@ -22,11 +22,15 @@ def SDTIntShiftQuadOp : SDTypeProfile<4, 5, [
 //===----------------------------------------------------------------------===//
 
 // Return from subroutine node.
-def cdm_ret : SDNode<"CDMISD::Ret",
+def cdm_rts : SDNode<"CDMISD::RTS",
+                    SDTNone, [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
+// Return from interrupt node.
+def cdm_rti : SDNode<"CDMISD::RTI",
                     SDTNone, [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 // Call subroutine node.
-def cdm_call : SDNode<"CDMISD::Call", SDT_CDMCall,
+def cdm_call : SDNode<"CDMISD::CALL", SDT_CDMCall,
                      [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue, SDNPVariadic]>;
 
 // The beginning and end of a call sequence. Needed for stack adjustment.
@@ -191,20 +195,14 @@ def JSRImm16 : Inst0OpImm16<0b1000, (outs), (ins imm16BrTarget:$imm), "jsr\t$imm
 }
 
 let isTerminator = 1, isReturn = 1, isBarrier = 1 in {
-  // Generic return pseudo
-  // Expands to:
-  // - rts for normal subroutines
-  // - rti for interrupt service routines
-  def PseudoRet : CDMPseudo<(outs), (ins), "retconv", [(cdm_ret)]>;
-
   // Return from interrupt
   // Pops a return address and a processor status word from the stack and loads
   // them into PC and PS respectively.
-  def RTI : Inst0Op<0b1001, (outs), (ins), "rti", []>;
+  def RTI : Inst0Op<0b1001, (outs), (ins), "rti", [(cdm_rti)]>;
 
   // Return from subroutine
   // Pops a return address from the stack and loads it into PC.
-  def RTS : Inst0Op<0b1011, (outs), (ins), "rts", []>;
+  def RTS : Inst0Op<0b1011, (outs), (ins), "rts", [(cdm_rts)]>;
 }
 
 // Push PC
