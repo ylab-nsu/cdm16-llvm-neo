@@ -832,7 +832,8 @@ def : Pat<(cdm_call (i16 tglobaladdr:$target)), (JSRImm9 tglobaladdr:$target)>;
 def : Pat<(cdm_call (i16 texternalsym:$target)), (JSRImm9 texternalsym:$target)>;
 
 // Load frame address
-def : Pat<(i16 addrFrame:$addr), (ADD (LDIImm16 imm:$addr), FP)>;
+// LDIImm6 may be changed to LDIImm16 in CDMRegisterInfo::eliminateFrameIndex.
+def : Pat<(i16 addrFrame:$addr), (ADD (LDIImm6 imm:$addr), FP)>;
 
 // Load byte from address with anyext
 def : Pat<(i16(extloadi8 addr:$addr)), (LDB addr:$addr)>;
