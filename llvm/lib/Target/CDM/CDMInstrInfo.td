@@ -7,7 +7,9 @@ include "CDMInstrFormats.td"
 def SDT_CDMRet : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 def SDT_CDMCall : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
 
-// Extended shift node types.
+def SDT_CDMCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i16>]>;
+def SDT_CDMCallSeqEnd : SDCallSeqEnd<[SDTCisVT<0, i16>, SDTCisVT<1, i16>]>;
+
 def SDTIntShiftQuadOp : SDTypeProfile<4, 5, [
   SDTCisInt<0>, SDTCisSameAs<1, 0>,
   SDTCisSameAs<2, 0>, SDTCisSameAs<3, 0>,
@@ -15,35 +17,36 @@ def SDTIntShiftQuadOp : SDTypeProfile<4, 5, [
   SDTCisSameAs<6, 0>, SDTCisSameAs<7, 0>, SDTCisInt<8>
 ]>;
 
-def SDT_CDMCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i16>]>;
-def SDT_CDMCallSeqEnd : SDCallSeqEnd<[SDTCisVT<0, i16>, SDTCisVT<1, i16>]>;
-
 //===----------------------------------------------------------------------===//
 // CDM SDNode definitions
 //===----------------------------------------------------------------------===//
 
-def CDMRet : SDNode<"CDMISD::Ret",
+// Return from subroutine node.
+def cdm_ret : SDNode<"CDMISD::Ret",
                     SDTNone, [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
-def CDMCall : SDNode<"CDMISD::Call", SDT_CDMCall,
+// Call subroutine node.
+def cdm_call : SDNode<"CDMISD::Call", SDT_CDMCall,
                      [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue, SDNPVariadic]>;
 
-// Extended shift nodes
+// The beginning and end of a call sequence. Needed for stack adjustment.
+// These are target-independent nodes, but have target-specific formats.
+def callseq_start : SDNode<"ISD::CALLSEQ_START",
+                           SDT_CDMCallSeqStart, [SDNPHasChain, SDNPOutGlue]>;
+def callseq_end : SDNode<"ISD::CALLSEQ_END",
+                         SDT_CDMCallSeqEnd, [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+
+// Wrapper node for global addresses, jump table indices and such.
+// Transformed into LDI instructions.
+def load_sym : SDNode<"CDMISD::LOAD_SYM", SDTIntUnaryOp>;
+
+// Extended bit shift nodes,
 def shl_ext32 : SDNode<"CDMISD::SHL_EXT32", SDTIntShiftPairOp>;
 def srl_ext32 : SDNode<"CDMISD::SRL_EXT32", SDTIntShiftPairOp>;
 def sra_ext32 : SDNode<"CDMISD::SRA_EXT32", SDTIntShiftPairOp>;
 def shl_ext64 : SDNode<"CDMISD::SHL_EXT64", SDTIntShiftQuadOp>;
 def srl_ext64 : SDNode<"CDMISD::SRL_EXT64", SDTIntShiftQuadOp>;
 def sra_ext64 : SDNode<"CDMISD::SRA_EXT64", SDTIntShiftQuadOp>;
-
-// Load symbol
-def load_sym : SDNode<"CDMISD::LOAD_SYM", SDTIntUnaryOp>;
-
-// These are target-independent nodes, but have target-specific formats.
-def callseq_start : SDNode<"ISD::CALLSEQ_START",
-                           SDT_CDMCallSeqStart, [SDNPHasChain, SDNPOutGlue]>;
-def callseq_end : SDNode<"ISD::CALLSEQ_END",
-                         SDT_CDMCallSeqEnd, [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
 //===----------------------------------------------------------------------===//
 // CDM Operands, Complex Patterns and Transformations Definitions.
@@ -192,7 +195,7 @@ let isTerminator = 1, isReturn = 1, isBarrier = 1 in {
   // Expands to:
   // - rts for normal subroutines
   // - rti for interrupt service routines
-  def PseudoRet : CDMPseudo<(outs), (ins), "retconv", [(CDMRet)]>;
+  def PseudoRet : CDMPseudo<(outs), (ins), "retconv", [(cdm_ret)]>;
 
   // Return from interrupt
   // Pops a return address and a processor status word from the stack and loads
@@ -267,12 +270,10 @@ let Uses = [SP], Defs = [SP] in {
 
 // Load large immediate to register
 // Loads immediate value imm16 to rd.
-def LDIImm16 : Inst1OpImm16<0b0010, (outs CPURegs:$rd), (ins imm16Op:$imm), "ldi\t$rd, $imm", []> {
+def LDIImm16 : Inst1OpImm16<0b0010, (outs CPURegs:$rd), (ins imm16Op:$imm), "ldi\t$rd, $imm",
+                            [(set CPURegs:$rd, imm:$imm)]> {
   let isReMaterializable = 1;
 }
-def : Pat<(i16(load_sym tglobaladdr:$addr)), (LDIImm16 $addr)>;
-def : Pat<(i16(load_sym tjumptable:$addr)), (LDIImm16 $addr)>;
-def : Pat<(i16 imm:$imm), (LDIImm16 imm:$imm)>;
 
 // Jump to subroutine by pointer
 // Pushes PC to stack and then does unconditional
@@ -388,8 +389,6 @@ defm STW : CDMStore<0b110, "stw", store>;
 defm STB : CDMStore<0b111, "stb", truncstorei8>;
 
 // Load i8 with anyext
-def : Pat<(i16(extloadi8 addr2Reg:$addr)), (LDB2Reg addr2Reg:$addr)>;
-def : Pat<(i16(extloadi8 addr:$addr)), (LDB addr:$addr)>;
 
 // Load from memory
 // Simulates CdM-8/8e ld instruction. Operates with words.
@@ -438,16 +437,14 @@ let Uses = [FP], PostEncoderMethod = "adjustImmOpCode<1, 9>" in {
   // Stores the least significant byte of rd to memory location fp + off.
   def SSB : CDMStoreStack<0b1000, "ssb", imm6ByteOffset, truncstorei8>;
 }
-// Load i8 with anyext
-def : Pat<(i16(extloadi8 addrFrame:$src)), (LSB addrFrame:$src)>;
 
 // Load small immediate to register
 // Loads immediate value imm6 to rd.
-def LDIImm6 : InstImm6<0b1010, (outs CPURegs:$rd), (ins imm6Op:$imm), "ldi\t$rd, $imm", []> {
+def LDIImm6 : InstImm6<0b1010, (outs CPURegs:$rd), (ins imm6Op:$imm), "ldi\t$rd, $imm",
+                      [(set CPURegs:$rd, imm6:$imm)]> {
   let isReMaterializable = 1;
   let PostEncoderMethod = "adjustImmOpCode<1, 9>";
 }
-def : Pat<(i16 imm6:$imm), (LDIImm6 imm6:$imm)>;
 
 let Defs = [PSR], isReMaterializable = 1, Constraints = "$rs = $rd" in {
   // Add immediate
@@ -519,8 +516,6 @@ let Uses = [SP], Defs = [SP], PostEncoderMethod = "adjustImmOpCode<0, 9>" in {
 def JSRImm9 : InstImm9<0b0110, (outs), (ins imm9CallTarget:$imm), "jsr\t$imm", []> {
   let isCall = 1;
 }
-def : Pat<(CDMCall(i16 tglobaladdr:$target)), (JSRImm9 tglobaladdr:$target)>;
-def : Pat<(CDMCall(i16 texternalsym:$target)), (JSRImm9 texternalsym:$target)>;
 
 //===----------------------------------------------------------------------===//
 // br_abs format
@@ -590,8 +585,7 @@ multiclass Shift<bits<3> op, string instr_asm, SDPatternOperator OpNode> {
     // The shift amount is constant, and is greater than 8.
     // Needs to be expanded into two "regular" (amount between 1 and 8) instructions.
     def _LARGEAMT
-        : CDMPseudo<(outs CPURegs:$rd), (ins CPURegs:$rs, shamt:$shamt),
-                  !strconcat(!strconcat(!strconcat("!", instr_asm), "_LARGEAMT"), "\t$rs, $rd, $shamt"),
+        : CDMPseudo<(outs CPURegs:$rd), (ins CPURegs:$rs, shamt:$shamt), "",
                   [(set CPURegs:$rd, (OpNode CPURegs:$rs, imm9_16:$shamt))]> {
       let usesCustomInserter = true;
     }
@@ -599,8 +593,7 @@ multiclass Shift<bits<3> op, string instr_asm, SDPatternOperator OpNode> {
     // The shift amount is stored in a register.
     // Expanded into an inline loop.
     def _LOOP
-        : CDMPseudo<(outs CPURegs:$rd), (ins CPURegs:$rs, CPURegs:$shamt),
-                  !strconcat(!strconcat(!strconcat("!", instr_asm), "_VARAMT"), "\t$rs, $rd, $shamt"),
+        : CDMPseudo<(outs CPURegs:$rd), (ins CPURegs:$rs, CPURegs:$shamt), "",
                   [(set CPURegs:$rd, (OpNode CPURegs:$rs, CPURegs:$shamt))]> {
       let usesCustomInserter = true;
     }
@@ -770,15 +763,6 @@ def CLR : InstAlias<"clr\t$rd", (SUB CPURegs:$rd, CPURegs:$rd, CPURegs:$rd), 0>;
 // Sets bits in rs0 that are set in rs1. Alias for OR.
 def BIS : InstAlias<"bis\t$rs0, $rs1, $rd", (OR CPURegs:$rd, CPURegs:$rs0, CPURegs:$rs1), 0>;
 
-// TODO why is this a separate instruction?
-def load_frame_address
-    : InstAlu3<0b100, (outs CPURegs:$rd), (ins CPURegs:$rs0), "add\t$rs0, fp, $rd", []> {
-  let rs1 = 7;
-  let isCodeGenOnly = 1;
-  let Uses = [FP];
-}
-def : Pat<(i16 addrFrame:$addr), (load_frame_address(LDIImm16 CPURegs:$addr))>;
-
 //===----------------------------------------------------------------------===//
 // alu3_ind format
 //===----------------------------------------------------------------------===//
@@ -796,55 +780,75 @@ let Defs = [PSR] in {
 }
 
 //===----------------------------------------------------------------------===//
-// Branch/select pseudos
+// Pseudo instructions
 //===----------------------------------------------------------------------===//
 
+// Conditional branch
 def PseudoBCondRR
-    : CDMPseudo<(outs), (ins condCode:$cnd, CPURegs:$lhs, CPURegs:$rhs, imm16BrTarget:$target), "bcondrr", []> {
+    : CDMPseudo<(outs), (ins condCode:$cnd, CPURegs:$lhs, CPURegs:$rhs, imm16BrTarget:$target), "", []> {
   let isTerminator = 1;
   let isBranch = 1;
   let Uses = [PSR];
 }
 
 def PseudoBCondRI
-    : CDMPseudo<(outs), (ins condCode:$cnd, CPURegs:$lhs, imm6Op:$rhs, imm16BrTarget:$target), "bcondri", []> {
+    : CDMPseudo<(outs), (ins condCode:$cnd, CPURegs:$lhs, imm6Op:$rhs, imm16BrTarget:$target), "", []> {
   let isTerminator = 1;
   let isBranch = 1;
   let Uses = [PSR];
 }
 
+// Select
 def PseudoSelectCC
     : CDMPseudo<(outs CPURegs:$dst),
-                (ins CPURegs:$lhs, CPURegs:$rhs, CPURegs:$vtrue, CPURegs:$vfalse, condCode:$cnd), "selectcc", []> {
+                (ins CPURegs:$lhs, CPURegs:$rhs, CPURegs:$vtrue, CPURegs:$vfalse, condCode:$cnd), "", []> {
   let usesCustomInserter = true;
 }
 
 def PseudoSelectCCI
     : CDMPseudo<(outs CPURegs:$dst),
-                (ins CPURegs:$lhs, imm6Op:$rhs, CPURegs:$vtrue, CPURegs:$vfalse, condCode:$cnd), "selectcci", []> {
+                (ins CPURegs:$lhs, imm6Op:$rhs, CPURegs:$vtrue, CPURegs:$vfalse, condCode:$cnd), "", []> {
   let usesCustomInserter = true;
 }
+
+// Stack adjustment required (by the ABI) before and after each call
+let Defs = [SP], Uses = [SP] in {
+  def PseudoCallAdjustStackDown
+      : CDMPseudo<(outs), (ins i16imm:$amt1, i16imm:$amt2), "",
+                  [(callseq_start timm:$amt1, timm:$amt2)]>;
+  def PseudoCallAdjustStackUp
+      : CDMPseudo<(outs), (ins i16imm:$amt1, i16imm:$amt2), "",
+                  [(callseq_end timm:$amt1, timm:$amt2)]>;
+}
+
+//===----------------------------------------------------------------------===//
+// Non-Instruction Patterns
+//===----------------------------------------------------------------------===//
+
+// Load symbols
+def : Pat<(i16(load_sym tglobaladdr:$addr)), (LDIImm16 $addr)>;
+def : Pat<(i16(load_sym tjumptable:$addr)), (LDIImm16 $addr)>;
+
+// Call (try to use short encoding first)
+def : Pat<(cdm_call (i16 tglobaladdr:$target)), (JSRImm9 tglobaladdr:$target)>;
+def : Pat<(cdm_call (i16 texternalsym:$target)), (JSRImm9 texternalsym:$target)>;
+
+// Load frame address
+def : Pat<(i16 addrFrame:$addr), (ADD (LDIImm16 imm:$addr), FP)>;
+
+// Load byte from address with anyext
+def : Pat<(i16(extloadi8 addr:$addr)), (LDB addr:$addr)>;
+def : Pat<(i16(extloadi8 addr2Reg:$addr)), (LDB2Reg addr2Reg:$addr)>;
+def : Pat<(i16(extloadi8 addrFrame:$src)), (LSB addrFrame:$src)>;
+
+// Conditional branch
 def : Pat<(brcc cond:$cnd, CPURegs:$lhs, imm6:$rhs, bb:$target),
           (PseudoBCondRI (cdmizeCondXform $cnd), CPURegs:$lhs, imm6:$rhs, imm16BrTarget:$target)>;
-
 def : Pat<(brcc cond:$cnd, CPURegs:$lhs, CPURegs:$rhs, bb:$target),
           (PseudoBCondRR (cdmizeCondXform $cnd), CPURegs:$lhs, CPURegs:$rhs, imm16BrTarget:$target)>;
 
-def : Pat<(selectcc CPURegs:$lhs, imm6:$rhs, CPURegs:$vtrue, CPURegs:$vfalse,
-              cond:$cnd),
-          (PseudoSelectCCI CPURegs:$lhs, imm6:$rhs, CPURegs:$vtrue,
-              CPURegs:$vfalse, (cdmizeCondXform $cnd))>;
-
-def : Pat<(selectcc CPURegs:$lhs, CPURegs:$rhs, CPURegs:$vtrue, CPURegs:$vfalse,
-              cond:$cnd),
-          (PseudoSelectCC CPURegs:$lhs, CPURegs:$rhs, CPURegs:$vtrue,
-              CPURegs:$vfalse, (cdmizeCondXform $cnd))>;
-
-let Defs = [SP], Uses = [SP] in {
-  def ADJCALLSTACKDOWN
-      : CDMPseudo<(outs), (ins i16imm:$amt1, i16imm:$amt2),
-                  "!ADJCALLSTACKDOWN $amt1", [(callseq_start timm:$amt1, timm:$amt2)]>;
-  def ADJCALLSTACKUP
-      : CDMPseudo<(outs), (ins i16imm:$amt1, i16imm:$amt2),
-                  "!ADJCALLSTACKUP $amt1", [(callseq_end timm:$amt1, timm:$amt2)]>;
-}
+// Select
+def : Pat<(selectcc CPURegs:$lhs, imm6:$rhs, CPURegs:$vtrue, CPURegs:$vfalse, cond:$cnd),
+          (PseudoSelectCCI CPURegs:$lhs, imm6:$rhs, CPURegs:$vtrue, CPURegs:$vfalse, (cdmizeCondXform $cnd))>;
+def : Pat<(selectcc CPURegs:$lhs, CPURegs:$rhs, CPURegs:$vtrue, CPURegs:$vfalse, cond:$cnd),
+          (PseudoSelectCC CPURegs:$lhs, CPURegs:$rhs, CPURegs:$vtrue, CPURegs:$vfalse, (cdmizeCondXform $cnd))>;

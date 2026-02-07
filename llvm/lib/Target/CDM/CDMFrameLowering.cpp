@@ -123,7 +123,7 @@ MachineBasicBlock::iterator CDMFrameLowering::eliminateCallFramePseudoInstr(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator MI) const {
   int Size = MI->getOperand(0).getImm();
-  if (MI->getOpcode() == CDM::ADJCALLSTACKDOWN)
+  if (MI->getOpcode() == CDM::PseudoCallAdjustStackDown)
     Size = -Size;
 
   const auto *TII =

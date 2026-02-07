@@ -17,7 +17,7 @@
 namespace llvm {
 
 CDMInstrInfo::CDMInstrInfo()
-    : CDMGenInstrInfo(CDM::ADJCALLSTACKDOWN, CDM::ADJCALLSTACKUP) {}
+    : CDMGenInstrInfo(CDM::PseudoCallAdjustStackDown, CDM::PseudoCallAdjustStackUp) {}
 
 static MachineMemOperand *getStackMemOperand(MachineBasicBlock &MBB, int FI,
                                              MachineMemOperand::Flags Flags) {
