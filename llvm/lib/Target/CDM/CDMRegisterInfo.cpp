@@ -97,9 +97,9 @@ bool CDMRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // Opcode -> (Opcode, MemSize)
   static const std::map<unsigned, std::pair<unsigned, int>>
       FPRelSubstitutionOpcsTable = {
-          {CDM::ssw, {CDM::STW2Reg, 2}},   {CDM::lsw, {CDM::LDW2Reg, 2}},
-          {CDM::ssb, {CDM::STB2Reg, 1}},   {CDM::lsb, {CDM::LDB2Reg, 1}},
-          {CDM::lssb, {CDM::LDSB2Reg, 1}},
+          {CDM::SSW, {CDM::STW2Reg, 2}},   {CDM::LSW, {CDM::LDW2Reg, 2}},
+          {CDM::SSB, {CDM::STB2Reg, 1}},   {CDM::LSB, {CDM::LDB2Reg, 1}},
+          {CDM::LSSB, {CDM::LDSB2Reg, 1}},
       };
 
   const auto Opcode = MI.getOpcode();

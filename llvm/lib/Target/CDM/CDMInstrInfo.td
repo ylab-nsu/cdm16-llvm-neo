@@ -50,23 +50,6 @@ def callseq_end
 // CDM Operands, Complex Patterns and Transformations Definitions.
 //===----------------------------------------------------------------------===//
 
-// 9-bit relative JSR call target
-def imm9CallTarget : Operand<i16> {
-  let OperandType = "OPERAND_PCREL";
-  let EncoderMethod = "encodeBranchTarget<CDM::fixup_call_imm9, 0>";
-}
-
-// 9-bit relative branch target
-def imm9BrTarget : Operand<OtherVT> {
-  let OperandType = "OPERAND_PCREL";
-  let EncoderMethod = "encodeBranchTarget<CDM::fixup_branch_imm9, 0>";
-}
-
-// 9-bit stack offset for addsp
-def imm9StackOffset : Operand<i16> {
-  let EncoderMethod = "encodeStackOffset";
-}
-
 // 16-bit generic constant
 def imm16 : Operand<i16> {
   let EncoderMethod = "encodeImm<FK_Data_2, 2>";
@@ -78,9 +61,29 @@ def imm16BrTarget : Operand<OtherVT> {
   let EncoderMethod = "encodeBranchTarget<FK_Data_2, 2>";
 }
 
+// 9-bit relative branch target
+def imm9BrTarget : Operand<OtherVT> {
+  let OperandType = "OPERAND_PCREL";
+  let EncoderMethod = "encodeBranchTarget<CDM::fixup_branch_imm9, 0>";
+}
+
+// 9-bit relative JSR call target
+def imm9CallTarget : Operand<i16> {
+  let OperandType = "OPERAND_PCREL";
+  let EncoderMethod = "encodeBranchTarget<CDM::fixup_call_imm9, 0>";
+}
+
 // Condition code operand used in conditional branch instrcutions.
 def condCode : Operand<OtherVT> {
   let PrintMethod = "printCondCode";
+}
+
+// Stack offsets for frame-relative loads/stores and addsp
+def stackWordOffset : Operand<i16> {
+  let EncoderMethod = "encodeStackOffset<2>";
+}
+def stackByteOffset : Operand<i16> {
+  let EncoderMethod = "encodeStackOffset<1>";
 }
 
 // reg address operand used in simple load/store
@@ -98,10 +101,10 @@ def mem2Reg : Operand<iPTR> {
   let PrintMethod = "printMem2RegOperand";
 }
 
-// reg address pattern.
+// Simple absolute address pattern.
 def addr : ComplexPattern<iPTR, 1, "SelectAddr", [], []>;
 
-// reg+reg address pattern.
+// reg+reg absolute address pattern.
 def addr2Reg : ComplexPattern<iPTR, 2, "SelectAddr2Reg", [], []>;
 
 // Frame-relative address pattern.
@@ -117,6 +120,19 @@ def shamt : Operand<i16> {
 def Imm1_8Leaf : ImmLeaf<i16, [{return (Imm >= 1) && (Imm <= 8);}]>;
 def Imm9_16Leaf : ImmLeaf<i16, [{return (Imm >= 9) && (Imm <= 16);}]>;
 
+def imm6 : ImmLeaf<i16, [{return (Imm >= -64) && (Imm <= 63);}]>;
+
+// Aligned load/store patterns
+def loadAligned : PatFrag<(ops node:$ptr), (load node:$ptr), [{
+  LoadSDNode *LD = cast<LoadSDNode>(N);
+  return LD->getMemoryVT().getSizeInBits()/8 <= LD->getAlign().value();
+}]>;
+def storeAligned  : PatFrag<(ops node:$val, node:$ptr), (store node:$val, node:$ptr), [{
+  StoreSDNode *SD = cast<StoreSDNode>(N);
+  return SD->getMemoryVT().getSizeInBits()/8 <= SD->getAlign().value();
+}]>;
+
+// Transforms LLVM cond codes to CDM cond codes
 def cdmizeCondXform : SDNodeXForm<cond, [{
   return CurDAG->getTargetConstant(CCToCondOp(N->get()), N, MVT::i16);
 }]>;
@@ -336,11 +352,11 @@ multiclass CDMStore<bits<3> opcode, string mnem, SDPatternOperator OpNode> {
 defm LDW : CDMLoad<0b000, "ldw", load>;
 
 // Load unsigned byte
-// Loads a byte from data memory pointed by rs to rd.
+// Loads a byte from data memory pointed by rs to rd with zero extend.
 defm LDB : CDMLoad<0b001, "ldb", zextloadi8>;
 
 // Load signed byte
-// Loads a byte from data memory pointed by rs to rd with sext.
+// Loads a byte from data memory pointed by rs to rd with sign extend.
 defm LDSB : CDMLoad<0b010, "ldsb", sextloadi8>;
 
 // Load constant word
@@ -348,11 +364,11 @@ defm LDSB : CDMLoad<0b010, "ldsb", sextloadi8>;
 defm LCW : CDMLoad<0b011, "lcw", null_frag>;
 
 // Load constant unsigned byte
-// Loads a byte from program memory pointed by rs to rd.
+// Loads a byte from program memory pointed by rs to rd with zero extend.
 defm LCB : CDMLoad<0b100, "lcb", null_frag>;
 
 // Load constant signed byte
-// Loads a byte from program memory pointed by rs to rd with sext.
+// Loads a byte from program memory pointed by rs to rd with sign extend.
 defm LCSB : CDMLoad<0b101, "lcsb", null_frag>;
 
 // Store word
@@ -363,7 +379,7 @@ defm STW : CDMStore<0b110, "stw", store>;
 // Stores the least significant byte of rd to data memory pointed by rs.
 defm STB : CDMStore<0b111, "stb", truncstorei8>;
 
-// These patterns are needed for selecting "load anyext from i8"
+// Load i8 with anyext
 def : Pat<(i16(extloadi8 addr2Reg:$addr)), (LDB2Reg addr2Reg:$addr)>;
 def : Pat<(i16(extloadi8 addr:$addr)), (LDB addr:$addr)>;
 
@@ -371,50 +387,53 @@ def : Pat<(i16(extloadi8 addr:$addr)), (LDB addr:$addr)>;
 // imm6 format
 //===----------------------------------------------------------------------===//
 
-def immZext6 : ImmLeaf<i16, [{return (Imm >= -64) && (Imm <= 63);}]>;
+class CDMLoadStack<bits<4> opcode, string mnem, Operand OffOp, SDPatternOperator OpNode>
+    : InstImm6<opcode, (outs CPURegs:$rd), (ins OffOp:$imm),
+               !strconcat(mnem, "\t$rd, $imm"),
+               [(set CPURegs:$rd, (OpNode addrFrame:$imm))]>;
 
-def load_a : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  LoadSDNode *LD = cast<LoadSDNode>(N);
-  return LD->getMemoryVT().getSizeInBits()/8 <= LD->getAlign().value();
-}]>;
+class CDMStoreStack<bits<4> opcode, string mnem, Operand OffOp, SDPatternOperator OpNode>
+    : InstImm6<opcode, (outs), (ins CPURegs:$rd, OffOp:$imm),
+               !strconcat(mnem, "\t$rd, $imm"),
+               [(OpNode CPURegs:$rd, addrFrame:$imm)]>;
 
-def store_a  : PatFrag<(ops node:$val, node:$ptr), (store node:$val, node:$ptr), [{
-  StoreSDNode *SD = cast<StoreSDNode>(N);
-  return SD->getMemoryVT().getSizeInBits()/8 <= SD->getAlign().value();
-}]>;
+let Uses = [FP], PostEncoderMethod = "adjustImmOpCode<1, 9>" in {
+  // Load word relative to fp
+  // Loads a word from memory location fp + off to rd.
+  def LSW : CDMLoadStack<0b0000, "lsw", stackWordOffset, loadAligned>;
 
-class LoadMStack<string instr_asm, PatFrag OpNode, Operand MemOperand,
-                 ComplexPattern AddrPattern, bit Pseudo>
-    : CDMInst16<(outs CPURegs:$ra), (ins MemOperand:$addr),
-              !strconcat(instr_asm, "\t$ra, $addr"),
-              [(set CPURegs:$ra, (OpNode AddrPattern:$addr))]> {
-  let isPseudo = Pseudo;
+  // Load unsigned byte relative to fp
+  // Loads a byte from memory location fp + off to rd with zero extend.
+  def LSB : CDMLoadStack<0b0010, "lsb", stackByteOffset, zextloadi8>;
+
+  // Load signed byte relative to fp
+  // Loads a byte from memory location fp + off to rd with sign extend.
+  def LSSB : CDMLoadStack<0b0100, "lssb", stackByteOffset, sextloadi8>;
+
+  // Store word relative to fp
+  // Stores 2 bytes from rd to memory location fp + off.
+  def SSW : CDMStoreStack<0b0110, "ssw", stackWordOffset, storeAligned>;
+
+  // Store byte relative to fp
+  // Stores the least significant byte of rd to memory location fp + off.
+  def SSB : CDMStoreStack<0b1000, "ssb", stackByteOffset, truncstorei8>;
 }
+// Load i8 with anyext
+def : Pat<(i16(extloadi8 addrFrame:$src)), (LSB addrFrame:$src)>;
 
-class StoreMStack<string instr_asm, PatFrag OpNode, Operand MemOperand,
-                  ComplexPattern AddrPattern, bit Pseudo>
-    : CDMInst16<(outs), (ins CPURegs:$ra, MemOperand:$addr),
-              !strconcat(instr_asm, "\t$ra, $addr"),
-              [(OpNode CPURegs:$ra, AddrPattern:$addr)]> {
-  let isPseudo = Pseudo;
+// Load small immediate to register
+// Loads immediate value imm6 to rd.
+def LDIImm6 : InstImm6<0b1010, (outs CPURegs:$rd), (ins i16imm:$imm), "ldi\t$rd, $imm", []> {
+  let isReMaterializable = 1;
+  let PostEncoderMethod = "adjustImmOpCode<1, 9>";
 }
-
-let Uses = [FP] in {
-  // stack words
-  def lsw : LoadMStack<"lsw", load_a, memReg, addrFrame, 0>;
-  def ssw : StoreMStack<"ssw", store_a, memReg, addrFrame, 0>;
-  // stack bytes
-  def ssb : StoreMStack<"ssb", truncstorei8, memReg, addrFrame, 0>;
-  def lsb : LoadMStack<"lsb", zextloadi8, memReg, addrFrame, 0>;
-  def lssb : LoadMStack<"lssb", sextloadi8, memReg, addrFrame, 0>;
-}
-def : Pat<(i16(extloadi8 addrFrame:$src)), (lsb addrFrame:$src)>;
+def : Pat<(i16 imm6:$imm), (LDIImm6 imm6:$imm)>;
 
 let Defs = [PSR], isReMaterializable = 1, Constraints = "$rs = $rd" in {
   // Add immediate
   // Computes rd + imm6 and puts result in rd.
   def ADDImm6 : InstImm6<0b1100, (outs CPURegs:$rd), (ins CPURegs:$rs, i16imm:$imm), "add\t$rs, $imm",
-                         [(set CPURegs:$rd, (add CPURegs:$rs, immZext6:$imm))]> {
+                         [(set CPURegs:$rd, (add CPURegs:$rs, imm6:$imm))]> {
     let PostEncoderMethod = "adjustImmOpCode<2, 9>";
   }
 
@@ -445,7 +464,7 @@ def TST : InstAlias<"tst\t$rd", (CMPImm6 CPURegs:$rd, 0)>;
 
 // Add immediate to SP
 // Adds imm bytes to SP.
-def ADDSPImm9 : InstImm9<0b0100, (outs), (ins imm9StackOffset:$imm), "addsp\t$imm", []> {
+def ADDSPImm9 : InstImm9<0b0100, (outs), (ins stackWordOffset:$imm), "addsp\t$imm", []> {
   let Uses = [SP];
   let Defs = [SP];
   let PostEncoderMethod = "adjustImmOpCode<0, 9>";
@@ -749,15 +768,15 @@ def PseudoSelectCCI
                 (ins CPURegs:$lhs, i16imm:$rhs, CPURegs:$vtrue, CPURegs:$vfalse, condCode:$cnd), "selectcci", []> {
   let usesCustomInserter = true;
 }
-def : Pat<(brcc cond:$cnd, CPURegs:$lhs, immZext6:$rhs, bb:$target),
-          (PseudoBCondRI (cdmizeCondXform $cnd), CPURegs:$lhs, immZext6:$rhs, imm16BrTarget:$target)>;
+def : Pat<(brcc cond:$cnd, CPURegs:$lhs, imm6:$rhs, bb:$target),
+          (PseudoBCondRI (cdmizeCondXform $cnd), CPURegs:$lhs, imm6:$rhs, imm16BrTarget:$target)>;
 
 def : Pat<(brcc cond:$cnd, CPURegs:$lhs, CPURegs:$rhs, bb:$target),
           (PseudoBCondRR (cdmizeCondXform $cnd), CPURegs:$lhs, CPURegs:$rhs, imm16BrTarget:$target)>;
 
-def : Pat<(selectcc CPURegs:$lhs, immZext6:$rhs, CPURegs:$vtrue, CPURegs:$vfalse,
+def : Pat<(selectcc CPURegs:$lhs, imm6:$rhs, CPURegs:$vtrue, CPURegs:$vfalse,
               cond:$cnd),
-          (PseudoSelectCCI CPURegs:$lhs, immZext6:$rhs, CPURegs:$vtrue,
+          (PseudoSelectCCI CPURegs:$lhs, imm6:$rhs, CPURegs:$vtrue,
               CPURegs:$vfalse, (cdmizeCondXform $cnd))>;
 
 def : Pat<(selectcc CPURegs:$lhs, CPURegs:$rhs, CPURegs:$vtrue, CPURegs:$vfalse,

@@ -45,6 +45,7 @@ public:
   explicit CDMInstrInfo();
 
   const CDMRegisterInfo &getRegisterInfo() const { return RI; }
+
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register SrcReg,
       bool IsKill, int FI, const TargetRegisterClass *RC,
@@ -56,7 +57,6 @@ public:
       const TargetRegisterInfo *TRI, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
-  bool expandPostRAPseudo(MachineInstr &MI) const override;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                    const DebugLoc &DL, Register DestReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,
@@ -65,11 +65,10 @@ public:
   void adjustStackPtr(int64_t Amount, MachineBasicBlock &MBB,
                       MachineBasicBlock::iterator I, const DebugLoc &DL) const;
 
+  bool expandPostRAPseudo(MachineInstr &MI) const override;
+
 private:
   const CDMRegisterInfo RI;
-
-  MachineMemOperand *GetMemOperand(MachineBasicBlock &MBB, int FI,
-                                   MachineMemOperand::Flags Flags) const;
 
   void expandRet(MachineBasicBlock &MBB, MachineInstr &MI) const;
   void expandBCond(MachineBasicBlock &MBB, MachineInstr &MI) const;

@@ -19,7 +19,7 @@ CDMAsmBackend::createObjectTargetWriter() const {
 void CDMAsmBackend::adjustFixupValue(const MCFixup &Fixup,
                                      const MCValue &Target, uint64_t &Value,
                                      MCContext *Ctx) const {
-  int64_t &Offset = reinterpret_cast<int64_t&>(Value);
+  int64_t &Offset = reinterpret_cast<int64_t &>(Value);
   switch (Fixup.getKind()) {
   default:
     llvm_unreachable("invalid fixup");

@@ -19,7 +19,16 @@ namespace llvm {
 CDMInstrInfo::CDMInstrInfo()
     : CDMGenInstrInfo(CDM::ADJCALLSTACKDOWN, CDM::ADJCALLSTACKUP) {}
 
-// needed for loading/saving regs in prologue/epilogue
+static MachineMemOperand *getStackMemOperand(MachineBasicBlock &MBB, int FI,
+                                             MachineMemOperand::Flags Flags) {
+  MachineFunction &MF = *MBB.getParent();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  return MF.getMachineMemOperand(MachinePointerInfo::getFixedStack(MF, FI),
+                                 Flags, MFI.getObjectSize(FI),
+                                 MFI.getObjectAlign(FI));
+}
+
 void CDMInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator I,
                                        Register SrcReg, bool IsKill, int FI,
@@ -28,25 +37,13 @@ void CDMInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                        Register VReg,
                                        MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
-  MachineMemOperand *MMO = GetMemOperand(MBB, FI, MachineMemOperand::MOStore);
+  MachineMemOperand *MMO =
+      getStackMemOperand(MBB, FI, MachineMemOperand::MOStore);
 
-  // TODO: understand this
-  BuildMI(MBB, I, DL, get(CDM::ssw))
+  BuildMI(MBB, I, DL, get(CDM::SSW))
       .addReg(SrcReg, getKillRegState(IsKill))
       .addFrameIndex(FI)
       .addMemOperand(MMO);
-}
-
-// TODO: understand this
-MachineMemOperand *
-CDMInstrInfo::GetMemOperand(MachineBasicBlock &MBB, int FI,
-                            MachineMemOperand::Flags Flags) const {
-  MachineFunction &MF = *MBB.getParent();
-  MachineFrameInfo &MFI = MF.getFrameInfo();
-  // Offset?
-  return MF.getMachineMemOperand(MachinePointerInfo::getFixedStack(MF, FI),
-                                 Flags, MFI.getObjectSize(FI),
-                                 MFI.getObjectAlign(FI));
 }
 
 void CDMInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
@@ -60,12 +57,53 @@ void CDMInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   if (MI != MBB.end())
     DL = MI->getDebugLoc();
   MachineMemOperand *MMO =
-      GetMemOperand(MBB, FrameIndex, MachineMemOperand::MOLoad);
+      getStackMemOperand(MBB, FrameIndex, MachineMemOperand::MOLoad);
 
-  // OFFSET?
-  BuildMI(MBB, MI, DL, get(CDM::lsw), DestReg)
+  BuildMI(MBB, MI, DL, get(CDM::LSW), DestReg)
       .addFrameIndex(FrameIndex)
       .addMemOperand(MMO);
+}
+
+void CDMInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator MI,
+                               const DebugLoc &DL, Register DestReg,
+                               Register SrcReg, bool KillSrc,
+                               bool RenamableDest, bool RenamableSrc) const {
+  if (SrcReg == CDM::SP) {
+    assert(CDM::CPURegsRegClass.contains(DestReg) &&
+           "Cannot copy SP to special register");
+
+    BuildMI(MBB, MI, DL, get(CDM::LDSP), DestReg);
+    return;
+  }
+
+  if (DestReg == CDM::SP) {
+    assert(CDM::CPURegsRegClass.contains(SrcReg) &&
+           "Cannot copy a special register to SP");
+
+    BuildMI(MBB, MI, DL, get(CDM::STSP))
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  assert(CDM::CPURegsRegClass.contains(SrcReg) &&
+         CDM::CPURegsRegClass.contains(DestReg) &&
+         "Impossible reg-to-reg copy");
+  BuildMI(MBB, MI, DL, get(CDM::MOVE), DestReg)
+      .addReg(SrcReg, getKillRegState(KillSrc));
+}
+
+void CDMInstrInfo::adjustStackPtr(int64_t Amount, MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator I,
+                                  const DebugLoc &DL) const {
+  const int64_t ImmLimit = Amount < 0 ? -1024 : 1023;
+  int64_t Rest = Amount;
+
+  for (; Rest < -1024 || Rest >= 1024; Rest -= ImmLimit) {
+    BuildMI(MBB, I, DL, get(CDM::ADDSPImm9)).addImm(ImmLimit);
+  }
+
+  BuildMI(MBB, I, DL, get(CDM::ADDSPImm9)).addImm(Rest);
 }
 
 bool CDMInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
@@ -225,48 +263,6 @@ void CDMInstrInfo::expandShiftExt(MachineBasicBlock &MBB,
   }
 
   finalizeBundle(MBB, Bundler.begin(), Bundler.end());
-}
-
-void CDMInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator MI,
-                               const DebugLoc &DL, Register DestReg,
-                               Register SrcReg, bool KillSrc,
-                               bool RenamableDest, bool RenamableSrc) const {
-  if (SrcReg == CDM::SP) {
-    assert(CDM::CPURegsRegClass.contains(DestReg) &&
-           "Cannot copy SP to special register");
-
-    BuildMI(MBB, MI, DL, get(CDM::LDSP), DestReg);
-    return;
-  }
-
-  if (DestReg == CDM::SP) {
-    assert(CDM::CPURegsRegClass.contains(SrcReg) &&
-           "Cannot copy a special register to SP");
-
-    BuildMI(MBB, MI, DL, get(CDM::STSP))
-        .addReg(SrcReg, getKillRegState(KillSrc));
-    return;
-  }
-
-  assert(CDM::CPURegsRegClass.contains(SrcReg) &&
-         CDM::CPURegsRegClass.contains(DestReg) &&
-         "Impossible reg-to-reg copy");
-  BuildMI(MBB, MI, DL, get(CDM::MOVE), DestReg)
-      .addReg(SrcReg, getKillRegState(KillSrc));
-}
-
-void CDMInstrInfo::adjustStackPtr(int64_t Amount, MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator I,
-                                  const DebugLoc &DL) const {
-  const int64_t ImmLimit = Amount < 0 ? -1024 : 1023;
-  int64_t Rest = Amount;
-
-  for (; Rest < -1024 || Rest >= 1024; Rest -= ImmLimit) {
-    BuildMI(MBB, I, DL, get(CDM::ADDSPImm9)).addImm(ImmLimit);
-  }
-
-  BuildMI(MBB, I, DL, get(CDM::ADDSPImm9)).addImm(Rest);
 }
 
 } // namespace llvm

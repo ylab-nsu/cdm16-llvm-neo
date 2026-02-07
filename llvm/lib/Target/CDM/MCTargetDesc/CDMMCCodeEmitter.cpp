@@ -46,8 +46,8 @@ private:
   /// Encodes an immediate operand (symbol only).
   template <unsigned FixupKind, unsigned Offset>
   unsigned encodeBranchTarget(const MCInst &MI, unsigned OpNo,
-                        SmallVectorImpl<MCFixup> &Fixups,
-                        const MCSubtargetInfo &STI) const;
+                              SmallVectorImpl<MCFixup> &Fixups,
+                              const MCSubtargetInfo &STI) const;
 
   /// Encodes an immediate operand.
   template <unsigned FixupKind, unsigned Offset>
@@ -60,7 +60,8 @@ private:
                        SmallVectorImpl<MCFixup> &Fixups,
                        const MCSubtargetInfo &STI) const;
 
-  /// Encodes a stack offset for addsp imm9.
+  /// Encodes a stack offset for addsp and frame-relative loads/stores.
+  template<unsigned Align>
   signed encodeStackOffset(const MCInst &MI, unsigned OpNo,
                            SmallVectorImpl<MCFixup> &Fixups,
                            const MCSubtargetInfo &STI) const;
@@ -108,7 +109,8 @@ uint64_t CDMMCCodeEmitter::getMachineOpValue(const MCInst &MI,
 }
 
 template <unsigned FixupKind, unsigned Offset>
-unsigned CDMMCCodeEmitter::encodeBranchTarget(const MCInst &MI, unsigned OpNo,
+unsigned
+CDMMCCodeEmitter::encodeBranchTarget(const MCInst &MI, unsigned OpNo,
                                      SmallVectorImpl<MCFixup> &Fixups,
                                      const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
@@ -152,6 +154,7 @@ unsigned CDMMCCodeEmitter::encodeShamt(const MCInst &MI, unsigned OpNo,
   return Value - 1;
 }
 
+template<unsigned Align>
 signed CDMMCCodeEmitter::encodeStackOffset(const MCInst &MI, unsigned OpNo,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
@@ -159,12 +162,10 @@ signed CDMMCCodeEmitter::encodeStackOffset(const MCInst &MI, unsigned OpNo,
 
   int64_t Value;
   if (!MO.evaluateAsConstantImm(Value)) {
-    llvm_unreachable("Unsupported word offset operand!");
+    llvm_unreachable("Unsupported stack offset operand!");
   }
-  if (Value % 2) {
-    llvm_unreachable("Invalid word offset!");
-  }
-  return Value >> 1;
+  assert(Value % Align == 0 && "Unaligned stack offset.");
+  return Value / Align;
 }
 
 template <unsigned OpNo, unsigned BitOffset>
