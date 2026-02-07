@@ -30,10 +30,8 @@ class CDMPseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
 }
 
 //===----------------------------------------------------------------------===//
-// Instruction without operands: <|oooo|cxxx|xxxx|ffff|>
-// o = opcode (5 bits)
-// x = ignored bits (7 bits)
-// f = secondary opcode (4 bits)
+// Instruction without operands: <|0000|0...|....|ffff|>
+// f = op type (4 bits)
 //===----------------------------------------------------------------------===//
 class Inst0Op<bits<4> f, dag outs, dag ins, string asmstr,
             list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
@@ -56,11 +54,9 @@ class Inst0OpImm16<bits<4> f, dag outs, dag ins, string asmstr,
 }
 
 //===----------------------------------------------------------------------===//
-// Instruction with 1 operand: <|ooox|xxxx|xfff|fddd|>
-// o = opcode (3 bits)
-// x = ignored bits (6 bits)
-// f = secondary opcode (4 bits)
-// d = first operand (3 bits)
+// Instruction with 1 operand: <|001.|....|.fff|fddd|>
+// f = op type (4 bits)
+// d = operand (3 bits)
 //===----------------------------------------------------------------------===//
 class Inst1Op<bits<4> f, dag outs, dag ins, string asmstr,
             list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
@@ -88,12 +84,10 @@ class Inst1OpImm16<bits<4> f, dag outs, dag ins, string asmstr,
 }
 
 //===----------------------------------------------------------------------===//
-// Instruction with 2 operands: <|oooo|cxff|ffrr|rddd|>
-// o = opcode (5 bits)
-// x = ignored bits (1 bit)
-// f = secondary opcode (4 bits)
-// r = source (3 bits)
-// d = destination (3 bits)
+// Instruction with 2 operands: <|0100|0.ff|ffss|sddd|>
+// f = op type (4 bits)
+// s = source operand (3 bits)
+// d = destination operand (3 bits)
 //===----------------------------------------------------------------------===//
 class Inst2Op<bits<4> f, dag outs, dag ins, string asmstr,
             list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
@@ -108,11 +102,9 @@ class Inst2Op<bits<4> f, dag outs, dag ins, string asmstr,
 }
 
 //===----------------------------------------------------------------------===//
-// Memory instruction with 2 operands: <|oooo|cxff|ffrr|rddd|>
-// o = opcode (5 bits)
-// x = ignored bits (1 bit)
-// f = secondary opcode (4 bits)
-// r = source (3 bits)
+// Memory instruction with 2 operands: <|0101|0.ff|ffss|sddd|>
+// f = op type (4 bits)
+// s = source (3 bits)
 // d = destination (3 bits)
 //===----------------------------------------------------------------------===//
 class InstMem2<bits<4> f, dag outs, dag ins, string asmstr,
@@ -128,9 +120,8 @@ class InstMem2<bits<4> f, dag outs, dag ins, string asmstr,
 }
 
 //===----------------------------------------------------------------------===//
-// Instruction with 1 operand and 1 immediate 6 bit value: <|ooof|fffK|KKKK|Kddd|>
-// o = opcode (3 bits)
-// f = secondary opcode (4 bits)
+// Instruction with 1 operand and 1 immediate 6 bit value: <|011f|fffK|KKKK|Kddd|>
+// f = op type (4 bits)
 // K = constant data (6 bits)
 // d = destination (3 bits)
 //===----------------------------------------------------------------------===//
@@ -146,9 +137,8 @@ class InstImm6<bits<4> f, dag outs, dag ins, string asmstr,
 }
 
 //===----------------------------------------------------------------------===//
-// Instruction with 1 operand and 1 immediate 9 bit value: <|ooof|fffK|KKKK|Kddd|>
-// o = opcode (3 bits)
-// f = secondary opcode (4 bits)
+// Instruction with 1 immediate 9 bit value: <|100f|fffK|KKKK|KKKK|>
+// f = op type (4 bits)
 // K = constant data (9 bits)
 //===----------------------------------------------------------------------===//
 class InstImm9<bits<4> f, dag outs, dag ins, string asmstr,
@@ -161,12 +151,11 @@ class InstImm9<bits<4> f, dag outs, dag ins, string asmstr,
 }
 
 //===----------------------------------------------------------------------===//
-// Instruction from mem3 group: <|oooo|fffr|rrss|sddd|>
-// o = opcode (4 bits)
-// f = secondary opcode (3 bits)
+// Memory instruction with 3 operands: <|1010|fffr|rrss|sddd|>
+// f = op type (3 bits)
 // r = first sourse (3 bits)
 // s = second sourse (3 bits)
-// d = destination(3 bits)
+// d = destination (3 bits)
 //===----------------------------------------------------------------------===//
 class InstMem3< bits<3> f, dag outs, dag ins, string asmstr,
             list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
@@ -182,10 +171,8 @@ class InstMem3< bits<3> f, dag outs, dag ins, string asmstr,
 }
 
 //===----------------------------------------------------------------------===//
-// Absolute branch: <|oooo|oxxx|xxxx|cccc|>
-// o = opcode (5 bits)
-// x = ignored bits (7 bits)
-// c = condition (4 bits)
+// Absolute branch instruction: <|0000|1...|....|CCCC|>
+// C = condition (4 bits)
 //===----------------------------------------------------------------------===//
 class InstBrAbs<dag outs, dag ins, string asmstr,
             list<dag> pattern> : CDMInst32<outs, ins, asmstr, pattern> {
@@ -199,12 +186,12 @@ class InstBrAbs<dag outs, dag ins, string asmstr,
 }
 
 //===----------------------------------------------------------------------===//
-// Relative branch: <|oooc|cccK|KKKK|KKKK|>
-// o = opcode (3 bits)
-// c = condition (4 bits)
+// Relative branch instruction: <|oooC|CCCK|KKKK|KKKK|>
+// o = opcode (3 bits, either 110 or 111)
+// C = condition (4 bits)
 // K = constant data (9 bits)
 //===----------------------------------------------------------------------===//
-class InstBrRel<bits<3>opcode, dag outs, dag ins, string asmstr,
+class InstBrRel<bits<3> opcode, dag outs, dag ins, string asmstr,
             list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
   bits<4> cond;
   bits<9> imm;
@@ -215,10 +202,9 @@ class InstBrRel<bits<3>opcode, dag outs, dag ins, string asmstr,
 }
 
 //===----------------------------------------------------------------------===//
-// Instruction shift: <|oooo|fffh|hhss|sddd|>
-// o = opcode (4 bits)
-// f = secondary opcode (3 bits)
-// h = shift value (3 bits)
+// Bit shift instruction: <|0001|fffA|AAss|sddd|>
+// f = op type (3 bits)
+// A = shift amount (3 bits)
 // s = source (3 bits)
 // d = destination (3 bits)
 //===----------------------------------------------------------------------===//
@@ -236,10 +222,8 @@ class InstShifts<bits<3> f, dag outs, dag ins, string asmstr,
 }
 
 //===----------------------------------------------------------------------===//
-// Instruction from group alu2: <|oooo|oxxf|ffss|sddd|>
-// o = opcode (5 bits)
-// x = ignored bits (2 bits)
-// f = secondary opcode (3 bits)
+// ALU instruction with 2 operands: <|0101|1..f|ffss|sddd|>
+// f = op type (3 bits)
 // s = source (3 bits)
 // d = destination (3 bits)
 //===----------------------------------------------------------------------===//
@@ -256,10 +240,9 @@ class InstAlu2<bits<3> f, dag outs, dag ins, string asmstr,
 }
 
 //===----------------------------------------------------------------------===//
-// Instruction from group alu3: <|oooo|fffr|rrss|sddd|>
-// o = opcode (4 bits)
-// f = secondary opcode (3 bits)
-// r = first souse (3 bits)
+// ALU instruction with 3 operands: <|1011|fffr|rrss|sddd|>
+// f = op type (3 bits)
+// r = first sourse (3 bits)
 // s = second sourse (3 bits)
 // d = destination (3 bits)
 //===----------------------------------------------------------------------===//
@@ -277,10 +260,8 @@ class InstAlu3<bits<3> f, dag outs, dag ins, string asmstr,
 }
 
 //===----------------------------------------------------------------------===//
-// Insdestructive instructions from alu3_ind: <|oooo|oxxf|ffss|sddd|>
-// o = opcode (4 bits)
-// x = ignored bits (2 bits)
-// f = secondary opcode (3 bits)
+// Indestructive ALU instruction with 3 operands: <|0100|1..f|ffss|sddd|>
+// f = op type (3 bits)
 // s = sourse (3 bits)
 // d = destination (3 bits)
 //===----------------------------------------------------------------------===//
