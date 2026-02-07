@@ -703,7 +703,7 @@ let Defs = [PSR] in {
 
   // Sign clear
   // Clears higher 8 bits of rs and puts result in rd.
-  def SCL : InstAlu2<0b011, (outs CPURegs:$rd), (ins CPURegs:$rs), "scl\t$rs, $rd", []>;
+  def SCL : InstAlu2<0b011, (outs CPURegs:$rd), (ins CPURegs:$rs), "scl\t$rs, $rd", [(set CPURegs:$rd, (and CPURegs:$rs, (i16 0xFF)))]>;
 }
 
 //===----------------------------------------------------------------------===//
