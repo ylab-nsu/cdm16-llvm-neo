@@ -116,9 +116,9 @@ bool CDMAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
     OS.write("\x00", 1);
     Count -= 1;
   }
-  // Canonical NOP is bfalse -FF
+  // Canonical NOP is bfalse 1FF
   for (; Count >= 2; Count -= 2) {
-    OS.write("\xff\xdf", 2);
+    OS.write("\xff\xff", 2);
   }
   return true;
 }

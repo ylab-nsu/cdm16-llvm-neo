@@ -42,32 +42,37 @@ def load_sym : SDNode<"CDMISD::LOAD_SYM", SDTIntUnaryOp>;
 // These are target-independent nodes, but have target-specific formats.
 def callseq_start : SDNode<"ISD::CALLSEQ_START",
                            SDT_CDMCallSeqStart, [SDNPHasChain, SDNPOutGlue]>;
-def callseq_end
-    : SDNode<"ISD::CALLSEQ_END",
-             SDT_CDMCallSeqEnd, [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+def callseq_end : SDNode<"ISD::CALLSEQ_END",
+                         SDT_CDMCallSeqEnd, [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
 //===----------------------------------------------------------------------===//
 // CDM Operands, Complex Patterns and Transformations Definitions.
 //===----------------------------------------------------------------------===//
 
-// 16-bit generic constant
-def imm16 : Operand<i16> {
+// 16-bit immediate operand (value or symbol).
+def imm16Op : Operand<i16> {
   let EncoderMethod = "encodeImm<FK_Data_2, 2>";
 }
 
-// 16-bit constant branch target
+// 9-bit immediate operand (value only).
+def imm9Op : Operand<i16>;
+
+// 6-bit immediate operand (value only).
+def imm6Op : Operand<i16>;
+
+// 16-bit absoulute branch target operand (symbol only).
 def imm16BrTarget : Operand<OtherVT> {
   let OperandType = "OPERAND_MEMORY";
   let EncoderMethod = "encodeBranchTarget<FK_Data_2, 2>";
 }
 
-// 9-bit relative branch target
+// 9-bit relative branch target operand (symbol only).
 def imm9BrTarget : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
   let EncoderMethod = "encodeBranchTarget<CDM::fixup_branch_imm9, 0>";
 }
 
-// 9-bit relative JSR call target
+// 9-bit relative call target operand (symbol only).
 def imm9CallTarget : Operand<i16> {
   let OperandType = "OPERAND_PCREL";
   let EncoderMethod = "encodeBranchTarget<CDM::fixup_call_imm9, 0>";
@@ -78,13 +83,25 @@ def condCode : Operand<OtherVT> {
   let PrintMethod = "printCondCode";
 }
 
-// Stack offsets for frame-relative loads/stores and addsp
-def stackWordOffset : Operand<i16> {
-  let EncoderMethod = "encodeStackOffset<2>";
+// Offset operands for frame-relative loads/stores and addsp.
+def imm9WordOffset : Operand<i16> {
+  let EncoderMethod = "encodeOffset<2>";
 }
-def stackByteOffset : Operand<i16> {
-  let EncoderMethod = "encodeStackOffset<1>";
+def imm6WordOffset : Operand<i16> {
+  let EncoderMethod = "encodeOffset<2>";
 }
+def imm6ByteOffset : Operand<i16> {
+  let EncoderMethod = "encodeOffset<1>";
+}
+
+// Small immediate value between 1 and 8 used in shift instructions.
+// Encoded as val - 1.
+def shamt : Operand<i16> {
+  let EncoderMethod = "encodeShamt";
+}
+
+// 9-bit interrupt vector operand.
+def interruptVec : Operand<i16>;
 
 // reg address operand used in simple load/store
 // instructions.
@@ -110,19 +127,14 @@ def addr2Reg : ComplexPattern<iPTR, 2, "SelectAddr2Reg", [], []>;
 // Frame-relative address pattern.
 def addrFrame : ComplexPattern<iPTR, 1, "SelectAddrFrameIndex", [frameindex], []>;
 
-// Small immediate value between 1 and 8 used in shift instructions.
-// Encoded as val - 1.
-def shamt : Operand<i16> {
-  let EncoderMethod = "encodeShamt";
-}
-
 // Immediate values with specific ranges (immM_N -> [M; N]).
-def Imm1_8Leaf : ImmLeaf<i16, [{return (Imm >= 1) && (Imm <= 8);}]>;
-def Imm9_16Leaf : ImmLeaf<i16, [{return (Imm >= 9) && (Imm <= 16);}]>;
+def imm1_8 : ImmLeaf<i16, [{return (Imm >= 1) && (Imm <= 8);}]>;
+def imm9_16 : ImmLeaf<i16, [{return (Imm >= 9) && (Imm <= 16);}]>;
 
+// 6-bit immediate value pattern.
 def imm6 : ImmLeaf<i16, [{return (Imm >= -64) && (Imm <= 63);}]>;
 
-// Aligned load/store patterns
+// Aligned load/store patterns.
 def loadAligned : PatFrag<(ops node:$ptr), (load node:$ptr), [{
   LoadSDNode *LD = cast<LoadSDNode>(N);
   return LD->getMemoryVT().getSizeInBits()/8 <= LD->getAlign().value();
@@ -201,7 +213,7 @@ def PUPC : Inst0Op<0b1010, (outs), (ins), "pupc", []> {
 
 // Pop PC
 // Pops PC from the stack. Alias for rts.
-def POPC : InstAlias<"popc", (RTS)>;
+def POPC : InstAlias<"popc", (RTS), 0>;
 
 // Push SP
 // Pushes SP to the stack.
@@ -255,15 +267,11 @@ let Uses = [SP], Defs = [SP] in {
 
 // Load large immediate to register
 // Loads immediate value imm16 to rd.
-def LDIImm16 : Inst1OpImm16<0b0010, (outs CPURegs:$rd), (ins imm16:$imm), "ldi\t$rd, $imm", []> {
+def LDIImm16 : Inst1OpImm16<0b0010, (outs CPURegs:$rd), (ins imm16Op:$imm), "ldi\t$rd, $imm", []> {
   let isReMaterializable = 1;
 }
-/*
- LD: LoadM32 -> LoadM -> FMem -> FL -> CpuoInst -> Instruction
- My LD: LoadM32 -> LoadM -> CDMInst
-*/
-def : Pattern<(i16(load_sym tglobaladdr:$addr)), [(LDIImm16 $addr)]>;
-def : Pattern<(i16(load_sym tjumptable:$addr)), [(LDIImm16 $addr)]>;
+def : Pat<(i16(load_sym tglobaladdr:$addr)), (LDIImm16 $addr)>;
+def : Pat<(i16(load_sym tjumptable:$addr)), (LDIImm16 $addr)>;
 def : Pat<(i16 imm:$imm), (LDIImm16 imm:$imm)>;
 
 // Jump to subroutine by pointer
@@ -383,6 +391,18 @@ defm STB : CDMStore<0b111, "stb", truncstorei8>;
 def : Pat<(i16(extloadi8 addr2Reg:$addr)), (LDB2Reg addr2Reg:$addr)>;
 def : Pat<(i16(extloadi8 addr:$addr)), (LDB addr:$addr)>;
 
+// Load from memory
+// Simulates CdM-8/8e ld instruction. Operates with words.
+def LD : MnemonicAlias<"ld", "ldw">;
+
+// Load constant from memory.
+// Simulates CdM-8/8e ldc instruction. Operates with words.
+def LDC : MnemonicAlias<"ldc", "lcw">;
+
+// Store to memory.
+// Simulates CdM-8/8e st instruction. Operates with words.
+def ST : MnemonicAlias<"st", "stw">;
+
 //===----------------------------------------------------------------------===//
 // imm6 format
 //===----------------------------------------------------------------------===//
@@ -400,30 +420,30 @@ class CDMStoreStack<bits<4> opcode, string mnem, Operand OffOp, SDPatternOperato
 let Uses = [FP], PostEncoderMethod = "adjustImmOpCode<1, 9>" in {
   // Load word relative to fp
   // Loads a word from memory location fp + off to rd.
-  def LSW : CDMLoadStack<0b0000, "lsw", stackWordOffset, loadAligned>;
+  def LSW : CDMLoadStack<0b0000, "lsw", imm6WordOffset, loadAligned>;
 
   // Load unsigned byte relative to fp
   // Loads a byte from memory location fp + off to rd with zero extend.
-  def LSB : CDMLoadStack<0b0010, "lsb", stackByteOffset, zextloadi8>;
+  def LSB : CDMLoadStack<0b0010, "lsb", imm6ByteOffset, zextloadi8>;
 
   // Load signed byte relative to fp
   // Loads a byte from memory location fp + off to rd with sign extend.
-  def LSSB : CDMLoadStack<0b0100, "lssb", stackByteOffset, sextloadi8>;
+  def LSSB : CDMLoadStack<0b0100, "lssb", imm6ByteOffset, sextloadi8>;
 
   // Store word relative to fp
   // Stores 2 bytes from rd to memory location fp + off.
-  def SSW : CDMStoreStack<0b0110, "ssw", stackWordOffset, storeAligned>;
+  def SSW : CDMStoreStack<0b0110, "ssw", imm6WordOffset, storeAligned>;
 
   // Store byte relative to fp
   // Stores the least significant byte of rd to memory location fp + off.
-  def SSB : CDMStoreStack<0b1000, "ssb", stackByteOffset, truncstorei8>;
+  def SSB : CDMStoreStack<0b1000, "ssb", imm6ByteOffset, truncstorei8>;
 }
 // Load i8 with anyext
 def : Pat<(i16(extloadi8 addrFrame:$src)), (LSB addrFrame:$src)>;
 
 // Load small immediate to register
 // Loads immediate value imm6 to rd.
-def LDIImm6 : InstImm6<0b1010, (outs CPURegs:$rd), (ins i16imm:$imm), "ldi\t$rd, $imm", []> {
+def LDIImm6 : InstImm6<0b1010, (outs CPURegs:$rd), (ins imm6Op:$imm), "ldi\t$rd, $imm", []> {
   let isReMaterializable = 1;
   let PostEncoderMethod = "adjustImmOpCode<1, 9>";
 }
@@ -432,7 +452,7 @@ def : Pat<(i16 imm6:$imm), (LDIImm6 imm6:$imm)>;
 let Defs = [PSR], isReMaterializable = 1, Constraints = "$rs = $rd" in {
   // Add immediate
   // Computes rd + imm6 and puts result in rd.
-  def ADDImm6 : InstImm6<0b1100, (outs CPURegs:$rd), (ins CPURegs:$rs, i16imm:$imm), "add\t$rs, $imm",
+  def ADDImm6 : InstImm6<0b1100, (outs CPURegs:$rd), (ins CPURegs:$rs, imm6Op:$imm), "add\t$rs, $imm",
                          [(set CPURegs:$rd, (add CPURegs:$rs, imm6:$imm))]> {
     let PostEncoderMethod = "adjustImmOpCode<2, 9>";
   }
@@ -440,7 +460,7 @@ let Defs = [PSR], isReMaterializable = 1, Constraints = "$rs = $rd" in {
   // Subtract immediate
   // Computes rd - imm6 and puts result in rd.
   // Expands to add rd, -imm6
-  def SUBImm6 : CDMPseudo<(outs CPURegs:$rd), (ins CPURegs:$rs, i16imm:$imm), "sub\t$rs, $imm", []> {
+  def SUBImm6 : CDMPseudo<(outs CPURegs:$rd), (ins CPURegs:$rs, imm6Op:$imm), "sub\t$rs, $imm", []> {
     let isCodeGenOnly = 0;
     let isAsmParserOnly = 1;
   }
@@ -449,25 +469,48 @@ let Defs = [PSR], isReMaterializable = 1, Constraints = "$rs = $rd" in {
 // Compare with immediate
 // Performs indestructible subtraction, sets flags
 // and thus compares numbers rd and imm6.
-def CMPImm6 : InstImm6<0b1110, (outs), (ins CPURegs:$rd, i16imm:$imm), "cmp\t$rd, $imm", []> {
+def CMPImm6 : InstImm6<0b1110, (outs), (ins CPURegs:$rd, imm6Op:$imm), "cmp\t$rd, $imm", []> {
   let Defs = [PSR];
   let PostEncoderMethod = "adjustImmOpCode<1, 9>";
 }
 
+// Increment register
+// Increments register by 1 and sets all flags according to the result.
+// Alias for add rd, 1
+def INC : InstAlias<"inc\t$rd", (ADDImm6 CPURegs:$rd, 1)>;
+
+// Decrement register
+// Decrements register by 1 and sets all flags according to the result.
+// Alias for add rd, -1
+def DEC : InstAlias<"dec\t$rd", (ADDImm6 CPURegs:$rd, -1)>;
+
 // Test register
-// Compares register with itself and sets Z, N flags according to the result. Alias for cmp rd, 0
+// Compares register with 0 and sets Z, N flags according to the result.
+// Alias for cmp rd, 0
 def TST : InstAlias<"tst\t$rd", (CMPImm6 CPURegs:$rd, 0)>;
 
 //===----------------------------------------------------------------------===//
 // imm9 format
 //===----------------------------------------------------------------------===//
 
-// Add immediate to SP
-// Adds imm bytes to SP.
-def ADDSPImm9 : InstImm9<0b0100, (outs), (ins stackWordOffset:$imm), "addsp\t$imm", []> {
-  let Uses = [SP];
-  let Defs = [SP];
-  let PostEncoderMethod = "adjustImmOpCode<0, 9>";
+// Software interrupt
+// Triggers an interrupt with vector with number imm9.
+def INT : InstImm9<0b0000, (outs), (ins interruptVec:$imm), "int\t$imm", []>;
+
+// Reset processor
+// Fetches reset vector thus performing soft reset.
+def RESET : InstImm9<0b0001, (outs), (ins interruptVec:$imm), "reset\t$imm", []>;
+
+let Uses = [SP], Defs = [SP], PostEncoderMethod = "adjustImmOpCode<0, 9>" in {
+  // Push immediate
+  // Stores immediate value imm9 to the top of the stack.
+  def PUSHImm9 : InstImm9<0b0010, (outs), (ins imm9Op:$imm), "push\t$imm", []> {
+    let mayStore = 1;
+  }
+
+  // Add immediate to SP
+  // Adds imm bytes to SP.
+  def ADDSPImm9 : InstImm9<0b0100, (outs), (ins imm9WordOffset:$imm), "addsp\t$imm", []>;
 }
 
 // Jump to subroutine (imm9 offset)
@@ -523,25 +566,33 @@ def BCondImm9 : InstBrRel<0b110, (outs), (ins condCode:$cond, imm9BrTarget:$imm)
   let Uses = [PSR];
 }
 
+// No operation
+// Performs no operation. Processor executes this instruction with no side
+// effects except for updated PC.
+def NOP : InstBrRel<0b111, (outs), (ins), "nop", []> {
+  let cond = 0xF; // always false
+  let imm = 0x1FF;
+}
+
 //===----------------------------------------------------------------------===//
 // shifts format
 //===----------------------------------------------------------------------===//
 
 // Class for basic shift instructions.
-multiclass Shift<bits<3> op, string instr_asm, SDNode OpNode> {
+multiclass Shift<bits<3> op, string instr_asm, SDPatternOperator OpNode> {
   let Defs = [PSR] in {
     // The shift amount is constant, and is between 1 and 8.
     def ""
         : InstShifts<op, (outs CPURegs:$rd), (ins CPURegs:$rs, shamt:$shamt),
                   !strconcat(instr_asm, "\t$rs, $rd, $shamt"),
-                  [(set CPURegs:$rd, (OpNode CPURegs:$rs, Imm1_8Leaf:$shamt))]>;
+                  [(set CPURegs:$rd, (OpNode CPURegs:$rs, imm1_8:$shamt))]>;
 
     // The shift amount is constant, and is greater than 8.
     // Needs to be expanded into two "regular" (amount between 1 and 8) instructions.
     def _LARGEAMT
         : CDMPseudo<(outs CPURegs:$rd), (ins CPURegs:$rs, shamt:$shamt),
                   !strconcat(!strconcat(!strconcat("!", instr_asm), "_LARGEAMT"), "\t$rs, $rd, $shamt"),
-                  [(set CPURegs:$rd, (OpNode CPURegs:$rs, Imm9_16Leaf:$shamt))]> {
+                  [(set CPURegs:$rd, (OpNode CPURegs:$rs, imm9_16:$shamt))]> {
       let usesCustomInserter = true;
     }
 
@@ -554,10 +605,11 @@ multiclass Shift<bits<3> op, string instr_asm, SDNode OpNode> {
       let usesCustomInserter = true;
     }
   }
+
 }
 
 // Class for 32-bit shift pseudos.
-multiclass ShiftExt32<SDNode OpNode> {
+multiclass ShiftExt32<SDPatternOperator OpNode> {
   let Defs = [PSR] in {
     // The shift amount is stored in a register.
     // Expanded into an inline loop.
@@ -685,7 +737,7 @@ let Defs = [PSR], isCommutable = 1, isReMaterializable = 1 in {
 
   // Add
   // Computes rs0 + rs1 and puts result in rd.
-  def ADDReg : InstAlu3<0b100, (outs CPURegs:$rd), (ins CPURegs:$rs0, CPURegs:$rs1), "add\t$rs0, $rs1, $rd",
+  def ADD : InstAlu3<0b100, (outs CPURegs:$rd), (ins CPURegs:$rs0, CPURegs:$rs1), "add\t$rs0, $rs1, $rd",
                         [(set CPURegs:$rd, (add CPURegs:$rs0, CPURegs:$rs1))]>;
 
   // Add with carry
@@ -710,9 +762,13 @@ let Defs = [PSR], isCommutable = 0 in {
   def SUBC : InstAlu3<0b111, (outs CPURegs:$rd), (ins CPURegs:$rs0, CPURegs:$rs1), "subc\t$rs0, $rs1, $rd", []>;
 }
 
+// Clear register
+// Sets register to 0 and sets flags according to its value before operation.
+def CLR : InstAlias<"clr\t$rd", (SUB CPURegs:$rd, CPURegs:$rd, CPURegs:$rd), 0>;
+
 // Bit set
 // Sets bits in rs0 that are set in rs1. Alias for OR.
-def BIS : InstAlias<"bis\t$rs0, $rs1, $rd", (OR CPURegs:$rd, CPURegs:$rs0, CPURegs:$rs1)>;
+def BIS : InstAlias<"bis\t$rs0, $rs1, $rd", (OR CPURegs:$rd, CPURegs:$rs0, CPURegs:$rs1), 0>;
 
 // TODO why is this a separate instruction?
 def load_frame_address
@@ -751,7 +807,7 @@ def PseudoBCondRR
 }
 
 def PseudoBCondRI
-    : CDMPseudo<(outs), (ins condCode:$cnd, CPURegs:$lhs, i16imm:$rhs, imm16BrTarget:$target), "bcondri", []> {
+    : CDMPseudo<(outs), (ins condCode:$cnd, CPURegs:$lhs, imm6Op:$rhs, imm16BrTarget:$target), "bcondri", []> {
   let isTerminator = 1;
   let isBranch = 1;
   let Uses = [PSR];
@@ -765,7 +821,7 @@ def PseudoSelectCC
 
 def PseudoSelectCCI
     : CDMPseudo<(outs CPURegs:$dst),
-                (ins CPURegs:$lhs, i16imm:$rhs, CPURegs:$vtrue, CPURegs:$vfalse, condCode:$cnd), "selectcci", []> {
+                (ins CPURegs:$lhs, imm6Op:$rhs, CPURegs:$vtrue, CPURegs:$vfalse, condCode:$cnd), "selectcci", []> {
   let usesCustomInserter = true;
 }
 def : Pat<(brcc cond:$cnd, CPURegs:$lhs, imm6:$rhs, bb:$target),
@@ -786,9 +842,9 @@ def : Pat<(selectcc CPURegs:$lhs, CPURegs:$rhs, CPURegs:$vtrue, CPURegs:$vfalse,
 
 let Defs = [SP], Uses = [SP] in {
   def ADJCALLSTACKDOWN
-      : CDMPseudo<(outs), (ins imm16:$amt1, imm16:$amt2),
+      : CDMPseudo<(outs), (ins i16imm:$amt1, i16imm:$amt2),
                   "!ADJCALLSTACKDOWN $amt1", [(callseq_start timm:$amt1, timm:$amt2)]>;
   def ADJCALLSTACKUP
-      : CDMPseudo<(outs), (ins imm16:$amt1, imm16:$amt2),
+      : CDMPseudo<(outs), (ins i16imm:$amt1, i16imm:$amt2),
                   "!ADJCALLSTACKUP $amt1", [(callseq_end timm:$amt1, timm:$amt2)]>;
 }

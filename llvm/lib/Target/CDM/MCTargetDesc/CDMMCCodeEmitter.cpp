@@ -60,9 +60,9 @@ private:
                        SmallVectorImpl<MCFixup> &Fixups,
                        const MCSubtargetInfo &STI) const;
 
-  /// Encodes a stack offset for addsp and frame-relative loads/stores.
+  /// Encodes an offset for addsp and frame-relative loads/stores.
   template<unsigned Align>
-  signed encodeStackOffset(const MCInst &MI, unsigned OpNo,
+  signed encodeOffset(const MCInst &MI, unsigned OpNo,
                            SmallVectorImpl<MCFixup> &Fixups,
                            const MCSubtargetInfo &STI) const;
 
@@ -155,16 +155,16 @@ unsigned CDMMCCodeEmitter::encodeShamt(const MCInst &MI, unsigned OpNo,
 }
 
 template<unsigned Align>
-signed CDMMCCodeEmitter::encodeStackOffset(const MCInst &MI, unsigned OpNo,
+signed CDMMCCodeEmitter::encodeOffset(const MCInst &MI, unsigned OpNo,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
 
   int64_t Value;
   if (!MO.evaluateAsConstantImm(Value)) {
-    llvm_unreachable("Unsupported stack offset operand!");
+    llvm_unreachable("Unsupported offset operand!");
   }
-  assert(Value % Align == 0 && "Unaligned stack offset.");
+  assert(Value % Align == 0 && "Unaligned offset.");
   return Value / Align;
 }
 
