@@ -6975,12 +6975,11 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         TC = std::make_unique<toolchains::CSKYToolChain>(*this, Target, Args);
         break;
       case llvm::Triple::cdm:
-        if (Target.getEnvironment() == llvm::Triple::Cocas) {
+        if (Target.getEnvironment() == llvm::Triple::Cocas)
           TC = std::make_unique<toolchains::CocasToolChain>(*this, Target, Args);
-        } else {
+        else
           TC = std::make_unique<toolchains::CDMToolChain>(*this, Target, Args);
-        }
-	      break;
+        break;
       default:
         if (toolchains::BareMetal::handlesTarget(Target))
           TC = std::make_unique<toolchains::BareMetal>(*this, Target, Args);
