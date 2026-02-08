@@ -109,11 +109,10 @@ MCFixupKindInfo CDMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
 bool CDMAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
                                  const MCSubtargetInfo *STI) const {
-  // Instructions always are at even addresses.  We must be in a data area or
-  // be unaligned due to some other reason.
+  // Instructions always are at even addresses.
+  // We must be in a data area or be unaligned due to some other reason.
   if (Count % 2) {
-    OS.write("\x00", 1);
-    Count -= 1;
+    return false;
   }
   // Canonical NOP is bfalse 1FF
   for (; Count >= 2; Count -= 2) {
