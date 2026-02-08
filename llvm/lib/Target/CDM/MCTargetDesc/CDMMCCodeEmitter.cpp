@@ -148,9 +148,7 @@ unsigned CDMMCCodeEmitter::encodeShamt(const MCInst &MI, unsigned OpNo,
   if (!MO.evaluateAsConstantImm(Value)) {
     llvm_unreachable("Unsupported shift amount operand!");
   }
-  if (Value == 0) {
-    llvm_unreachable("Invalid shift amount!");
-  }
+  assert(Value >= 1 && Value <= 8 && "Invalid shift amount.");
   return Value - 1;
 }
 
