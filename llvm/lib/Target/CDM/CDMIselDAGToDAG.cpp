@@ -17,10 +17,10 @@
 #include <algorithm>
 #include <utility>
 
-using namespace llvm;
-
 #define DEBUG_TYPE "cdm-isel"
-#define PASS_NAME "CDM DAG->DAG Bullshit Instruction Selection"
+#define PASS_NAME "CDM DAG->DAG Instruction Selection"
+
+using namespace llvm;
 
 char CDMDagToDagIselLegacy::ID = 0;
 
@@ -29,9 +29,8 @@ StringRef CDMDagToDagIselLegacy::getPassName() const { return PASS_NAME; }
 void CDMDagToDagIsel::Select(SDNode *N) {
 
   if (N->isMachineOpcode()) {
-    LLVM_DEBUG(
-        errs() << "== Something fucked up; selecting already selected node";
-        N->dump(CurDAG); errs() << "\n");
+    LLVM_DEBUG(errs() << "== Tried to select already selected node ";
+               N->dump(CurDAG); errs() << "\n");
     N->setNodeId(-1);
     return;
   }
@@ -44,48 +43,6 @@ void CDMDagToDagIsel::Select(SDNode *N) {
   }
 
   SelectCode(N);
-}
-
-bool CDMDagToDagIsel::runOnMachineFunction(MachineFunction &MF) {
-  return SelectionDAGISel::runOnMachineFunction(MF);
-}
-
-bool CDMDagToDagIsel::trySelect(SDNode *Node) {
-  return false; // TODO: actually select
-}
-
-bool CDMDagToDagIsel::SelectAddr(SDValue N, SDValue &Base) {
-  if (isa<FrameIndexSDNode>(N)) {
-    return false;
-  }
-
-  Base = N;
-  return true;
-}
-
-bool CDMDagToDagIsel::SelectAddr2Reg(SDValue N, SDValue &Base,
-                                     SDValue &Offset) {
-  if (N.getOpcode() == ISD::ADD) {
-    Base = N.getOperand(0);
-    Offset = N.getOperand(1);
-    return true;
-  }
-
-  return false;
-}
-
-bool CDMDagToDagIsel::SelectAddrFrameIndex(SDValue N, SDValue &Base) {
-  EVT ValTy = N.getValueType();
-  SDLoc DL(N);
-
-  if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(N)) {
-    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
-    return true;
-  }
-
-  // Cant load not from stack yet
-  LLVM_DEBUG(errs() << "[LEADP] Cant select frame address\n");
-  return false;
 }
 
 bool CDMDagToDagIsel::trySelectPointerCall(SDNode *N) {
@@ -131,8 +88,36 @@ bool CDMDagToDagIsel::trySelectPointerCall(SDNode *N) {
   }
 
   CurDAG->SelectNodeTo(N, CDM::JSRR, MVT::Other, MVT::Glue, Operands);
-
   return true;
+}
+
+bool CDMDagToDagIsel::selectAddr(SDValue N, SDValue &Base) {
+  if (isa<FrameIndexSDNode>(N)) {
+    return false;
+  }
+  Base = N;
+  return true;
+}
+
+bool CDMDagToDagIsel::selectAddr2Reg(SDValue N, SDValue &Base,
+                                     SDValue &Offset) {
+  if (N.getOpcode() == ISD::ADD) {
+    Base = N.getOperand(0);
+    Offset = N.getOperand(1);
+    return true;
+  }
+  return false;
+}
+
+bool CDMDagToDagIsel::selectAddrFrameIndex(SDValue N, SDValue &Base) {
+  EVT ValTy = N.getValueType();
+  SDLoc DL(N);
+
+  if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(N)) {
+    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
+    return true;
+  }
+  return false;
 }
 
 FunctionPass *llvm::createCDMISelDagLegacy(llvm::CDMTargetMachine &TM,

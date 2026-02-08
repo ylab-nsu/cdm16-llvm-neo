@@ -86,7 +86,7 @@ def imm9CallTarget : Operand<i16> {
 }
 
 // Condition code operand used in conditional branch instrcutions.
-def condCode : Operand<OtherVT> {
+def cdmCond : Operand<OtherVT> {
   let PrintMethod = "printCondCode";
 }
 
@@ -126,13 +126,13 @@ def mem2Reg : Operand<iPTR> {
 }
 
 // Simple absolute address pattern.
-def addr : ComplexPattern<iPTR, 1, "SelectAddr", [], []>;
+def addr : ComplexPattern<iPTR, 1, "selectAddr", [], []>;
 
 // reg+reg absolute address pattern.
-def addr2Reg : ComplexPattern<iPTR, 2, "SelectAddr2Reg", [], []>;
+def addr2Reg : ComplexPattern<iPTR, 2, "selectAddr2Reg", [], []>;
 
 // Frame-relative address pattern.
-def addrFrame : ComplexPattern<iPTR, 1, "SelectAddrFrameIndex", [frameindex], []>;
+def addrFrame : ComplexPattern<iPTR, 1, "selectAddrFrameIndex", [frameindex], []>;
 
 // Immediate values with specific ranges (immM_N -> [M; N]).
 def imm1_8 : ImmLeaf<i16, [{return (Imm >= 1) && (Imm <= 8);}]>;
@@ -153,7 +153,7 @@ def storeAligned  : PatFrag<(ops node:$val, node:$ptr), (store node:$val, node:$
 
 // Transforms LLVM cond codes to CDM cond codes
 def cdmizeCondXform : SDNodeXForm<cond, [{
-  return CurDAG->getTargetConstant(CCToCondOp(N->get()), N, MVT::i16);
+  return CurDAG->getTargetConstant(condCodeToCDMCond(N->get()), N, MVT::i16);
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -530,7 +530,7 @@ def BRImm16 : InstBrAbs<(outs), (ins imm16BrTarget:$imm), "br\t$imm", []> {
 
 // Absolute conditional branch
 // Loads imm16 to PC if the specified condition is true.
-def BCondImm16 : InstBrAbs<(outs), (ins condCode:$cond, imm16BrTarget:$imm),
+def BCondImm16 : InstBrAbs<(outs), (ins cdmCond:$cond, imm16BrTarget:$imm),
                     "b$cond\t$imm", []> {
   let isTerminator = 1;
   let isBranch = 1;
@@ -552,7 +552,7 @@ def BRImm9 : InstBrRel<0b110, (outs), (ins imm9BrTarget:$imm), "br\t$imm", [(br 
 
 // Absolute conditional branch
 // Loads imm16 to PC if the specified condition is true.
-def BCondImm9 : InstBrRel<0b110, (outs), (ins condCode:$cond, imm9BrTarget:$imm),
+def BCondImm9 : InstBrRel<0b110, (outs), (ins cdmCond:$cond, imm9BrTarget:$imm),
                     "b$cond\t$imm", []> {
   let isTerminator = 1;
   let isBranch = 1;
@@ -783,14 +783,14 @@ let Defs = [PSR] in {
 
 // Conditional branch
 def PseudoBCondRR
-    : CDMPseudo<(outs), (ins condCode:$cnd, CPURegs:$lhs, CPURegs:$rhs, imm16BrTarget:$target), "", []> {
+    : CDMPseudo<(outs), (ins cdmCond:$cnd, CPURegs:$lhs, CPURegs:$rhs, imm16BrTarget:$target), "", []> {
   let isTerminator = 1;
   let isBranch = 1;
   let Uses = [PSR];
 }
 
 def PseudoBCondRI
-    : CDMPseudo<(outs), (ins condCode:$cnd, CPURegs:$lhs, imm6Op:$rhs, imm16BrTarget:$target), "", []> {
+    : CDMPseudo<(outs), (ins cdmCond:$cnd, CPURegs:$lhs, imm6Op:$rhs, imm16BrTarget:$target), "", []> {
   let isTerminator = 1;
   let isBranch = 1;
   let Uses = [PSR];
@@ -799,13 +799,13 @@ def PseudoBCondRI
 // Select
 def PseudoSelectCC
     : CDMPseudo<(outs CPURegs:$dst),
-                (ins CPURegs:$lhs, CPURegs:$rhs, CPURegs:$vtrue, CPURegs:$vfalse, condCode:$cnd), "", []> {
+                (ins CPURegs:$lhs, CPURegs:$rhs, CPURegs:$vtrue, CPURegs:$vfalse, cdmCond:$cnd), "", []> {
   let usesCustomInserter = true;
 }
 
 def PseudoSelectCCI
     : CDMPseudo<(outs CPURegs:$dst),
-                (ins CPURegs:$lhs, imm6Op:$rhs, CPURegs:$vtrue, CPURegs:$vfalse, condCode:$cnd), "", []> {
+                (ins CPURegs:$lhs, imm6Op:$rhs, CPURegs:$vtrue, CPURegs:$vfalse, cdmCond:$cnd), "", []> {
   let usesCustomInserter = true;
 }
 

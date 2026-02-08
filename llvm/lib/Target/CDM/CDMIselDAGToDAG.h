@@ -17,21 +17,17 @@ public:
                            CodeGenOptLevel OL = CodeGenOptLevel::Default)
       : SelectionDAGISel(TM, OL) {}
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
 private:
 #include "CDMGenDAGISel.inc"
 
   void Select(SDNode *N) override;
-  bool trySelect(SDNode *Node);
-  bool SelectAddrFrameIndex(SDValue N, SDValue &Addr);
-  bool SelectAddr(SDValue N, SDValue &Addr);
-  bool SelectAddr2Reg(SDValue N, SDValue &Base, SDValue &Offset);
-
   bool trySelectPointerCall(SDNode *N);
-  bool SelectConditionalBranch(SDNode *N);
 
-  inline CDMCOND::CondOp CCToCondOp(ISD::CondCode CC) const {
+  bool selectAddrFrameIndex(SDValue N, SDValue &Addr);
+  bool selectAddr(SDValue N, SDValue &Addr);
+  bool selectAddr2Reg(SDValue N, SDValue &Base, SDValue &Offset);
+
+  inline CDMCOND::CondOp condCodeToCDMCond(ISD::CondCode CC) const {
     switch (CC) {
     case ISD::CondCode::SETLT:
       return CDMCOND::LT;
