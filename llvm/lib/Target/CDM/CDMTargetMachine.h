@@ -2,9 +2,9 @@
 #define LLVM_LIB_TARGET_CDM_CDMTARGETMACHINE_H
 
 #include "CDMSubtarget.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 
 namespace llvm {
 

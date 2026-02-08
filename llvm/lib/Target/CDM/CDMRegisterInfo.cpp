@@ -99,7 +99,7 @@ bool CDMRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       FPRelSubstitutionOpcsTable = {
           {CDM::SSW, {CDM::STW2Reg, 2}},   {CDM::LSW, {CDM::LDW2Reg, 2}},
           {CDM::SSB, {CDM::STB2Reg, 1}},   {CDM::LSB, {CDM::LDB2Reg, 1}},
-          {CDM::LSSB, {CDM::LDSB2Reg, 1}}, {CDM::LDIImm6, {CDM::LDIImm16, 1}}
+          {CDM::LSSB, {CDM::LDSB2Reg, 1}}, {CDM::LDIImm6, {CDM::LDIImm16, 1}},
       };
 
   const auto Opcode = MI.getOpcode();

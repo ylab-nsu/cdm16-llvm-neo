@@ -61,10 +61,10 @@ private:
                        const MCSubtargetInfo &STI) const;
 
   /// Encodes an offset for addsp and frame-relative loads/stores.
-  template<unsigned Align>
+  template <unsigned Align>
   signed encodeOffset(const MCInst &MI, unsigned OpNo,
-                           SmallVectorImpl<MCFixup> &Fixups,
-                           const MCSubtargetInfo &STI) const;
+                      SmallVectorImpl<MCFixup> &Fixups,
+                      const MCSubtargetInfo &STI) const;
 
   /// Adjusts the opcode of imm6 and imm9 instrucions
   /// based on the sign of the immediate.
@@ -154,10 +154,10 @@ unsigned CDMMCCodeEmitter::encodeShamt(const MCInst &MI, unsigned OpNo,
   return Value - 1;
 }
 
-template<unsigned Align>
+template <unsigned Align>
 signed CDMMCCodeEmitter::encodeOffset(const MCInst &MI, unsigned OpNo,
-                                           SmallVectorImpl<MCFixup> &Fixups,
-                                           const MCSubtargetInfo &STI) const {
+                                      SmallVectorImpl<MCFixup> &Fixups,
+                                      const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
 
   int64_t Value;

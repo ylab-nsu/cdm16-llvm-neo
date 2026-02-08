@@ -19,7 +19,7 @@ public:
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
-  // Eliminate ADJCALLSTACKDOWN, ADJCALLSTACKUP pseudo instructions
+  // Eliminate PseudoCallAdjustStackDown, PseudoCallAdjustStackUp instructions
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
