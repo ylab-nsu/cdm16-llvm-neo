@@ -8,6 +8,7 @@
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/ErrorHandling.h"
 
 namespace llvm {
 
@@ -22,22 +23,19 @@ void CDMAsmBackend::adjustFixupValue(const MCFixup &Fixup,
   int64_t &Offset = reinterpret_cast<int64_t &>(Value);
   switch (Fixup.getKind()) {
   default:
-    llvm_unreachable("invalid fixup");
+    llvm_unreachable("Invalid fixup!");
   case CDM::fixup_branch_imm9:
     // Instructions are 2-byte aligned, so divide by 2.
     // Also subtract 1 instruction because CDM increments PC after relative
     // branches.
     Offset = Offset / 2 - 1;
-    // Keep 9 bits, set sign bit when offset is nonnegative.
+    // Keep 9 bits, set bit 13 when offset is nonnegative.
     Offset = (Offset & 0x1ff) | (Offset >= 0 ? 0x2000 : 0);
     break;
   case CDM::fixup_call_imm9:
-    // Same as previous.
-    // Instructions are 2-byte aligned, so divide by 2.
-    // Also subtract 1 instruction because CDM increments PC after relative
-    // branches.
+    // Same as before
     Offset = Offset / 2 - 1;
-    // Keep 9 bits, set sign bit when offset is negative.
+    // Keep 9 bits, set bit 9 when offset is negative.
     Offset = (Offset & 0x1ff) | (Offset < 0 ? 0x200 : 0);
     break;
   case FK_Data_2:
@@ -52,6 +50,9 @@ void CDMAsmBackend::applyFixup(const MCFragment &Fragment, const MCFixup &Fixup,
                                bool IsResolved) {
   if (!IsResolved)
     Asm->getWriter().recordRelocation(Fragment, Fixup, Target, Value);
+
+  if (mc::isRelocation(Fixup.getKind()))
+    return;
 
   adjustFixupValue(Fixup, Target, Value, &getContext());
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
@@ -90,12 +91,10 @@ std::optional<MCFixupKind> CDMAsmBackend::getFixupKind(StringRef Name) const {
 MCFixupKindInfo CDMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[CDM::NumTargetFixupKinds] = {
       // name                    offset  bits  flags
-      {"fixup_call_imm9", 0, 10, 0},   // 10th bit is needed to fix up op_type
-      {"fixup_branch_imm9", 0, 14, 0}, // 14th bit is needed to fix up opcode
+      {"fixup_call_imm9", 0, 10, 0},   // bit 9 is needed to fix up op_type
+      {"fixup_branch_imm9", 0, 14, 0}, // bit 13 is needed to fix up opcode
   };
 
-  // Fixup kinds from .reloc directive are like R_AVR_NONE. They do not require
-  // any extra processing.
   if (mc::isRelocation(Kind))
     return {};
 
