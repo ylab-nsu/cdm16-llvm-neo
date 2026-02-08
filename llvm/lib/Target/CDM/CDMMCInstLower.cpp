@@ -38,24 +38,22 @@ MCOperand CDMMCInstLower::lowerOperand(const MachineOperand &MO) const {
   case MachineOperand::MO_Immediate:
     return MCOperand::createImm(MO.getImm());
   case MachineOperand::MO_MachineBasicBlock:
-    return lowerSymbolOperand(MO, MO.getMBB()->getSymbol(), 0);
+    return lowerSymbolOperand(MO.getMBB()->getSymbol(), 0);
   case MachineOperand::MO_GlobalAddress:
-    return lowerSymbolOperand(MO, AsmPrinter.getSymbol(MO.getGlobal()),
+    return lowerSymbolOperand(AsmPrinter.getSymbol(MO.getGlobal()),
                               MO.getOffset());
   case MachineOperand::MO_ExternalSymbol:
     return lowerSymbolOperand(
-        MO, AsmPrinter.GetExternalSymbolSymbol(MO.getSymbolName()),
-        MO.getOffset());
+        AsmPrinter.GetExternalSymbolSymbol(MO.getSymbolName()), MO.getOffset());
   case MachineOperand::MO_JumpTableIndex:
-    return lowerSymbolOperand(MO, AsmPrinter.GetJTISymbol(MO.getIndex()), 0);
+    return lowerSymbolOperand(AsmPrinter.GetJTISymbol(MO.getIndex()), 0);
   case MachineOperand::MO_RegisterMask:
     break;
   }
   return MCOperand();
 }
 
-MCOperand CDMMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
-                                             MCSymbol *Symbol,
+MCOperand CDMMCInstLower::lowerSymbolOperand(MCSymbol *Symbol,
                                              int64_t Offset) const {
   const MCExpr *Expr = MCSymbolRefExpr::create(Symbol, Ctx);
 

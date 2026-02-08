@@ -19,7 +19,7 @@ public:
   CDMMCInstLower(MCContext &C, CDMAsmPrinter &AsmPrinter);
   void lower(const MachineInstr *MI, MCInst &OutMI) const;
   MCOperand lowerOperand(const MachineOperand &MO) const;
-  MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Symbol, int64_t Offset) const;
+  MCOperand lowerSymbolOperand(MCSymbol *Symbol, int64_t Offset) const;
 };
 
 } // namespace llvm
