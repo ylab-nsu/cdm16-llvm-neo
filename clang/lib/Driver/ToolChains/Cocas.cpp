@@ -36,8 +36,7 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
   if (JA.getKind() == Action::AssembleJobClass) {
     CmdArgs.push_back("-c");
   }
-  // If job kinde is link and incremental linking requested
-  // "Merge" objects
+  // If job kind is link and incremental linking requested, "Merge" objects
   if (JA.getKind() == Action::LinkJobClass && Args.hasArg(options::OPT_r)) {
     CmdArgs.push_back("-m");
   }
