@@ -324,7 +324,10 @@ def STPC : Inst1Op<0b1001, (outs), (ins CPURegs:$rd), "stpc\t$rd", [(brind CPURe
 
 // Copy register
 // Copies value from rs to rd. Clobbers PS!
-def MOVE : Inst2Op<0b0000, (outs CPURegs:$rd), (ins CPURegs:$rs), "move\t$rs, $rd", []>;
+def MOVE : Inst2Op<0b0000, (outs CPURegs:$rd), (ins CPURegs:$rs), "move\t$rs, $rd", []> {
+  let Defs = [PSR]; // LLVM assumes that copyPhysReg (where MOVE is used) doesn't clobber anything.
+                    // This "Defs" isn't considered.
+}
 
 //===----------------------------------------------------------------------===//
 // mem2/mem3 format
