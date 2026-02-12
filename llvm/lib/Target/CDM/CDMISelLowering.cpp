@@ -34,8 +34,17 @@ CDMISelLowering::CDMISelLowering(const CDMTargetMachine &TM,
   setBooleanContents(ZeroOrOneBooleanContent);
 
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
-  setOperationAction(ISD::JumpTable, MVT::i16, Custom);
+
+  // Regular symbol
   setOperationAction(ISD::GlobalAddress, MVT::i16, Custom);
+  // Symbol not defined in IR
+  setOperationAction(ISD::ExternalSymbol, MVT::i16, Custom);
+  // Jump table address for switch-case
+  setOperationAction(ISD::JumpTable, MVT::i16, Custom);
+  // Code block address for referencing labels
+  setOperationAction(ISD::BlockAddress, MVT::i16, Custom);
+  // Constant pool address
+  setOperationAction(ISD::ConstantPool, MVT::i16, Custom);
 
   setOperationAction(ISD::VASTART, MVT::Other, Custom);
   setOperationAction(ISD::VAARG, MVT::Other, Expand);
@@ -508,8 +517,14 @@ SDValue CDMISelLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   case ISD::GlobalAddress:
     return lowerGlobalAddress(Op, DAG);
+  case ISD::ExternalSymbol:
+    return lowerExternalSymbol(Op, DAG);
   case ISD::JumpTable:
     return lowerJumpTable(Op, DAG);
+  case ISD::BlockAddress:
+    return lowerBlockAddress(Op, DAG);
+  case ISD::ConstantPool:
+    return lowerConstantPool(Op, DAG);
   case ISD::VASTART:
     return lowerVASTART(Op, DAG);
   case ISD::SHL:
@@ -522,19 +537,54 @@ SDValue CDMISelLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue CDMISelLowering::lowerGlobalAddress(SDValue Op,
                                             SelectionDAG &DAG) const {
-  EVT VT = Op.getValueType();
-  GlobalAddressSDNode *GlobalAddr = cast<GlobalAddressSDNode>(Op.getNode());
-  SDValue TargetAddr = DAG.getTargetGlobalAddress(
-      GlobalAddr->getGlobal(), Op, MVT::i16, GlobalAddr->getOffset());
-  return DAG.getNode(CDMISD::LOAD_SYM, Op, VT, TargetAddr);
+  EVT VT = getPointerTy(DAG.getDataLayout());
+
+  const GlobalValue *GV = cast<GlobalAddressSDNode>(Op)->getGlobal();
+  int64_t Offset = cast<GlobalAddressSDNode>(Op)->getOffset();
+
+  SDValue Result = DAG.getTargetGlobalAddress(GV, SDLoc(Op), VT, Offset);
+  return DAG.getNode(CDMISD::LOAD_SYM, SDLoc(Op), VT, Result);
+}
+
+SDValue CDMISelLowering::lowerExternalSymbol(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  EVT VT = getPointerTy(DAG.getDataLayout());
+
+  const char *SymName = cast<ExternalSymbolSDNode>(Op)->getSymbol();
+
+  SDValue Result = DAG.getTargetExternalSymbol(SymName, VT);
+  return DAG.getNode(CDMISD::LOAD_SYM, SDLoc(Op), VT, Result);
 }
 
 SDValue CDMISelLowering::lowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
-  EVT VT = Op.getValueType();
-  JumpTableSDNode *N = cast<JumpTableSDNode>(Op);
-  // TODO: check if value type is correct
-  SDValue TargetJumpTable = DAG.getTargetJumpTable(N->getIndex(), VT, 0);
-  return DAG.getNode(CDMISD::LOAD_SYM, Op, VT, TargetJumpTable);
+  EVT VT = getPointerTy(DAG.getDataLayout());
+
+  int JumpTableIndex = cast<JumpTableSDNode>(Op)->getIndex();
+
+  SDValue Result = DAG.getTargetJumpTable(JumpTableIndex, VT, 0);
+  return DAG.getNode(CDMISD::LOAD_SYM, SDLoc(Op), VT, Result);
+}
+
+SDValue CDMISelLowering::lowerBlockAddress(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  EVT VT = getPointerTy(DAG.getDataLayout());
+
+  const BlockAddress *BlockAddress =
+      cast<BlockAddressSDNode>(Op)->getBlockAddress();
+
+  SDValue Result = DAG.getTargetBlockAddress(BlockAddress, VT);
+  return DAG.getNode(CDMISD::LOAD_SYM, SDLoc(Op), VT, Result);
+}
+
+SDValue CDMISelLowering::lowerConstantPool(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  EVT VT = getPointerTy(DAG.getDataLayout());
+
+  ConstantPoolSDNode *CP = cast<ConstantPoolSDNode>(Op);
+
+  SDValue Result = DAG.getTargetConstantPool(CP->getConstVal(), VT,
+                                             CP->getAlign(), CP->getOffset());
+  return DAG.getNode(CDMISD::LOAD_SYM, SDLoc(Op), VT, Result);
 }
 
 SDValue CDMISelLowering::lowerVASTART(SDValue Op, SelectionDAG &DAG) const {

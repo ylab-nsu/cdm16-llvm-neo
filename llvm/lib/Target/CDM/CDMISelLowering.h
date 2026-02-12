@@ -24,6 +24,7 @@ enum NodeType {
   // Call
   CALL,
 
+  // Load symbol (LDI)
   LOAD_SYM,
 
   // Extended shifts
@@ -67,14 +68,20 @@ public:
 
 private:
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue lowerCallResult(SDValue Chain, SDValue InGlue,
                           CallingConv::ID CallConv, bool IsVarArg,
                           const SmallVectorImpl<ISD::InputArg> &Ins, SDLoc DL,
                           SelectionDAG &DAG,
                           SmallVectorImpl<SDValue> &InVals) const;
+
   SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVAARG(SDValue Op, SelectionDAG &DAG);
+
   SDValue lowerShifts(SDValue Op, SelectionDAG &DAG) const;
 
   MachineBasicBlock *emitPseudoSelectCC(MachineInstr &MI,

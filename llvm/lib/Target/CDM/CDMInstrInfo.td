@@ -828,7 +828,10 @@ let Defs = [SP], Uses = [SP] in {
 
 // Load symbols
 def : Pat<(i16(load_sym tglobaladdr:$addr)), (LDIImm16 $addr)>;
+def : Pat<(i16(load_sym texternalsym:$addr)), (LDIImm16 $addr)>;
 def : Pat<(i16(load_sym tjumptable:$addr)), (LDIImm16 $addr)>;
+def : Pat<(i16(load_sym tblockaddress:$addr)), (LDIImm16 $addr)>;
+def : Pat<(i16(load_sym tconstpool:$addr)), (LDIImm16 $addr)>;
 
 // Call (try to use short encoding first)
 def : Pat<(cdm_call (i16 tglobaladdr:$target)), (JSRImm9 tglobaladdr:$target)>;

@@ -47,6 +47,12 @@ MCOperand CDMMCInstLower::lowerOperand(const MachineOperand &MO) const {
         AsmPrinter.GetExternalSymbolSymbol(MO.getSymbolName()), MO.getOffset());
   case MachineOperand::MO_JumpTableIndex:
     return lowerSymbolOperand(AsmPrinter.GetJTISymbol(MO.getIndex()), 0);
+  case MachineOperand::MO_BlockAddress:
+    return lowerSymbolOperand(
+        AsmPrinter.GetBlockAddressSymbol(MO.getBlockAddress()), MO.getOffset());
+  case MachineOperand::MO_ConstantPoolIndex:
+    return lowerSymbolOperand(AsmPrinter.GetCPISymbol(MO.getIndex()),
+                              MO.getOffset());
   case MachineOperand::MO_RegisterMask:
     break;
   }
