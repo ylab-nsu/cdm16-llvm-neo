@@ -1,14 +1,11 @@
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
+include(CDMRTObjectRules)
+find_package(Cocas REQUIRED)
 
-add_custom_command(
-    OUTPUT ${CDM_COCAS_RT_LIB_DIR}/crt0.o
-    COMMAND ${CMAKE_C_COMPILER} -target cdm-cocas
-                                -c
-                                -o ${CDM_COCAS_RT_LIB_DIR}/crt0.o
-                                crt0.asm
-    DEPENDS crt0.asm
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    VERBATIM)
+if (NOT COCAS_FOUND)
+    message(SEND_ERROR "Cocas not found")
+else()
+    message(STATUS "Cocas found: ${COCAS_EXECUTABLE}")
+endif()
 
-
-add_custom_target(cdm_rt_cocs ALL DEPENDS
-    ${COMPILER_RESOURCE_DIR}/lib/cdm-unknown-unknown-cocas/crt0.o)
+create_object_library(cocas_crt0 ${CDM_COCAS_RT_LIB_DIR}/crt0.o SRCS ${CMAKE_CURRENT_SOURCE_DIR}/crt0/crt0.asm)
