@@ -53,68 +53,150 @@ def srl_ext64 : SDNode<"CDMISD::SRL_EXT64", SDTIntShiftQuadOp>;
 def sra_ext64 : SDNode<"CDMISD::SRA_EXT64", SDTIntShiftQuadOp>;
 
 //===----------------------------------------------------------------------===//
-// CDM Operands, Complex Patterns and Transformations Definitions.
+// CDM assembly operand classes
+//===----------------------------------------------------------------------===//
+
+// The sign bit is not part of the encoding of imm6 and imm9 fields in most
+// instructions so they are effectively 7-bit and 10-bit respectively.
+
+// Allows signed and unsigned 16-bit values and symbols
+def imm16AsmOp : AsmOperandClass {
+  let Name = "CDMImm16";
+  let PredicateMethod = "isImmN<16, 1, true, true, true>";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parseImm";
+}
+
+// Allows signed 10-bit values known at assembly time
+def imm9AsmOp : AsmOperandClass {
+  let Name = "CDMImm9";
+  let PredicateMethod = "isImmN<10, 1, true, false>";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parseSmallImm";
+}
+
+// Allows signed 10-bit values known at assembly time
+// Must be even, but the range is doubled
+def imm9EvenAsmOp : AsmOperandClass {
+  let Name = "CDMImm9Even";
+  let PredicateMethod = "isImmN<10, 2, true, false>";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parseSmallImm";
+}
+
+// Allows signed 10-bit values and symbols
+// Must be even, but the range is doubled
+def imm9SymAsmOp : AsmOperandClass {
+  let Name = "CDMImmSym";
+  let PredicateMethod = "isImmN<10, 2, true, false, true>";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parseImm";
+}
+
+// Allows signed 7-bit values known at assembly
+def imm6AsmOp : AsmOperandClass {
+  let Name = "CDMImm6";
+  let PredicateMethod = "isImmN<7, 1, true, false>";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parseSmallImm";
+}
+
+// Allows signed 7-bit values known at assembly time
+// Must be even, but the range is doubled
+def imm6EvenAsmOp : AsmOperandClass {
+  let Name = "CDMImm6Even";
+  let PredicateMethod = "isImmN<7, 2, true, false>";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parseSmallImm";
+}
+
+// Allows values between 0 and 255 (inclusive)
+def interruptVecAsmOp : AsmOperandClass {
+  let Name = "CDMInterruptVec";
+  let PredicateMethod = "isImmN<8, 1, false, true>";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parseSmallImm";
+}
+
+// Allows values between 1 and 8 (inclusive)
+def shamtAsmOp : AsmOperandClass {
+  let Name = "CDMShamt";
+  let PredicateMethod = "isShamt";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parseSmallImm";
+}
+
+//===----------------------------------------------------------------------===//
+// CDM instruction operands
 //===----------------------------------------------------------------------===//
 
 // 16-bit immediate operand (value or symbol).
 def imm16Op : Operand<i16> {
   let EncoderMethod = "encodeImm<FK_Data_2, 2>";
+  let ParserMatchClass = imm16AsmOp;
 }
 
 // 9-bit immediate operand (value only).
-def imm9Op : Operand<i16>;
+def imm9Op : Operand<i16> {
+  let ParserMatchClass = imm9AsmOp;
+}
 
 // 6-bit immediate operand (value only).
-def imm6Op : Operand<i16>;
+def imm6Op : Operand<i16> {
+  let ParserMatchClass = imm6AsmOp;
+}
 
 // 16-bit absoulute branch target operand (symbol only).
 def imm16BrTarget : Operand<OtherVT> {
   let OperandType = "OPERAND_MEMORY";
   let EncoderMethod = "encodeBranchTarget<FK_Data_2, 2>";
+  let ParserMatchClass = imm16AsmOp;
 }
 
 // 9-bit relative branch target operand (symbol only).
 def imm9BrTarget : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
   let EncoderMethod = "encodeBranchTarget<CDM::fixup_branch_imm9, 0>";
+  let ParserMatchClass = imm9SymAsmOp;
 }
 
 // 9-bit relative call target operand (symbol only).
 def imm9CallTarget : Operand<i16> {
   let OperandType = "OPERAND_PCREL";
   let EncoderMethod = "encodeBranchTarget<CDM::fixup_call_imm9, 0>";
+  let ParserMatchClass = imm9SymAsmOp;
 }
 
 // Condition code operand used in conditional branch instrcutions.
 def cdmCond : Operand<OtherVT> {
   let PrintMethod = "printCondCode";
+  let ParserMatchClass = imm16AsmOp;
 }
 
 // Offset operands for frame-relative loads/stores and addsp.
 def imm9WordOffset : Operand<i16> {
   let EncoderMethod = "encodeOffset<2>";
+  let ParserMatchClass = imm9EvenAsmOp;
 }
 def imm6WordOffset : Operand<i16> {
   let EncoderMethod = "encodeOffset<2>";
+  let ParserMatchClass = imm6EvenAsmOp;
 }
 def imm6ByteOffset : Operand<i16> {
   let EncoderMethod = "encodeOffset<1>";
+  let ParserMatchClass = imm6AsmOp;
 }
 
 // Small immediate value between 1 and 8 used in shift instructions.
 // Encoded as val - 1.
 def shamt : Operand<i16> {
   let EncoderMethod = "encodeShamt";
+  let ParserMatchClass = shamtAsmOp;
 }
 
 // 9-bit interrupt vector operand.
-def interruptVec : Operand<i16>;
-
-// reg address operand used in simple load/store
-// instructions.
-def memReg : Operand<iPTR> {
-  let MIOperandInfo = (ops CPURegs);
-  let OperandType = "OPERAND_MEMORY";
+def interruptVec : Operand<i16> {
+  let ParserMatchClass = interruptVecAsmOp;
 }
 
 // reg+reg address operand used in load/store
@@ -124,6 +206,10 @@ def mem2Reg : Operand<iPTR> {
   let OperandType = "OPERAND_MEMORY";
   let PrintMethod = "printMem2RegOperand";
 }
+
+//===----------------------------------------------------------------------===//
+// CDM DAG patterns and transforms
+//===----------------------------------------------------------------------===//
 
 // Simple absolute address pattern.
 def addr : ComplexPattern<iPTR, 1, "selectAddr", [], []>;
@@ -192,6 +278,7 @@ def DI: Inst0Op<0b0111, (outs), (ins), "di", []>;
 // absolute branch to address imm16.
 def JSRImm16 : Inst0OpImm16<0b1000, (outs), (ins imm16BrTarget:$imm), "jsr\t$imm", []> {
   let isCall = 1;
+  let isCodeGenOnly = 1;
 }
 
 let isTerminator = 1, isReturn = 1, isBarrier = 1 in {
@@ -335,7 +422,7 @@ def MOVE : Inst2Op<0b0000, (outs CPURegs:$rd), (ins CPURegs:$rs), "move\t$rs, $r
 
 multiclass CDMLoad<bits<3> opcode, string mnem, SDPatternOperator OpNode> {
     // reg addressing mode
-    def "" : InstMem2<{0, opcode}, (outs CPURegs:$rd), (ins memReg:$rs),
+    def "" : InstMem2<{0, opcode}, (outs CPURegs:$rd), (ins CPURegs:$rs),
               !strconcat(mnem, "\t$rs, $rd"),
               [(set CPURegs:$rd, (OpNode addr:$rs))]>;
 
@@ -347,7 +434,7 @@ multiclass CDMLoad<bits<3> opcode, string mnem, SDPatternOperator OpNode> {
 
 multiclass CDMStore<bits<3> opcode, string mnem, SDPatternOperator OpNode> {
     // reg addressing mode
-    def "" : InstMem2<{0, opcode}, (outs), (ins CPURegs:$rd, memReg:$rs),
+    def "" : InstMem2<{0, opcode}, (outs), (ins CPURegs:$rd, CPURegs:$rs),
               !strconcat(mnem, "\t$rs, $rd"),
               [(OpNode CPURegs:$rd, addr:$rs)]>;
 
@@ -529,6 +616,7 @@ def BRImm16 : InstBrAbs<(outs), (ins imm16BrTarget:$imm), "br\t$imm", []> {
   let isBranch = 1;
   let isTerminator = 1;
   let isBarrier = 1;
+  let isCodeGenOnly = 1;
 }
 
 // Absolute conditional branch
@@ -538,6 +626,7 @@ def BCondImm16 : InstBrAbs<(outs), (ins cdmCond:$cond, imm16BrTarget:$imm),
   let isTerminator = 1;
   let isBranch = 1;
   let Uses = [PSR];
+  let isCodeGenOnly = 1;
 }
 
 //===----------------------------------------------------------------------===//

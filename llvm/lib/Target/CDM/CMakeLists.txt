@@ -47,6 +47,7 @@ tablegen(LLVM CDMGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM CDMGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM CDMGenMCPseudoLowering.inc -gen-pseudo-lowering)
 tablegen(LLVM CDMGenAsmWriter.inc -gen-asm-writer)
+tablegen(LLVM CDMGenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM CDMGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM CDMGenCallingConv.inc -gen-callingconv)
 tablegen(LLVM CDMGenInstrInfo.inc -gen-instr-info)
@@ -55,19 +56,6 @@ tablegen(LLVM CDMGenInstrInfo.inc -gen-instr-info)
 add_public_tablegen_target(CDMCommonTableGen)
 
 add_llvm_target(CDMCodeGen
-#        DelaySlotFiller.cpp
-#        LeonPasses.cpp
-#        SparcAsmPrinter.cpp
-#        SparcInstrInfo.cpp
-#        SparcISelDAGToDAG.cpp
-#        SparcISelLowering.cpp
-#        SparcFrameLowering.cpp
-#        SparcMachineFunctionInfo.cpp
-#        SparcRegisterInfo.cpp
-#        SparcSubtarget.cpp
-#        SparcTargetMachine.cpp
-#        SparcMCInstLower.cpp
-#        SparcTargetObjectFile.cpp
         CDMTargetMachine.cpp
         CDMAsmPrinter.cpp
         CDMIselDAGToDAG.cpp
@@ -86,7 +74,6 @@ add_llvm_target(CDMCodeGen
         Core
         MC
         SelectionDAG
-#        SparcDesc
         CDMInfo
         CDMDesc
         CDMInstPrinter
@@ -97,10 +84,9 @@ add_llvm_target(CDMCodeGen
         ADD_TO_COMPONENT
         CDM
 )
-#
-#add_subdirectory(AsmParser)
+
 #add_subdirectory(Disassembler)
-#add_subdirectory(MCTargetDesc)
+add_subdirectory(AsmParser)
 add_subdirectory(TargetInfo)
 add_subdirectory(InstPrinter)
 add_subdirectory(MCTargetDesc)

@@ -9,4 +9,12 @@ def CDMInstrInfo : InstrInfo;
 def CDMGenericItineraries : ProcessorItineraries<[], [], []>;
 def : Processor<"cdm", CDMGenericItineraries, []>;
 
-def CDM : Target { let InstructionSet = CDMInstrInfo; }
+def CDMAsmParser : AsmParser {
+  let ShouldEmitMatchRegisterName = 1;
+  let ShouldEmitMatchRegisterAltName = 1;
+}
+
+def CDM : Target {
+  let InstructionSet = CDMInstrInfo;
+  let AssemblyParsers = [CDMAsmParser];
+}

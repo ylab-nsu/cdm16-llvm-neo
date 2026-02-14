@@ -12,15 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 // We have banks of 16 registers each.
-class CDMReg<bits<16> Enc, string n> : Register<n> {
+class CDMReg<bits<16> Enc, string name, list<string> altNames = []> : Register<name> {
   // For tablegen(... -gen-emitter)  in CMakeLists.txt
   let HWEncoding = Enc;
-
   let Namespace = "CDM";
+  let AltNames = altNames;
 }
 
 // CDM CPU Registers
-class CDMGPRReg<bits<16> Enc, string n> : CDMReg<Enc, n>;
+class CDMGPRReg<bits<16> Enc, string n, list<string> altNames = []> : CDMReg<Enc, n, altNames>;
 
 //===----------------------------------------------------------------------===//
 //@Registers
@@ -36,7 +36,7 @@ let Namespace = "CDM" in {
   def R4 : CDMGPRReg<4, "r4">, DwarfRegNum<[4]>;
   def R5 : CDMGPRReg<5, "r5">, DwarfRegNum<[5]>;
   def R6 : CDMGPRReg<6, "r6">, DwarfRegNum<[6]>;
-  def FP : CDMGPRReg<7, "fp">, DwarfRegNum<[7]>;
+  def FP : CDMGPRReg<7, "fp", ["r7"]>, DwarfRegNum<[7]>;
 
   def PC : CDMReg<-1, "pc">, DwarfRegNum<[20]>;
   def PSR : CDMReg<-1, "psr">, DwarfRegNum<[21]>;
