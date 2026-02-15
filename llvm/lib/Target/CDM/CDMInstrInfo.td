@@ -776,7 +776,7 @@ defm ROL : Shift<0b011, "rol", rotl>;
 
 // Cyclic right shift
 // Shifts right, bit 0 shifts to bit 15.
-defm ROR : Shift<0b010, "ror", rotr>;
+defm ROR : Shift<0b100, "ror", rotr>;
 
 // Cyclic left shift with carry
 // Shifts left, bit 15 shifts to C, old C shifts to bit 0.
