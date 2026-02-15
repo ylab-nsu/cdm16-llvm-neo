@@ -879,15 +879,15 @@ def : InstAlias<"bis\t$rs, $rd", (OR CPURegs:$rd, CPURegs:$rs, CPURegs:$rd), 0>;
 //===----------------------------------------------------------------------===//
 
 let Defs = [PSR] in {
-  // Compare
-  // Performs indestructible subtraction, sets PS
-  // and thus compares numbers in registers rs and rd.
-  def CMPReg : InstAlu3Ind<0b000, (outs), (ins CPURegs:$rs, CPURegs:$rd), "cmp\t$rs, $rd", []>;
-
   // Bit test
   // Performs indestructible AND and sets PS. If any of bits that
   // are set in bitmask rd are also set in rs, then Z is 0, otherwise Z is 1.
-  def BIT : InstAlu3Ind<0b110, (outs), (ins CPURegs:$rs, CPURegs:$rd), "bit\t$rs, $rd", []>;
+  def BIT : InstAlu3Ind<0b000, (outs), (ins CPURegs:$rs, CPURegs:$rd), "bit\t$rs, $rd", []>;
+
+  // Compare
+  // Performs indestructible subtraction, sets PS
+  // and thus compares numbers in registers rs and rd.
+  def CMPReg : InstAlu3Ind<0b110, (outs), (ins CPURegs:$rs, CPURegs:$rd), "cmp\t$rs, $rd", []>;
 }
 
 //===----------------------------------------------------------------------===//
