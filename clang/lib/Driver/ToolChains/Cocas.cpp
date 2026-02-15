@@ -6,6 +6,7 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Types.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -148,7 +149,14 @@ CocasToolChain::CocasToolChain(const Driver &D, const llvm::Triple &Triple,
     CocasPath = *P;
   }
 
-  // TODO: Set Include Path and push any Lib paths to ToolChain::LibraryPaths
+  // Since cdm and cdm-cocas share same headers, strip environment
+  const llvm::Triple T = llvm::Triple(getTriple().getArchName());
+  SmallString<128> P(D.Dir);
+  llvm::sys::path::append(P, "..", "include", T.str());
+
+  if (llvm::sys::fs::is_directory(P)) {
+    IncludePath = P.str();
+  }
 }
 
 DerivedArgList *
@@ -178,9 +186,13 @@ CocasToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 void CocasToolChain::AddClangSystemIncludeArgs(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {
-  if (getIncludePath()) {
-    CC1Args.append(
-        {"-internal-isystem", DriverArgs.MakeArgString(*getIncludePath())});
+
+  if (DriverArgs.hasArg(options::OPT_nostdinc) ||
+      DriverArgs.hasArg(options::OPT_nostdlibinc)){
+    return;
+  }
+  if (getIncludePath()){
+    addSystemInclude(DriverArgs, CC1Args, *getIncludePath());
   }
 }
 
