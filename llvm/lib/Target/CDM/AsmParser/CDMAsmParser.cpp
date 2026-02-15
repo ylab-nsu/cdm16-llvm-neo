@@ -1,11 +1,10 @@
 #include "CDMInstrInfo.h"
-#include "CDMRegisterInfo.h"
-#include "MCTargetDesc/CDMMCAsmInfo.h"
 #include "MCTargetDesc/CDMMCTargetDesc.h"
 #include "TargetInfo/CDMTargetInfo.h"
 
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
@@ -39,6 +38,12 @@ class CDMAsmParser : public MCTargetAsmParser {
 
   /// Matches a register name to an MCRegister
   MCRegister getRegisterByName(StringRef Name);
+
+  /// Checks if an instruction mnemonic is valid
+  bool mnemonicIsValid(StringRef Mnemonic, unsigned VariantID);
+
+  /// Parses a branch instruction mnemonic
+  bool parseBranchInst(StringRef &Name, SMLoc Loc, OperandVector &Operands);
 
   /// Parses a generic immediate value.
   ParseStatus parseImm(OperandVector &Operands);
@@ -83,6 +88,7 @@ class CDMOperand : public MCParsedAsmOperand {
     Invalid,
     Token,
     Reg,
+    Cond,
     Imm,
   };
 
@@ -91,6 +97,7 @@ class CDMOperand : public MCParsedAsmOperand {
   union {
     StringRef Token;
     MCRegister Reg;
+    CDMCOND::CondOp Cond;
     const MCExpr *Expr;
   };
 
@@ -116,6 +123,13 @@ public:
   void addRegOperands(MCInst &Inst, unsigned N) const;
   static std::unique_ptr<CDMOperand> createReg(MCRegister Reg, SMLoc Start,
                                                SMLoc End);
+
+  // Condition operand
+  bool isCond() const;
+  CDMCOND::CondOp getCond() const;
+  void addCondOperands(MCInst &Inst, unsigned N) const;
+  static std::unique_ptr<CDMOperand> createCond(CDMCOND::CondOp Reg,
+                                                SMLoc Start, SMLoc End);
 
   // Immediate operand
   bool isImm() const override;
@@ -194,6 +208,27 @@ std::unique_ptr<CDMOperand> CDMOperand::createReg(MCRegister Reg, SMLoc Start,
   return Op;
 }
 
+bool CDMOperand::isCond() const { return Kind == KindTy::Cond; }
+
+CDMCOND::CondOp CDMOperand::getCond() const {
+  assert(isCond());
+  return Cond;
+}
+
+void CDMOperand::addCondOperands(MCInst &Inst, unsigned N) const {
+  assert(isCond() && "wrong operand kind");
+  assert((N == 1) && "can only handle one condition operand");
+
+  Inst.addOperand(MCOperand::createImm(getCond()));
+}
+
+std::unique_ptr<CDMOperand> CDMOperand::createCond(CDMCOND::CondOp Cond,
+                                                   SMLoc Start, SMLoc End) {
+  auto Op = std::make_unique<CDMOperand>(KindTy::Cond, Start, End);
+  Op->Cond = Cond;
+  return Op;
+}
+
 // Immmediate operand
 bool CDMOperand::isImm() const {
   if (Kind != KindTy::Imm) {
@@ -264,6 +299,10 @@ void CDMOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
     int64_t Value;
     Expr->evaluateAsAbsolute(Value);
     OS << "immediate " << Value;
+    break;
+  }
+  case KindTy::Cond: {
+    OS << "cond " << CDMCOND::condtoString(Cond);
     break;
   }
   }
@@ -349,9 +388,54 @@ ParseStatus CDMAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
   return Result;
 }
 
+bool CDMAsmParser::parseBranchInst(StringRef &Name, SMLoc Loc,
+                                   OperandVector &Operands) {
+  if (Name.size() < 2 || std::tolower(Name[0]) != 'b') {
+    return true;
+  }
+  StringRef CondName = StringRef(Name.data() + 1, Name.size() - 1);
+  CDMCOND::CondOp Cond = CDMCOND::stringToCond(CondName);
+  if (Cond == CDMCOND::Invalid) {
+    return true;
+  }
+  Name = StringRef(Name.data(), 1);
+  SMLoc CondLoc = SMLoc::getFromPointer(Loc.getPointer() + 1);
+  Operands.push_back(CDMOperand::createToken(Name, Loc, Loc));
+  Operands.push_back(CDMOperand::createCond(Cond, CondLoc, CondLoc));
+  return false;
+}
+
+bool CDMAsmParser::mnemonicIsValid(StringRef Mnemonic, unsigned VariantID) {
+  // Process all MnemonicAliases to remap the mnemonic.
+  applyMnemonicAliases(Mnemonic, getAvailableFeatures(), VariantID);
+
+  // Find the appropriate table for this asm variant.
+  const MatchEntry *Start, *End;
+  switch (VariantID) {
+  default:
+    llvm_unreachable("invalid variant!");
+  case 0:
+    Start = std::begin(MatchTable0);
+    End = std::end(MatchTable0);
+    break;
+  }
+
+  // Search the table.
+  auto MnemonicRange = std::equal_range(Start, End, Mnemonic, LessOpcode());
+  return MnemonicRange.first != MnemonicRange.second;
+}
+
 bool CDMAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                     SMLoc NameLoc, OperandVector &Operands) {
-  Operands.push_back(CDMOperand::createToken(Name, NameLoc, NameLoc));
+  if (parseBranchInst(Name, NameLoc, Operands)) {
+    Operands.push_back(CDMOperand::createToken(Name, NameLoc, NameLoc));
+  }
+
+  // Validate instruction mnemonic early so that we don't fail trying to parse a
+  // register operand producing a confusing error message
+  if (!mnemonicIsValid(Name, 0)) {
+    return Error(NameLoc, "invalid instruction mnemonic");
+  }
 
   bool First = true;
   while (Parser.getTok().isNot(AsmToken::EndOfStatement)) {
@@ -449,7 +533,7 @@ bool CDMAsmParser::matchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
     return invalidOperandError(Loc, Operands, ErrorInfo);
   }
   case Match_MnemonicFail: {
-    return Error(Loc, "invalid instruction");
+    return Error(Loc, "invalid instruction mnemonic");
   }
   case Match_InvalidImmSym: {
     return outOfRangeError(

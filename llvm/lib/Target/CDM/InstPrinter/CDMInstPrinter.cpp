@@ -51,15 +51,8 @@ void CDMInstPrinter::printOperand(const MCInst *MI, unsigned int OpNo,
 void CDMInstPrinter::printCondCode(const MCInst *MI, unsigned int OpNo,
                                    raw_ostream &O) {
   using namespace llvm;
-  std::map<CDMCOND::CondOp, std::string> CondMap = {
-      {CDMCOND::EQ, "eq"},       {CDMCOND::NE, "ne"}, {CDMCOND::HS, "hs"},
-      {CDMCOND::LO, "lo"},       {CDMCOND::MI, "mi"}, {CDMCOND::PL, "pl"},
-      {CDMCOND::VS, "vs"},       {CDMCOND::VC, "vc"}, {CDMCOND::HI, "hi"},
-      {CDMCOND::LS, "ls"},       {CDMCOND::GE, "ge"}, {CDMCOND::LT, "lt"},
-      {CDMCOND::LE, "le"},       {CDMCOND::GT, "gt"}, {CDMCOND::TRUE, "true"},
-      {CDMCOND::FALSE, "false"},
-  };
-  O << CondMap.at((CDMCOND::CondOp)MI->getOperand(OpNo).getImm());
+  CDMCOND::CondOp Cond = (CDMCOND::CondOp)MI->getOperand(OpNo).getImm();
+  O << CDMCOND::condtoString(Cond);
 }
 
 void CDMInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {

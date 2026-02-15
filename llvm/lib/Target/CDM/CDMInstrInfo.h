@@ -16,6 +16,7 @@ namespace llvm {
 
 namespace CDMCOND {
 enum CondOp {
+  Invalid = -1,
   EQ = 0x0,    // equal
   NE = 0x1,    // not equal
   Z = EQ,      // zero
@@ -37,6 +38,72 @@ enum CondOp {
   TRUE = 0xE,  // always true
   FALSE = 0xF, // always false
 };
+
+/// Converts a string to a CondOp.
+inline CondOp stringToCond(StringRef String) {
+  return StringSwitch<CondOp>(String.lower())
+      .Case("eq", EQ)
+      .Case("ne", NE)
+      .Case("z", Z)
+      .Case("nz", NZ)
+      .Case("hs", HS)
+      .Case("lo", LO)
+      .Case("cs", CS)
+      .Case("cc", CC)
+      .Case("mi", MI)
+      .Case("pl", PL)
+      .Case("vs", VS)
+      .Case("vc", VC)
+      .Case("hi", HI)
+      .Case("ls", LS)
+      .Case("ge", GE)
+      .Case("lt", LT)
+      .Case("gt", GT)
+      .Case("le", LE)
+      .Case("true", TRUE)
+      .Case("false", FALSE)
+      .Default(CDMCOND::Invalid);
+}
+
+/// Converts CondOp to its string representation.
+inline StringRef condtoString(CondOp Cond) {
+  switch (Cond) {
+  default:
+    llvm_unreachable("Unknown condition code");
+  case EQ:
+    return "eq";
+  case NE:
+    return "ne";
+  case HS:
+    return "hs";
+  case LO:
+    return "lo";
+  case MI:
+    return "mi";
+  case PL:
+    return "pl";
+  case VS:
+    return "vs";
+  case VC:
+    return "vc";
+  case HI:
+    return "hi";
+  case LS:
+    return "ls";
+  case GE:
+    return "ge";
+  case LT:
+    return "lt";
+  case GT:
+    return "gt";
+  case LE:
+    return "le";
+  case TRUE:
+    return "true";
+  case FALSE:
+    return "false";
+  }
+}
 
 } // namespace CDMCOND
 

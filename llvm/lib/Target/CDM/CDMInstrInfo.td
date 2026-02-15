@@ -124,6 +124,13 @@ def shamtAsmOp : AsmOperandClass {
   let DiagnosticType = !strconcat("Invalid", Name);
 }
 
+// Condition assembly operand
+def cdmCondAsmOp : AsmOperandClass {
+  let Name = "Cond";
+  let PredicateMethod = "isCond";
+  let RenderMethod = "addCondOperands";
+}
+
 //===----------------------------------------------------------------------===//
 // CDM instruction operands
 //===----------------------------------------------------------------------===//
@@ -174,7 +181,7 @@ def imm9CallTarget : Operand<i16> {
 // Condition code operand used in conditional branch instrcutions.
 def cdmCond : Operand<OtherVT> {
   let PrintMethod = "printCondCode";
-  let ParserMatchClass = immSymAsmOp;
+  let ParserMatchClass = cdmCondAsmOp;
 }
 
 // Offset operands for frame-relative loads/stores and addsp.
