@@ -60,70 +60,68 @@ def sra_ext64 : SDNode<"CDMISD::SRA_EXT64", SDTIntShiftQuadOp>;
 // instructions so they are effectively 7-bit and 10-bit respectively.
 
 // Allows signed and unsigned 16-bit values and symbols
-def imm16AsmOp : AsmOperandClass {
-  let Name = "CDMImm16";
-  let PredicateMethod = "isImmN<16, 1, true, true, true>";
+def immSymAsmOp : AsmOperandClass {
+  let Name = "ImmSym";
+  let PredicateMethod = "isImmN<16, 0, true, true, true>";
   let RenderMethod = "addImmOperands";
   let ParserMethod = "parseImm";
+  let DiagnosticType = !strconcat("Invalid", Name);
 }
 
 // Allows signed 10-bit values known at assembly time
 def imm9AsmOp : AsmOperandClass {
-  let Name = "CDMImm9";
-  let PredicateMethod = "isImmN<10, 1, true, false>";
+  let Name = "Imm9";
+  let PredicateMethod = "isImmN<10, 0, true, false>";
   let RenderMethod = "addImmOperands";
   let ParserMethod = "parseSmallImm";
+  let DiagnosticType = !strconcat("Invalid", Name);
 }
 
 // Allows signed 10-bit values known at assembly time
 // Must be even, but the range is doubled
 def imm9EvenAsmOp : AsmOperandClass {
-  let Name = "CDMImm9Even";
-  let PredicateMethod = "isImmN<10, 2, true, false>";
+  let Name = "Imm9Even";
+  let PredicateMethod = "isImmN<10, 1, true, false>";
   let RenderMethod = "addImmOperands";
   let ParserMethod = "parseSmallImm";
-}
-
-// Allows signed 10-bit values and symbols
-// Must be even, but the range is doubled
-def imm9SymAsmOp : AsmOperandClass {
-  let Name = "CDMImmSym";
-  let PredicateMethod = "isImmN<10, 2, true, false, true>";
-  let RenderMethod = "addImmOperands";
-  let ParserMethod = "parseImm";
+  let DiagnosticType = !strconcat("Invalid", Name);
 }
 
 // Allows signed 7-bit values known at assembly
 def imm6AsmOp : AsmOperandClass {
-  let Name = "CDMImm6";
-  let PredicateMethod = "isImmN<7, 1, true, false>";
+  let Name = "Imm6";
+  let PredicateMethod = "isImmN<7, 0, true, false>";
   let RenderMethod = "addImmOperands";
   let ParserMethod = "parseSmallImm";
+  let DiagnosticType = !strconcat("Invalid", Name);
 }
 
 // Allows signed 7-bit values known at assembly time
 // Must be even, but the range is doubled
 def imm6EvenAsmOp : AsmOperandClass {
-  let Name = "CDMImm6Even";
-  let PredicateMethod = "isImmN<7, 2, true, false>";
+  let Name = "Imm6Even";
+  let PredicateMethod = "isImmN<7, 1, true, false>";
   let RenderMethod = "addImmOperands";
   let ParserMethod = "parseSmallImm";
+  let DiagnosticType = !strconcat("Invalid", Name);
 }
 
 // Allows values between 0 and 255 (inclusive)
 def interruptVecAsmOp : AsmOperandClass {
-  let Name = "CDMInterruptVec";
-  let PredicateMethod = "isImmN<8, 1, false, true>";
+  let Name = "InterruptVec";
+  let PredicateMethod = "isImmN<8, 0, false, true>";
   let RenderMethod = "addImmOperands";
   let ParserMethod = "parseSmallImm";
+  let DiagnosticType = !strconcat("Invalid", Name);
 }
 
 // Allows values between 1 and 8 (inclusive)
 def shamtAsmOp : AsmOperandClass {
-  let Name = "CDMShamt";
+  let Name = "Shamt";
   let PredicateMethod = "isShamt";
   let RenderMethod = "addImmOperands";
   let ParserMethod = "parseSmallImm";
+  let DiagnosticType = !strconcat("Invalid", Name);
 }
 
 //===----------------------------------------------------------------------===//
@@ -133,7 +131,7 @@ def shamtAsmOp : AsmOperandClass {
 // 16-bit immediate operand (value or symbol).
 def imm16Op : Operand<i16> {
   let EncoderMethod = "encodeImm<FK_Data_2, 2>";
-  let ParserMatchClass = imm16AsmOp;
+  let ParserMatchClass = immSymAsmOp;
 }
 
 // 9-bit immediate operand (value only).
@@ -149,34 +147,34 @@ def imm6Op : Operand<i16> {
 // 6-bit immediate operand for LDIImm6.
 def imm6LDIOp : Operand<i16> {
   let EncoderMethod = "encodeImm<CDM::fixup_load_imm6, 0, true>";
-  let ParserMatchClass = imm16AsmOp;
+  let ParserMatchClass = immSymAsmOp;
 }
 
 // 16-bit absoulute branch target operand (symbol only).
 def imm16BrTarget : Operand<OtherVT> {
   let OperandType = "OPERAND_MEMORY";
   let EncoderMethod = "encodeImm<FK_Data_2, 2>";
-  let ParserMatchClass = imm16AsmOp;
+  let ParserMatchClass = immSymAsmOp;
 }
 
 // 9-bit relative branch target operand (symbol only).
 def imm9BrTarget : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
   let EncoderMethod = "encodeImm<CDM::fixup_branch_imm9, 0, true>";
-  let ParserMatchClass = imm9SymAsmOp;
+  let ParserMatchClass = immSymAsmOp;
 }
 
 // 9-bit relative call target operand (symbol only).
 def imm9CallTarget : Operand<i16> {
   let OperandType = "OPERAND_PCREL";
   let EncoderMethod = "encodeImm<CDM::fixup_call_imm9, 0, true>";
-  let ParserMatchClass = imm9SymAsmOp;
+  let ParserMatchClass = immSymAsmOp;
 }
 
 // Condition code operand used in conditional branch instrcutions.
 def cdmCond : Operand<OtherVT> {
   let PrintMethod = "printCondCode";
-  let ParserMatchClass = imm16AsmOp;
+  let ParserMatchClass = immSymAsmOp;
 }
 
 // Offset operands for frame-relative loads/stores and addsp.
@@ -482,18 +480,9 @@ defm STW : CDMStore<0b110, "stw", store>;
 // Stores the least significant byte of rd to data memory pointed by rs.
 defm STB : CDMStore<0b111, "stb", truncstorei8>;
 
-// Load i8 with anyext
-
-// Load from memory
-// Simulates CdM-8/8e ld instruction. Operates with words.
+// CDM8-like aliases
 def LD : MnemonicAlias<"ld", "ldw">;
-
-// Load constant from memory.
-// Simulates CdM-8/8e ldc instruction. Operates with words.
 def LDC : MnemonicAlias<"ldc", "lcw">;
-
-// Store to memory.
-// Simulates CdM-8/8e st instruction. Operates with words.
 def ST : MnemonicAlias<"st", "stw">;
 
 //===----------------------------------------------------------------------===//
@@ -693,6 +682,10 @@ multiclass Shift<bits<3> op, string instr_asm, SDPatternOperator OpNode> {
     }
   }
 
+  // CDM8-like 2 operand and 1 operand aliases
+  def : InstAlias<!strconcat(instr_asm, "\t$rs, $rd"), (!cast<Instruction>(NAME) CPURegs:$rd, CPURegs:$rs, 1), 0>;
+  def : InstAlias<!strconcat(instr_asm, "\t$rd, $shamt"), (!cast<Instruction>(NAME) CPURegs:$rd, CPURegs:$rd, shamt:$shamt)>;
+  def : InstAlias<!strconcat(instr_asm, "\t$rd"), (!cast<Instruction>(NAME) CPURegs:$rd, CPURegs:$rd, 1)>;
 }
 
 // Class for 32-bit shift pseudos.
@@ -771,6 +764,14 @@ def RCL : InstShifts<0b101, (outs CPURegs:$rd), (ins CPURegs:$rs, shamt:$shamt),
 // Shifts right, bit 0 shifts to C, old C shifts to bit 15.
 def RCR : InstShifts<0b110, (outs CPURegs:$rd), (ins CPURegs:$rs, shamt:$shamt), "rcr\t$rs, $rd, $shamt", []>;
 
+// CDM8-like 2 operand and 1 operand aliases
+def : InstAlias<"rcl\t$rs, $rd", (RCL CPURegs:$rd, CPURegs:$rs, 1), 0>;
+def : InstAlias<"rcr\t$rs, $rd", (RCR CPURegs:$rd, CPURegs:$rs, 1), 0>;
+def : InstAlias<"rcl\t$rd, $shamt", (RCL CPURegs:$rd, CPURegs:$rd, shamt:$shamt)>;
+def : InstAlias<"rcr\t$rd, $shamt", (RCR CPURegs:$rd, CPURegs:$rd, shamt:$shamt)>;
+def : InstAlias<"rcl\t$rd", (RCL CPURegs:$rd, CPURegs:$rd, 1)>;
+def : InstAlias<"rcr\t$rd", (RCR CPURegs:$rd, CPURegs:$rd, 1)>;
+
 // 32-bit and 64-bit pseudos.
 // Expand to chains of 16-bit shifts and loops.
 defm SHL_EXT32 : ShiftExt32<shl_ext32>;
@@ -801,6 +802,12 @@ let Defs = [PSR] in {
   // Clears higher 8 bits of rs and puts result in rd.
   def SCL : InstAlu2<0b011, (outs CPURegs:$rd), (ins CPURegs:$rs), "scl\t$rs, $rd", [(set CPURegs:$rd, (and CPURegs:$rs, (i16 0xFF)))]>;
 }
+
+//CDM8-like 1 operand aliases
+def : InstAlias<"neg\t$rd", (NEG CPURegs:$rd, CPURegs:$rd)>;
+def : InstAlias<"not\t$rd", (NOT CPURegs:$rd, CPURegs:$rd)>;
+def : InstAlias<"sxt\t$rd", (SXT CPURegs:$rd, CPURegs:$rd)>;
+def : InstAlias<"scl\t$rd", (SCL CPURegs:$rd, CPURegs:$rd)>;
 
 //===----------------------------------------------------------------------===//
 // alu3 format
@@ -856,6 +863,16 @@ def CLR : InstAlias<"clr\t$rd", (SUB CPURegs:$rd, CPURegs:$rd, CPURegs:$rd), 0>;
 // Bit set
 // Sets bits in rs0 that are set in rs1. Alias for OR.
 def BIS : InstAlias<"bis\t$rs0, $rs1, $rd", (OR CPURegs:$rd, CPURegs:$rs0, CPURegs:$rs1), 0>;
+
+// CDM8-like 2 operand aliasas
+def : InstAlias<"and\t$rs, $rd", (AND CPURegs:$rd, CPURegs:$rs, CPURegs:$rd), 0>;
+def : InstAlias<"or\t$rs, $rd", (OR CPURegs:$rd, CPURegs:$rs, CPURegs:$rd), 0>;
+def : InstAlias<"xor\t$rs, $rd", (XOR CPURegs:$rd, CPURegs:$rs, CPURegs:$rd), 0>;
+def : InstAlias<"add\t$rs, $rd", (ADD CPURegs:$rd, CPURegs:$rs, CPURegs:$rd), 0>;
+def : InstAlias<"addc\t$rs, $rd", (ADDC CPURegs:$rd, CPURegs:$rs, CPURegs:$rd), 0>;
+def : InstAlias<"bic\t$rs, $rd", (BIC CPURegs:$rd, CPURegs:$rs, CPURegs:$rd), 0>;
+def : InstAlias<"sub\t$rs, $rd", (SUB CPURegs:$rd, CPURegs:$rs, CPURegs:$rd), 0>;
+def : InstAlias<"bis\t$rs, $rd", (OR CPURegs:$rd, CPURegs:$rs, CPURegs:$rd), 0>;
 
 //===----------------------------------------------------------------------===//
 // alu3_ind format

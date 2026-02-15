@@ -13,6 +13,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
 
+#include "llvm/Support/MathExtras.h"
 #define DEBUG_TYPE "cdm-asm-parser"
 
 using namespace llvm;
@@ -28,11 +29,12 @@ class CDMAsmParser : public MCTargetAsmParser {
 #define GET_ASSEMBLER_HEADER
 #include "CDMGenAsmMatcher.inc"
 
-  // Helpers for matchAndEmitInstruction
-  bool invalidOperand(const SMLoc &Loc, const OperandVector &Operands,
-                      const uint64_t &ErrorInfo);
-  bool invalidInstruction(const SMLoc &Loc, const uint64_t &ErrorInfo);
-  bool missingFeature(const SMLoc &Loc, const uint64_t &ErrorInfo);
+  bool invalidOperandError(SMLoc Loc, OperandVector &Operands,
+                           uint64_t ErrorInfo);
+  bool outOfRangeError(OperandVector &Operands, uint64_t ErrorInfo,
+                       int64_t Lower, int64_t Upper, StringRef Msg);
+
+  /// Post-processes and emits instruction
   bool emit(MCInst &Inst, SMLoc const &Loc, MCStreamer &Out) const;
 
   /// Matches a register name to an MCRegister
@@ -45,6 +47,13 @@ class CDMAsmParser : public MCTargetAsmParser {
   ParseStatus parseSmallImm(OperandVector &Operands);
 
 public:
+  enum CDMMatchResultTy : unsigned {
+    Match_Dummy = FIRST_TARGET_MATCH_RESULT_TY,
+#define GET_OPERAND_DIAGNOSTIC_TYPES
+#include "CDMGenAsmMatcher.inc"
+#undef GET_OPERAND_DIAGNOSTIC_TYPES
+  };
+
   CDMAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                const MCInstrInfo &MII, const MCTargetOptions &Options)
       : MCTargetAsmParser(Options, STI, MII), STI(STI), Parser(Parser) {
@@ -117,12 +126,13 @@ public:
   /// Checks if an immediate operand is valid.
   ///
   /// @tparam Bits The bit-width of the field the value needs to fit in
-  /// @tparam Align The minimal multiple of the value
+  /// @tparam ShiftAmount The number of bits the value is shifted by in the
+  /// encoding
   /// @tparam Signed Can the value be interpreted as signed
   /// @tparam Unsigned Can the value be interpreted as unsigned
   /// @tparam AllowSymbols Can the value be not known at assembly time (i.e.
   /// contain symbols)
-  template <unsigned Bits, unsigned Align, bool Signed, bool Unsigned,
+  template <unsigned Bits, unsigned ShiftAmount, bool Signed, bool Unsigned,
             bool AllowSymbols = false>
   bool isImmN() const;
 
@@ -211,7 +221,7 @@ std::unique_ptr<CDMOperand> CDMOperand::createImm(const MCExpr *Expr,
   return Op;
 }
 
-template <unsigned Bits, unsigned Align, bool Signed, bool Unsigned,
+template <unsigned Bits, unsigned ShiftAmount, bool Signed, bool Unsigned,
           bool AllowSymbols>
 bool CDMOperand::isImmN() const {
   if (!isImm()) {
@@ -221,11 +231,8 @@ bool CDMOperand::isImmN() const {
   if (!Expr->evaluateAsAbsolute(Value)) {
     return AllowSymbols;
   }
-  if (Value % Align) {
-    return false;
-  }
-  return (Signed && isInt<Bits>(Value / Align)) ||
-         (Unsigned && isUInt<Bits>(Value / Align));
+  return (Signed && isShiftedInt<Bits, ShiftAmount>(Value)) ||
+         (Unsigned && isShiftedUInt<Bits, ShiftAmount>(Value));
 }
 
 bool CDMOperand::isShamt() const {
@@ -236,7 +243,7 @@ bool CDMOperand::isShamt() const {
   if (!Expr->evaluateAsAbsolute(Value)) {
     return false;
   }
-  return Value >= 1 && Value <= 8;
+  return isUInt<3>(Value - 1);
 }
 
 void CDMOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
@@ -387,9 +394,15 @@ bool CDMAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   return false;
 }
 
-bool CDMAsmParser::invalidOperand(SMLoc const &Loc,
-                                  OperandVector const &Operands,
-                                  uint64_t const &ErrorInfo) {
+bool CDMAsmParser::emit(MCInst &Inst, SMLoc const &Loc, MCStreamer &Out) const {
+  Inst.setLoc(Loc);
+  Out.emitInstruction(Inst, STI);
+
+  return false;
+}
+
+bool CDMAsmParser::invalidOperandError(SMLoc Loc, OperandVector &Operands,
+                                       uint64_t ErrorInfo) {
   SMLoc ErrorLoc = Loc;
   char const *Diag = 0;
 
@@ -397,35 +410,23 @@ bool CDMAsmParser::invalidOperand(SMLoc const &Loc,
     if (ErrorInfo >= Operands.size()) {
       Diag = "too few operands for instruction.";
     } else {
-      auto const &Op = (CDMOperand const &)*Operands[ErrorInfo];
-      if (Op.getStartLoc() != SMLoc()) {
-        ErrorLoc = Op.getStartLoc();
-      }
+      ErrorLoc = ((CDMOperand &)*Operands[ErrorInfo]).getStartLoc();
     }
   }
-
   if (!Diag) {
     Diag = "invalid operand for instruction";
   }
-
   return Error(ErrorLoc, Diag);
 }
 
-bool CDMAsmParser::missingFeature(llvm::SMLoc const &Loc,
-                                  uint64_t const &ErrorInfo) {
-  return Error(Loc, "instruction requires a CPU feature not currently enabled");
-}
-
-bool CDMAsmParser::invalidInstruction(llvm::SMLoc const &Loc,
-                                      uint64_t const &ErrorInfo) {
-  return Error(Loc, "invalid instruction");
-}
-
-bool CDMAsmParser::emit(MCInst &Inst, SMLoc const &Loc, MCStreamer &Out) const {
-  Inst.setLoc(Loc);
-  Out.emitInstruction(Inst, STI);
-
-  return false;
+bool CDMAsmParser::outOfRangeError(
+    OperandVector &Operands, uint64_t ErrorInfo, int64_t Lower, int64_t Upper,
+    StringRef Msg = "immediate must be an integer in the range") {
+  if (ErrorInfo >= Operands.size()) {
+    ErrorInfo = Operands.size() - 1;
+  }
+  SMLoc Loc = ((CDMOperand &)*Operands[ErrorInfo]).getStartLoc();
+  return Error(Loc, Msg + " [" + Twine(Lower) + ", " + Twine(Upper) + "]");
 }
 
 bool CDMAsmParser::matchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
@@ -437,14 +438,46 @@ bool CDMAsmParser::matchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
       MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm);
 
   switch (MatchResult) {
-  case Match_InvalidOperand:
-    return invalidOperand(Loc, Operands, ErrorInfo);
-  case Match_MissingFeature:
-    return missingFeature(Loc, ErrorInfo);
-  case Match_MnemonicFail:
-    return invalidInstruction(Loc, ErrorInfo);
-  case Match_Success:
+  case Match_Success: {
     return emit(Inst, Loc, Out);
+  }
+  case Match_MissingFeature: {
+    return Error(Loc,
+                 "instruction requires a CPU feature not currently enabled");
+  }
+  case Match_InvalidOperand: {
+    return invalidOperandError(Loc, Operands, ErrorInfo);
+  }
+  case Match_MnemonicFail: {
+    return Error(Loc, "invalid instruction");
+  }
+  case Match_InvalidImmSym: {
+    return outOfRangeError(
+        Operands, ErrorInfo, INT16_MIN, UINT16_MAX,
+        "immediate must be a symbol or an integer in the range");
+  }
+  case Match_InvalidImm9: {
+    return outOfRangeError(Operands, ErrorInfo, -512, 511);
+  }
+  case Match_InvalidImm9Even: {
+    return outOfRangeError(
+        Operands, ErrorInfo, -1024, 1022,
+        "immediate must be a multiple of 2 bytes in the range");
+  }
+  case Match_InvalidImm6: {
+    return outOfRangeError(Operands, ErrorInfo, -64, 63);
+  }
+  case Match_InvalidImm6Even: {
+    return outOfRangeError(
+        Operands, ErrorInfo, -128, 126,
+        "immediate must be a multiple of 2 bytes in the range");
+  }
+  case Match_InvalidInterruptVec: {
+    return outOfRangeError(Operands, ErrorInfo, 0, 255);
+  }
+  case Match_InvalidShamt: {
+    return outOfRangeError(Operands, ErrorInfo, 1, 8);
+  }
   default:
     return true;
   }
