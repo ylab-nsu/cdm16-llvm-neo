@@ -99,7 +99,7 @@ bool CDMRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       FPRelSubstitutionOpcsTable = {
           {CDM::SSW, {CDM::STW2Reg, 2}},   {CDM::LSW, {CDM::LDW2Reg, 2}},
           {CDM::SSB, {CDM::STB2Reg, 1}},   {CDM::LSB, {CDM::LDB2Reg, 1}},
-          {CDM::LSSB, {CDM::LDSB2Reg, 1}}, {CDM::LDIImm6, {CDM::LDIImm16, 1}},
+          {CDM::LSSB, {CDM::LDSB2Reg, 1}},
       };
 
   const auto Opcode = MI.getOpcode();
@@ -127,9 +127,7 @@ bool CDMRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       if (!OffsetReg) // should not happen, but report in case a bug occurs
         report_fatal_error("Couldn't find register to use");
     } else {
-      // not load or store, just replace the opcode
-      MI.setDesc(InstrInfo->get(SubstitutionOpc));
-      return false; // instruction not removed
+      llvm_unreachable("Unhandled FP-relative instruction");
     }
 
     BuildMI(MBB, II, II->getDebugLoc(), InstrInfo->get(CDM::LDIImm16),

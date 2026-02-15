@@ -146,24 +146,30 @@ def imm6Op : Operand<i16> {
   let ParserMatchClass = imm6AsmOp;
 }
 
+// 6-bit immediate operand for LDIImm6.
+def imm6LDIOp : Operand<i16> {
+  let EncoderMethod = "encodeImm<CDM::fixup_load_imm6, 0, true>";
+  let ParserMatchClass = imm16AsmOp;
+}
+
 // 16-bit absoulute branch target operand (symbol only).
 def imm16BrTarget : Operand<OtherVT> {
   let OperandType = "OPERAND_MEMORY";
-  let EncoderMethod = "encodeBranchTarget<FK_Data_2, 2>";
+  let EncoderMethod = "encodeImm<FK_Data_2, 2>";
   let ParserMatchClass = imm16AsmOp;
 }
 
 // 9-bit relative branch target operand (symbol only).
 def imm9BrTarget : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
-  let EncoderMethod = "encodeBranchTarget<CDM::fixup_branch_imm9, 0>";
+  let EncoderMethod = "encodeImm<CDM::fixup_branch_imm9, 0, true>";
   let ParserMatchClass = imm9SymAsmOp;
 }
 
 // 9-bit relative call target operand (symbol only).
 def imm9CallTarget : Operand<i16> {
   let OperandType = "OPERAND_PCREL";
-  let EncoderMethod = "encodeBranchTarget<CDM::fixup_call_imm9, 0>";
+  let EncoderMethod = "encodeImm<CDM::fixup_call_imm9, 0, true>";
   let ParserMatchClass = imm9SymAsmOp;
 }
 
@@ -355,9 +361,9 @@ let Uses = [SP], Defs = [SP] in {
 
 // Load large immediate to register
 // Loads immediate value imm16 to rd.
-def LDIImm16 : Inst1OpImm16<0b0010, (outs CPURegs:$rd), (ins imm16Op:$imm), "ldi\t$rd, $imm",
-                            [(set CPURegs:$rd, imm:$imm)]> {
+def LDIImm16 : Inst1OpImm16<0b0010, (outs CPURegs:$rd), (ins imm16Op:$imm), "ldi\t$rd, $imm", []> {
   let isReMaterializable = 1;
+  let isCodeGenOnly = 1;
 }
 
 // Jump to subroutine by pointer
@@ -528,10 +534,9 @@ let Uses = [FP], PostEncoderMethod = "adjustImmOpCode<1, 9>" in {
 
 // Load small immediate to register
 // Loads immediate value imm6 to rd.
-def LDIImm6 : InstImm6<0b1010, (outs CPURegs:$rd), (ins imm6Op:$imm), "ldi\t$rd, $imm",
-                      [(set CPURegs:$rd, imm6:$imm)]> {
+def LDIImm6 : InstImm6<0b1010, (outs CPURegs:$rd), (ins imm6LDIOp:$imm), "ldi\t$rd, $imm",
+                      [(set CPURegs:$rd, imm:$imm)]> {
   let isReMaterializable = 1;
-  let PostEncoderMethod = "adjustImmOpCode<1, 9>";
 }
 
 let Defs = [PSR], isReMaterializable = 1, Constraints = "$rs = $rd" in {
@@ -621,8 +626,7 @@ def BRImm16 : InstBrAbs<(outs), (ins imm16BrTarget:$imm), "br\t$imm", []> {
 
 // Absolute conditional branch
 // Loads imm16 to PC if the specified condition is true.
-def BCondImm16 : InstBrAbs<(outs), (ins cdmCond:$cond, imm16BrTarget:$imm),
-                    "b$cond\t$imm", []> {
+def BCondImm16 : InstBrAbs<(outs), (ins cdmCond:$cond, imm16BrTarget:$imm), "b$cond\t$imm", []> {
   let isTerminator = 1;
   let isBranch = 1;
   let Uses = [PSR];
@@ -927,7 +931,6 @@ def : Pat<(cdm_call (i16 tglobaladdr:$target)), (JSRImm9 tglobaladdr:$target)>;
 def : Pat<(cdm_call (i16 texternalsym:$target)), (JSRImm9 texternalsym:$target)>;
 
 // Load frame address
-// LDIImm6 may be changed to LDIImm16 in CDMRegisterInfo::eliminateFrameIndex.
 def : Pat<(i16 addrFrame:$addr), (ADD (LDIImm6 imm:$addr), FP)>;
 
 // Load byte from address with anyext

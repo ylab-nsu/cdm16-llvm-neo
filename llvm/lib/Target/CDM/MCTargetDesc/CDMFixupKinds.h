@@ -9,6 +9,7 @@ namespace CDM {
 enum Fixups {
   fixup_call_imm9 = FirstTargetFixupKind,
   fixup_branch_imm9,
+  fixup_load_imm6,
   LastTargetFixupKind,
   NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind
 };

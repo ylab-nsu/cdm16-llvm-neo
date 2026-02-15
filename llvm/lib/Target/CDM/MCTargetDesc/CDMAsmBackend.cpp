@@ -4,6 +4,7 @@
 
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -19,7 +20,7 @@ CDMAsmBackend::createObjectTargetWriter() const {
 
 void CDMAsmBackend::adjustFixupValue(const MCFixup &Fixup,
                                      const MCValue &Target, uint64_t &Value,
-                                     MCContext *Ctx) const {
+                                     MCContext &Ctx) const {
   int64_t &Offset = reinterpret_cast<int64_t &>(Value);
   switch (Fixup.getKind()) {
   default:
@@ -29,14 +30,18 @@ void CDMAsmBackend::adjustFixupValue(const MCFixup &Fixup,
     // Also subtract 1 instruction because CDM increments PC after relative
     // branches.
     Offset = Offset / 2 - 1;
-    // Keep 9 bits, set bit 13 when offset is nonnegative.
+    // Keep 9 bits, set sign bit when offset is nonnegative.
     Offset = (Offset & 0x1ff) | (Offset >= 0 ? 0x2000 : 0);
     break;
   case CDM::fixup_call_imm9:
     // Same as before
     Offset = Offset / 2 - 1;
-    // Keep 9 bits, set bit 9 when offset is negative.
+    // Keep 9 bits, set sign bit when offset is negative.
     Offset = (Offset & 0x1ff) | (Offset < 0 ? 0x200 : 0);
+    break;
+  case CDM::fixup_load_imm6:
+    // Keep 6 bits, set sign bit when offset is negative.
+    Offset = ((Offset & 0x3f) << 0) | (Offset < 0 ? 0x40 : 0);
     break;
   case FK_Data_2:
     // No need for adjustment.
@@ -54,13 +59,14 @@ void CDMAsmBackend::applyFixup(const MCFragment &Fragment, const MCFixup &Fixup,
   if (mc::isRelocation(Fixup.getKind()))
     return;
 
-  adjustFixupValue(Fixup, Target, Value, &getContext());
+  adjustFixupValue(Fixup, Target, Value, getContext());
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
 
   unsigned NumBits = Info.TargetSize + Info.TargetOffset;
   auto NumBytes = (NumBits / 8) + ((NumBits % 8) == 0 ? 0 : 1);
 
-  // Shift the value into position.
+  // Mask the value and shift it into position.
+  Value &= ~(-1 << Info.TargetSize);
   Value <<= Info.TargetOffset;
 
   unsigned Offset = Fixup.getOffset();
@@ -90,9 +96,10 @@ std::optional<MCFixupKind> CDMAsmBackend::getFixupKind(StringRef Name) const {
 
 MCFixupKindInfo CDMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[CDM::NumTargetFixupKinds] = {
-      // name                    offset  bits  flags
+      // name           offset  bits  flags
       {"fixup_call_imm9", 0, 10, 0},   // bit 9 is needed to fix up op_type
       {"fixup_branch_imm9", 0, 14, 0}, // bit 13 is needed to fix up opcode
+      {"fixup_load_imm6", 3, 7, 0},    // bit 9 is needed to fix up opcode
   };
 
   if (mc::isRelocation(Kind))
@@ -130,6 +137,7 @@ bool CDMAsmBackend::mayNeedRelaxation(unsigned Opcode,
   case CDM::JSRImm9:
   case CDM::BCondImm9:
   case CDM::BRImm9:
+  case CDM::LDIImm6:
     return true;
   }
 }
@@ -143,6 +151,8 @@ bool CDMAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
   case CDM::fixup_call_imm9:
   case CDM::fixup_branch_imm9:
     return Offset <= -1024 || Offset > 1024;
+  case CDM::fixup_load_imm6:
+    return Offset < -64 || Offset > 63;
   }
 }
 
@@ -157,6 +167,8 @@ static unsigned getRelaxedOpcode(unsigned Opcode, ArrayRef<MCOperand> Operands,
     return CDM::BRImm16;
   case CDM::BCondImm9:
     return CDM::BCondImm16;
+  case CDM::LDIImm6:
+    return CDM::LDIImm16;
   }
 }
 
@@ -166,13 +178,14 @@ void CDMAsmBackend::relaxInstruction(MCInst &Inst,
   switch (Inst.getOpcode()) {
   default:
     llvm_unreachable("Opcode not expected!");
-  case CDM::BRImm9:
-  case CDM::JSRImm9: {
+  case CDM::JSRImm9:
+  case CDM::BRImm9: {
     Res.setOpcode(getRelaxedOpcode(Inst.getOpcode(), Inst.getOperands(), STI));
     Res.addOperand(Inst.getOperand(0));
     break;
   }
-  case CDM::BCondImm9: {
+  case CDM::BCondImm9:
+  case CDM::LDIImm6: {
     Res.setOpcode(getRelaxedOpcode(Inst.getOpcode(), Inst.getOperands(), STI));
     Res.addOperand(Inst.getOperand(0));
     Res.addOperand(Inst.getOperand(1));

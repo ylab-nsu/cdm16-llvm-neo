@@ -38,7 +38,7 @@ public:
                         const MCSubtargetInfo &STI) const override;
 
   void adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
-                        uint64_t &Value, MCContext *Ctx) const;
+                        uint64_t &Value, MCContext &Ctx) const;
 
 private:
   Triple::OSType OSType;

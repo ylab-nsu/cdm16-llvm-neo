@@ -13,6 +13,7 @@
 #include "llvm/Support/EndianStream.h"
 
 #include "llvm/Support/ErrorHandling.h"
+#include <cstdint>
 using namespace llvm;
 
 namespace {
@@ -43,14 +44,8 @@ public:
                                  const MCSubtargetInfo &STI) const;
 
 private:
-  /// Encodes an immediate operand (symbol only).
-  template <unsigned FixupKind, unsigned Offset>
-  unsigned encodeBranchTarget(const MCInst &MI, unsigned OpNo,
-                              SmallVectorImpl<MCFixup> &Fixups,
-                              const MCSubtargetInfo &STI) const;
-
   /// Encodes an immediate operand.
-  template <unsigned FixupKind, unsigned Offset>
+  template <unsigned FixupKind, unsigned Offset, bool ForceFixup = false>
   unsigned encodeImm(const MCInst &MI, unsigned OpNo,
                      SmallVectorImpl<MCFixup> &Fixups,
                      const MCSubtargetInfo &STI) const;
@@ -83,6 +78,7 @@ static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
     PCRel = false;
     break;
   case FK_Data_2:
+  case CDM::fixup_load_imm6:
     PCRel = false;
     break;
   case CDM::fixup_call_imm9:
@@ -108,32 +104,24 @@ uint64_t CDMMCCodeEmitter::getMachineOpValue(const MCInst &MI,
   return 0;
 }
 
-template <unsigned FixupKind, unsigned Offset>
-unsigned
-CDMMCCodeEmitter::encodeBranchTarget(const MCInst &MI, unsigned OpNo,
-                                     SmallVectorImpl<MCFixup> &Fixups,
-                                     const MCSubtargetInfo &STI) const {
-  const MCOperand &MO = MI.getOperand(OpNo);
-
-  assert(MO.isExpr() && "encodeBranchTarget expects only expressions");
-  const MCExpr *Expr = MO.getExpr();
-
-  addFixup(Fixups, Offset, Expr, FixupKind);
-  return 0;
-}
-
-template <unsigned FixupKind, unsigned Offset>
+template <unsigned FixupKind, unsigned Offset, bool ForceFixup>
 unsigned CDMMCCodeEmitter::encodeImm(const MCInst &MI, unsigned OpNo,
                                      SmallVectorImpl<MCFixup> &Fixups,
                                      const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
 
-  // If the destination is an immediate, there is nothing to do.
-  if (MO.isImm())
+  // If the value is an immediate, there is nothing to do.
+  if (MO.isImm() && !ForceFixup)
     return MO.getImm();
 
-  assert(MO.isExpr() && "encodeImm expects only expressions or immediates");
-  const MCExpr *Expr = MO.getExpr();
+  const MCExpr *Expr;
+  if (MO.isExpr()) {
+    Expr = MO.getExpr();
+  } else if (MO.isImm()) {
+    Expr = MCConstantExpr::create(MO.getImm(), Ctx);
+  } else {
+    llvm_unreachable("encodeImm expects only expressions or immediates");
+  }
 
   addFixup(Fixups, Offset, Expr, FixupKind);
   return 0;
@@ -173,7 +161,7 @@ unsigned CDMMCCodeEmitter::adjustImmOpCode(const MCInst &MI,
   int64_t Value;
   const MCOperand &MO = MI.getOperand(OpNo);
   if (!MO.evaluateAsConstantImm(Value)) {
-    llvm_unreachable("Unsupported imm6/imm9 operand!");
+    llvm_unreachable("Unsupported imm operand!");
   }
 
   if (Value < 0) {
