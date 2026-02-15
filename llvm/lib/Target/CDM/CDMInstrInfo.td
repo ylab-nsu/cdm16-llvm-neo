@@ -96,6 +96,16 @@ def imm6AsmOp : AsmOperandClass {
   let DiagnosticType = !strconcat("Invalid", Name);
 }
 
+// Allows signed 7-bit values known at assembly
+// (positive/negative ranges are swapped)
+def imm6SubAsmOp : AsmOperandClass {
+  let Name = "Imm6Sub";
+  let PredicateMethod = "isImm6Sub";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parseSmallImm";
+  let DiagnosticType = !strconcat("Invalid", Name);
+}
+
 // Allows signed 7-bit values known at assembly time
 // Must be even, but the range is doubled
 def imm6EvenAsmOp : AsmOperandClass {
@@ -149,6 +159,11 @@ def imm9Op : Operand<i16> {
 // 6-bit immediate operand (value only).
 def imm6Op : Operand<i16> {
   let ParserMatchClass = imm6AsmOp;
+}
+
+// 6-bit immediate operand (value only, negated).
+def imm6SubOp : Operand<i16> {
+  let ParserMatchClass = imm6SubAsmOp;
 }
 
 // 6-bit immediate operand for LDIImm6.
@@ -546,7 +561,7 @@ let Defs = [PSR], isReMaterializable = 1, Constraints = "$rs = $rd" in {
   // Subtract immediate
   // Computes rd - imm6 and puts result in rd.
   // Expands to add rd, -imm6
-  def SUBImm6 : CDMPseudo<(outs CPURegs:$rd), (ins CPURegs:$rs, imm6Op:$imm), "sub\t$rs, $imm", []> {
+  def SUBImm6 : CDMPseudo<(outs CPURegs:$rd), (ins CPURegs:$rs, imm6SubOp:$imm), "sub\t$rs, $imm", []> {
     let isCodeGenOnly = 0;
     let isAsmParserOnly = 1;
   }

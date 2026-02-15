@@ -5,6 +5,7 @@
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
@@ -152,6 +153,9 @@ public:
 
   /// Checks if an immediate operand is a valid shift amount.
   bool isShamt() const;
+
+  /// Checks if an immediate operand is a valid sub rd, imm6 operand
+  bool isImm6Sub() const;
 };
 
 } // end anonymous namespace.
@@ -279,6 +283,17 @@ bool CDMOperand::isShamt() const {
     return false;
   }
   return isUInt<3>(Value - 1);
+}
+
+bool CDMOperand::isImm6Sub() const {
+  if (!isImm()) {
+    return false;
+  }
+  int64_t Value;
+  if (!Expr->evaluateAsAbsolute(Value)) {
+    return false;
+  }
+  return isInt<7>(-Value);
 }
 
 void CDMOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
@@ -479,9 +494,20 @@ bool CDMAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
 }
 
 bool CDMAsmParser::emit(MCInst &Inst, SMLoc const &Loc, MCStreamer &Out) const {
-  Inst.setLoc(Loc);
-  Out.emitInstruction(Inst, STI);
-
+  switch (Inst.getOpcode()) {
+  default:
+    Inst.setLoc(Loc);
+    Out.emitInstruction(Inst, STI);
+    break;
+  case CDM::SUBImm6:
+    Out.emitInstruction(MCInstBuilder(CDM::ADDImm6)
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(1))
+                            .addImm(-Inst.getOperand(2).getImm())
+                            .setLoc(Loc),
+                        STI);
+    break;
+  }
   return false;
 }
 
@@ -550,6 +576,9 @@ bool CDMAsmParser::matchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
   }
   case Match_InvalidImm6: {
     return outOfRangeError(Operands, ErrorInfo, -64, 63);
+  }
+  case Match_InvalidImm6Sub: {
+    return outOfRangeError(Operands, ErrorInfo, -63, 64);
   }
   case Match_InvalidImm6Even: {
     return outOfRangeError(
