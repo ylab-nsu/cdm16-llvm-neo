@@ -1,5 +1,5 @@
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
-include(CDMRTObjectRules)
+include(CDMRTCocasObjectRules)
 find_package(Cocas REQUIRED)
 
 if (NOT COCAS_FOUND)
