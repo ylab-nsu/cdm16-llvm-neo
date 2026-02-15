@@ -26,6 +26,11 @@ void CDMAsmBackend::adjustFixupValue(const MCFixup &Fixup,
   default:
     llvm_unreachable("Invalid fixup!");
   case CDM::fixup_branch_imm9:
+    // Verify that the value is a multiple of 2.
+    // Range should be handled by relaxation.
+    if (Value % 2) {
+      Ctx.reportError(Fixup.getLoc(), "branch offset not aligned");
+    }
     // Instructions are 2-byte aligned, so divide by 2.
     // Also subtract 1 instruction because CDM increments PC after relative
     // branches.
@@ -34,6 +39,11 @@ void CDMAsmBackend::adjustFixupValue(const MCFixup &Fixup,
     Offset = (Offset & 0x1ff) | (Offset >= 0 ? 0x2000 : 0);
     break;
   case CDM::fixup_call_imm9:
+    // Verify that the value is a multiple of 2.
+    // Range should be handled by relaxation.
+    if (Value % 2) {
+      Ctx.reportError(Fixup.getLoc(), "call offset not aligned");
+    }
     // Same as before
     Offset = Offset / 2 - 1;
     // Keep 9 bits, set sign bit when offset is negative.
@@ -44,7 +54,11 @@ void CDMAsmBackend::adjustFixupValue(const MCFixup &Fixup,
     Offset = ((Offset & 0x3f) << 0) | (Offset < 0 ? 0x40 : 0);
     break;
   case FK_Data_2:
-    // No need for adjustment.
+    // No need for adjustment. Verify that the value can fit.
+    if (!isInt<16>(Value) && !isUInt<16>(Value)) {
+      Ctx.reportError(Fixup.getLoc(),
+                      "operand value outside of 16-bit integer range");
+    }
     break;
   }
 }
