@@ -75,11 +75,11 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (JA.getKind() == Action::LinkJobClass) {
-    if (!Args.hasArg(options::OPT_nostartfiles, options::OPT_r)) {
+    if (!Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib, options::OPT_r)) {
       CmdArgs.push_back(
           Args.MakeArgString(getCocasToolChain().GetFilePath("crt0.o")));
     }
-    if (!Args.hasArg(options::OPT_nostdlib, options::OPT_r)){
+    if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs, options::OPT_r)){
         // Add object files from standard lib
         for (const char *obj : getCocasToolChain().getStdLibObjs()) {
           CmdArgs.push_back(
