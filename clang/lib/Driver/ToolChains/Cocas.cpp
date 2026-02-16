@@ -86,7 +86,7 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
               Args.MakeArgString(getCocasToolChain().GetFilePath(obj)));
         }
     }
-    if (!Args.hasArg(options::OPT_r)){
+    if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs, options::OPT_r)){
         // Add builtins
         for (const char *obj : getCocasToolChain().getBuiltinNames()) {
           CmdArgs.push_back(getCocasToolChain().getCompilerRTArgString(
