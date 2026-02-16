@@ -552,6 +552,9 @@ if(build_runtimes)
   if("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
     list(APPEND extra_args ENABLE_FORTRAN)
   endif ()
+  if ("cdm-rt" IN_LIST LLVM_ENABLE_RUNTIMES AND COCAS_EXECUTABLE)
+    list(APPEND extra_cmake_args "-DCOCAS_EXECUTABLE=${COCAS_EXECUTABLE}")
+  endif()
 
   if(NOT LLVM_RUNTIME_TARGETS)
     runtime_default_target(
