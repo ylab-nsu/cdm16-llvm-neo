@@ -55,10 +55,7 @@ public:
                         MacroBuilder &Builder) const override {
     Builder.defineMacro("__CDM__");
     if (getTriple().getEnvironment() == llvm::Triple::Cocas) {
-      Builder.defineMacro("__CDM_COCAS_TOOLCHAIN__");
-    }
-    else {
-      Builder.defineMacro("__CDM_ELF_TOOLCHAIN__");
+      Builder.defineMacro("__CDM_COCAS__");
     }
   }
 
