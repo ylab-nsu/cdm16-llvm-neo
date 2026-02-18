@@ -1,6 +1,6 @@
 #include "MCTargetDesc/CDMFixupKinds.h"
 #include "MCTargetDesc/CDMMCTargetDesc.h"
-#include "llvm/MC/MCAsmInfo.h"
+
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -8,12 +8,9 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/EndianStream.h"
-
 #include "llvm/Support/ErrorHandling.h"
-#include <cstdint>
+
 using namespace llvm;
 
 namespace {

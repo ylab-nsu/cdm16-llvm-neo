@@ -11,9 +11,8 @@
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/TargetRegistry.h"
-
 #include "llvm/Support/MathExtras.h"
+
 #define DEBUG_TYPE "cdm-asm-parser"
 
 using namespace llvm;

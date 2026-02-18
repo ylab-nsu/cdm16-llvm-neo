@@ -1,8 +1,6 @@
 #ifndef LLVM_CDMASMBACKEND_H
 #define LLVM_CDMASMBACKEND_H
 
-#include "MCTargetDesc/CDMFixupKinds.h"
-
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/TargetParser/Triple.h"
 
