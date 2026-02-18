@@ -67,8 +67,16 @@ void CDMAsmBackend::applyFixup(const MCFragment &Fragment, const MCFixup &Fixup,
                                const MCValue &Target,
                                MutableArrayRef<char> Data, uint64_t Value,
                                bool IsResolved) {
-  if (!IsResolved)
-    Asm->getWriter().recordRelocation(Fragment, Fixup, Target, Value);
+  if (!IsResolved) {
+    if (Fixup.getKind() == FK_Data_2) {
+      Asm->getWriter().recordRelocation(Fragment, Fixup, Target, Value);
+    } else {
+      getContext().reportError(
+          Fixup.getLoc(),
+          "only 2-byte absolute address relocations are supported");
+      return;
+    }
+  }
 
   if (mc::isRelocation(Fixup.getKind()))
     return;
