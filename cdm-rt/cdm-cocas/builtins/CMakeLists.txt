@@ -1,0 +1,20 @@
+set(BUILDIN_SOURCES 
+  ${CMAKE_CURRENT_SOURCE_DIR}/mulhi3.asm
+  ${CMAKE_CURRENT_SOURCE_DIR}/mulsi3.asm
+  ${CMAKE_CURRENT_SOURCE_DIR}/muldi3.asm
+  ${CMAKE_CURRENT_SOURCE_DIR}/divhi3.asm
+  ${CMAKE_CURRENT_SOURCE_DIR}/divsi3.asm
+  ${CMAKE_CURRENT_SOURCE_DIR}/divdi3.asm
+  ${CMAKE_CURRENT_SOURCE_DIR}/udivhi3.asm
+  ${CMAKE_CURRENT_SOURCE_DIR}/udivsi3.asm
+  ${CMAKE_CURRENT_SOURCE_DIR}/udivdi3.asm
+  ${CMAKE_CURRENT_SOURCE_DIR}/modhi3.asm
+  ${CMAKE_CURRENT_SOURCE_DIR}/modsi3.asm
+  ${CMAKE_CURRENT_SOURCE_DIR}/moddi3.asm
+  ${CMAKE_CURRENT_SOURCE_DIR}/umodhi3.asm
+  ${CMAKE_CURRENT_SOURCE_DIR}/umodsi3.asm
+  ${CMAKE_CURRENT_SOURCE_DIR}/umoddi3.asm
+  ${CMAKE_CURRENT_SOURCE_DIR}/cdm_asm.inc
+)
+
+create_object_library(target_name ${CDM_COCAS_RT_LIB_DIR}/cdm-builtins.lib SRCS ${BUILDIN_SOURCES})
