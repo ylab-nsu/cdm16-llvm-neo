@@ -119,7 +119,7 @@ def imm6EvenAsmOp : AsmOperandClass {
 // Allows values between 0 and 255 (inclusive)
 def interruptVecAsmOp : AsmOperandClass {
   let Name = "InterruptVec";
-  let PredicateMethod = "isImmN<8, 0, false, true>";
+  let PredicateMethod = "isImmN<9, 0, false, true>";
   let RenderMethod = "addImmOperands";
   let ParserMethod = "parseSmallImm";
   let DiagnosticType = !strconcat("Invalid", Name);
@@ -218,11 +218,13 @@ def imm6ByteOffset : Operand<i16> {
 def shamt : Operand<i16> {
   let EncoderMethod = "encodeShamt";
   let ParserMatchClass = shamtAsmOp;
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 // 9-bit interrupt vector operand.
 def interruptVec : Operand<i16> {
   let ParserMatchClass = interruptVecAsmOp;
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 // reg+reg address operand used in load/store
@@ -284,20 +286,20 @@ def ZERO: Inst0Op<0b0000, (outs), (ins), "zero", []>;
 
 // Halt processor
 // Stops processor clock, changes processor status to HALTED.
-def HALT: Inst0Op<0b0100, (outs), (ins), "halt", []>;
+def HALT: Inst0Op<0b0100, (outs), (ins), "halt", [(int_cdm_halt)]>;
 
 // Wait for interrupt
 // Stops processor clock until an interrupt or an exception
 // occurs, changes processor status to WAITING.
-def WAIT: Inst0Op<0b0101, (outs), (ins), "wait", []>;
+def WAIT: Inst0Op<0b0101, (outs), (ins), "wait", [(int_cdm_wait)]>;
 
 // Enable interrupts
 // Sets I bit (bit 15) in PS thus enabling interrupts.
-def EI: Inst0Op<0b0110, (outs), (ins), "ei", []>;
+def EI: Inst0Op<0b0110, (outs), (ins), "ei", [(int_cdm_ei)]>;
 
 // Disable interrupts
 // Clears I bit (bit 15) in PS thus disabling interrupts.
-def DI: Inst0Op<0b0111, (outs), (ins), "di", []>;
+def DI: Inst0Op<0b0111, (outs), (ins), "di", [(int_cdm_di)]>;
 
 // Jump to subroutine (imm16 absolute address)
 // Pushes PC to stack and then does unconditional
@@ -407,13 +409,13 @@ def STSP : Inst1Op<0b0101, (outs), (ins CPURegs:$rd), "stsp\t$rd", []> {
 
 // Load PS
 // Copies value from PS to rd.
-def LDPS : Inst1Op<0b0110, (outs CPURegs:$rd), (ins), "ldps\t$rd", []> {
+def LDPS : Inst1Op<0b0110, (outs CPURegs:$rd), (ins), "ldps\t$rd", [(set CPURegs:$rd, (int_cdm_ldps))]> {
   let Uses = [PSR];
 }
 
 // Store PS
 // Copies value from rd to PS.
-def STPS : Inst1Op<0b0111, (outs), (ins CPURegs:$rd), "stps\t$rd", []> {
+def STPS : Inst1Op<0b0111, (outs), (ins CPURegs:$rd), "stps\t$rd", [(int_cdm_stps CPURegs:$rd)]> {
   let Defs = [PSR];
 }
 
@@ -596,11 +598,13 @@ def TST : InstAlias<"tst\t$rd", (CMPImm6 CPURegs:$rd, 0)>;
 
 // Software interrupt
 // Triggers an interrupt with vector with number imm9.
-def INT : InstImm9<0b0000, (outs), (ins interruptVec:$imm), "int\t$imm", []>;
+def INT : InstImm9<0b0000, (outs), (ins interruptVec:$imm), "int\t$imm",
+                   [(int_cdm_int timm:$imm)]>;
 
 // Reset processor
 // Fetches reset vector thus performing soft reset.
-def RESET : InstImm9<0b0001, (outs), (ins interruptVec:$imm), "reset\t$imm", []>;
+def RESET : InstImm9<0b0001, (outs), (ins interruptVec:$imm), "reset\t$imm",
+                     [(int_cdm_reset timm:$imm)]>;
 
 let Uses = [SP], Defs = [SP], PostEncoderMethod = "adjustImmOpCode<0, 9>" in {
   // Push immediate

@@ -585,7 +585,7 @@ bool CDMAsmParser::matchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
         "immediate must be a multiple of 2 bytes in the range");
   }
   case Match_InvalidInterruptVec: {
-    return outOfRangeError(Operands, ErrorInfo, 0, 255);
+    return outOfRangeError(Operands, ErrorInfo, 0, 511);
   }
   case Match_InvalidShamt: {
     return outOfRangeError(Operands, ErrorInfo, 1, 8);
