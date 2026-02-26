@@ -119,6 +119,7 @@ add_clang_library(clangCodeGen
   SwiftCallingConv.cpp
   TargetBuiltins/ARM.cpp
   TargetBuiltins/AMDGPU.cpp
+  TargetBuiltins/CDM.cpp
   TargetBuiltins/DirectX.cpp
   TargetBuiltins/Hexagon.cpp
   TargetBuiltins/NVPTX.cpp

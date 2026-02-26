@@ -47,17 +47,10 @@ public:
 
   bool allowsLargerPreferedTypeAlignment() const override { return false; }
 
-  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override {
-    return {};
-  }
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override {
-    Builder.defineMacro("__CDM__");
-    if (getTriple().getEnvironment() == llvm::Triple::Cocas) {
-      Builder.defineMacro("__COCAS__");
-    }
-  }
+                        MacroBuilder &Builder) const override;
 
   std::string_view getClobbers() const override { return ""; }
 
