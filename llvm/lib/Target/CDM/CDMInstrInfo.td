@@ -606,6 +606,9 @@ def INT : InstImm9<0b0000, (outs), (ins interruptVec:$imm), "int\t$imm",
 def RESET : InstImm9<0b0001, (outs), (ins interruptVec:$imm), "reset\t$imm",
                      [(int_cdm_reset timm:$imm)]>;
 
+// Reset vector can be omitted
+def : InstAlias<"reset", (RESET 0), 0>;
+
 let Uses = [SP], Defs = [SP], PostEncoderMethod = "adjustImmOpCode<0, 9>" in {
   // Push immediate
   // Stores immediate value imm9 to the top of the stack.
