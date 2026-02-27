@@ -62,6 +62,7 @@
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaBPF.h"
+#include "clang/Sema/SemaCDM.h"
 #include "clang/Sema/SemaDirectX.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaHexagon.h"
@@ -2063,6 +2064,8 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case llvm::Triple::bpfeb:
   case llvm::Triple::bpfel:
     return BPF().CheckBPFBuiltinFunctionCall(BuiltinID, TheCall);
+  case llvm::Triple::cdm:
+    return CDM().CheckCDMBuiltinFunctionCall(BuiltinID, TheCall);
   case llvm::Triple::dxil:
     return DirectX().CheckDirectXBuiltinFunctionCall(BuiltinID, TheCall);
   case llvm::Triple::hexagon:
