@@ -1,3 +1,4 @@
+// CHECK prod(end_to_end cocas)
 // CHECK reg(r0) 30
 
 #include <string.h>

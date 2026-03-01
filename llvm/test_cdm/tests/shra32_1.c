@@ -1,3 +1,4 @@
+// CHECK prod(end_to_end cocas)
 // CHECK reg(r0) 57207
 // CHECK reg(r1) 61270
 

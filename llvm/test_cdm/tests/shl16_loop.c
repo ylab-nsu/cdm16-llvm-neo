@@ -1,3 +1,4 @@
+// CHECK prod(end_to_end cocas)
 // CHECK reg(r0) 64192
 
 __attribute__((noinline)) int shl16_loop(int value, char amount) {
