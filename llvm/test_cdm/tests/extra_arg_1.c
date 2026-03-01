@@ -1,3 +1,4 @@
+// CHECK prod(end_to_end cocas)
 // CHECK reg(r0) 15
 
 __attribute__((noinline))

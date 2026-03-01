@@ -1,27 +1,23 @@
 from pathlib import Path
+from dataclasses import dataclass
 import subprocess
 import tempfile
 import os
 import sys
-from .exceptions import CompilationError
-from .exceptions import CocasError
 
-_START_OF_ABSOLUTE_SECTIONS = 0x80
+@dataclass
+class CompilationError(Exception):
+  message: str
+  def __str__(self) -> str:
+    return self.message
 
-def place_all_absolute_sections(absolute_sections):
-  next_address = _START_OF_ABSOLUTE_SECTIONS
+@dataclass
+class CocasError(Exception):
+  message: str
+  def __str__(self) -> str:
+    return self.message
 
-  section_addresses = {}
-
-  with tempfile.NamedTemporaryFile(suffix = '.asm', delete=False, mode='wt') as temp:
-    for sec in absolute_sections:
-      section_addresses[sec.symbol] = next_address
-      temp.write(f"asect {next_address}\n{sec.symbol}> ds {len(sec.content)}\n")
-      next_address += len(sec.content)
-    temp.write('end.\n')
-    return (temp.name, section_addresses)
-
-def clang_compile(filepath, clang_path, include_paths, opt_level):
+def clang_compile(filepath: Path, clang_path: Path, include_paths: list[Path], opt_level: str) -> Path:
   output_file = tempfile.NamedTemporaryFile(suffix = '.asm', delete=False)
   output_path = Path(output_file.name)
   output_file.close()
@@ -32,8 +28,8 @@ def clang_compile(filepath, clang_path, include_paths, opt_level):
       clang_args.append(str(i))
 
   clang_args.append(str(filepath))
+  #print(' '.join(clang_args), end = "\n\n")
   clang_proc = subprocess.run(clang_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-  # print(' '.join(clang_args), end = "\n\n")
 
   if not clang_proc.returncode == 0:
     if os.path.exists(str(output_path)):
@@ -41,10 +37,11 @@ def clang_compile(filepath, clang_path, include_paths, opt_level):
     raise CompilationError(f"Failed when tried to compile {str(filepath)} with return code {clang_proc.returncode}\nStdout:\n{clang_proc.stdout.decode()}\nStderr:\n{clang_proc.stderr.decode()}")
   return output_path
 
-def clang_compile_and_assemble(filepath, clang_path, include_paths, opt_level):
-  output_file = tempfile.NamedTemporaryFile(suffix = '.obj', delete=False)
-  output_path = Path(output_file.name)
-  output_file.close()
+def clang_compile_and_assemble(filepath: Path, clang_path: Path, include_paths: list[Path], opt_level: str, output_path: Path | None = None) -> Path:
+  if output_path is None:
+    output_file = tempfile.NamedTemporaryFile(suffix = '.obj', delete=False)
+    output_path = Path(output_file.name)
+    output_file.close()
 
   clang_args = [str(clang_path), '-target', 'cdm-cocas', '-c', f'-O{opt_level}', '-o', str(output_path)]
   for i in include_paths:
@@ -61,7 +58,7 @@ def clang_compile_and_assemble(filepath, clang_path, include_paths, opt_level):
     raise CompilationError(f"Failed when tried to compile and assemble {str(filepath)} with return code {clang_proc.returncode}\nStdout:\n{clang_proc.stdout.decode()}\nStderr:\n{clang_proc.stderr.decode()}")
   return output_path
 
-def cocas_assemble(filepath):
+def cocas_assemble(filepath: Path) -> Path:
   output_file = tempfile.NamedTemporaryFile(suffix = '.obj', delete=False)
   output_path = Path(output_file.name)
   output_file.close()
@@ -84,7 +81,7 @@ def cocas_assemble(filepath):
 
   return output_path
 
-def cocas_assemble_and_link(cocas_input):
+def cocas_assemble_and_link(cocas_input: list[Path]) -> Path:
   output_file = tempfile.NamedTemporaryFile(suffix = '.img', delete=False)
   output_path = Path(output_file.name)
   output_file.close()

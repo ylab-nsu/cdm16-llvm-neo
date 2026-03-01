@@ -1,5 +1,6 @@
+from typing import Any
 
-def get_diff(expected, actual, **kvargs):
+def get_diff(expected: list[Any], actual: list[Any], **kvargs: Any) -> str:
   out = "Expected:\n"
   for val1, val2 in zip(expected, actual):
     if val1 == val2:

@@ -1,6 +1,7 @@
+// CHECK prod(end_to_end cocas)
 // CHECK reg(r0) 3045
 
-__attribute__((noinline)) 
+__attribute__((noinline))
 int foo(volatile int arr[90]) {
   volatile int lol[228] = {0};
   int res = arr[0] ^ arr[1];
