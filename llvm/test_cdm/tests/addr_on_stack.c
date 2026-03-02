@@ -1,5 +1,6 @@
 // CHECK prod(end_to_end cocas)
 // CHECK mem(0xFF00) 48 45 6C 6C 6F
+// CHECK prod(driver_only)
 
 __attribute__((noinline))
 void flip_case (char* c){

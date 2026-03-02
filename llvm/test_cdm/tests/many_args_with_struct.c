@@ -1,5 +1,6 @@
 // CHECK prod(end_to_end cocas)
 // CHECK reg(r0) 35
+// CHECK prod(driver_only)
 
 struct S {
   int A[10];

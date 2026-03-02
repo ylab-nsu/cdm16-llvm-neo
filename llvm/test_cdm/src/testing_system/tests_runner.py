@@ -12,7 +12,7 @@ from .test_case import TestCase
 from .parse.tests_parser import parse_all_tests
 from .configuration import Configuration
 
-def run_testing_system(config: Configuration, producers: dict[str, TestCaseProducer]) -> int:
+def run_testing_system(config: Configuration, producers: dict[str, type[TestCaseProducer]]) -> int:
   server_proc = subprocess.Popen([
                                    "bin/cocoemu-server",
                                    "-p",
@@ -26,10 +26,9 @@ def run_testing_system(config: Configuration, producers: dict[str, TestCaseProdu
       if config.verbose:
         print(connection.processor_info, end = "\n\n")
 
-      for _, producer in producers.items():
-        producer.processor_info = connection.processor_info
+      producer_instances = dict(map(lambda item: (item[0], item[1](config, connection.processor_info)), producers.items()))
 
-      test_cases = parse_all_tests(config.tests_to_run, producers)
+      test_cases = parse_all_tests(config.tests_to_run, producer_instances)
       if (config.verbose):
         print("\033[32mFound tests:\033[0m")
         print('\n\n'.join(map(str, test_cases)), end = "\n\n")

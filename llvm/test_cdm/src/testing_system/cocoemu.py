@@ -1,6 +1,7 @@
 import json
 import time
 from pathlib import Path
+from types import TracebackType
 from dataclasses import dataclass
 from websockets.sync.client import connect
 from websockets.sync.client import ClientConnection
@@ -46,7 +47,7 @@ class CocoemuConnection:
   def __enter__(self) -> CocoemuConnection:
     return self
 
-  def __exit__(self, type, value, traceback) -> None:
+  def __exit__(self, type: type[BaseException], value: BaseException | None, traceback: TracebackType | None) -> None:
     self.ws.close()
 
   def check_server_response(self) -> Any:
