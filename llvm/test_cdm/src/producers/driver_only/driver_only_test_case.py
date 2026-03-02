@@ -17,9 +17,9 @@ class DriverOnlyTestCase(TestCase):
   def run_tests(self, connection: CocoemuConnection, errors_stream: TextIOBase) -> Generator[bool]:
     for file in filter(lambda f: f.suffix == '.c', self.files):
       for opt_level in ['0', '1', '2', '3', 's']:
-        obj_from_clang: Path
-        asm: Path
-        obj_from_cocas: Path
+        obj_from_clang: Path | None = None
+        asm: Path | None = None
+        obj_from_cocas: Path | None = None
         try:
           obj_from_clang = clang_compile_and_assemble(file, self.clang_path, self.include_paths, opt_level)
           asm = clang_compile(file, self.clang_path, self.include_paths, opt_level)
