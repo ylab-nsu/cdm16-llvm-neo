@@ -1,5 +1,5 @@
 // CHECK prod(end_to_end cocas)
-// CHECK reg(r0) 1342
+// CHECK reg(r0) 1341
 // CHECK mem(0xCAFE) BE BA
 
 int a = 5;
