@@ -1,5 +1,5 @@
-from testing_system.test_case_producer import TestCaseProducer, TestProducingError
 from pathlib import Path
+from testing_system.test_case_producer import TestCaseProducer, TestProducingError
 from testing_system.parse.directive import Directive
 from testing_system.test_case import TestCase
 from testing_system.configuration import Configuration
@@ -11,8 +11,9 @@ from .parsing import parse_directive
 class EndToEndTestCaseProducer(TestCaseProducer):
   common: list[Path] = []
 
-  def __init__(self, config: Configuration):
+  def __init__(self, config: Configuration, processor_info: ProcessorInfo):
     self.config = config
+    self.processor_info = processor_info
 
     resources = config.resources_path / "end_to_end_cocas"
     build = resources / "build"

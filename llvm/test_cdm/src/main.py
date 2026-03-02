@@ -9,6 +9,7 @@ from testing_system.util.errors_printing import print_error
 from testing_system.test_case_producer import TestCaseProducer, TestProducingError
 from testing_system.configuration import Configuration
 from producers.end_to_end.end_to_end_producer import EndToEndTestCaseProducer
+from producers.driver_only.driver_only_producer import DriverOnlyTestCaseProducer
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(__file__)
@@ -22,7 +23,7 @@ if __name__ == "__main__":
   config = Configuration(args.port, args.verbose, args.tests_to_run, Path(shutil.which(args.clang)).resolve().absolute(), args.include_paths, Path(Path(__file__).parent.parent / 'resources').resolve().absolute())
 
   try:
-    producers: dict[str, TestCaseProducer] = {'end_to_end' : EndToEndTestCaseProducer(config)}
+    producers: dict[str, type[TestCaseProducer]] = {'end_to_end' : EndToEndTestCaseProducer, 'driver_only' : DriverOnlyTestCaseProducer}
     sys.exit(run_testing_system(config, producers))
   except KeyboardInterrupt:
     print("")

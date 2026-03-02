@@ -71,4 +71,4 @@ class CocasEndToEndTestCase(TestCase):
   def __str__(self) -> str:
     files_string = '\n\t\t'.join(map(str, self.files))
     assertions_string = '\n\t\t'.join(map(str, self.assertions))
-    return f'\033[1m{self.name}:\033[0m\n\tFiles:\n\t\t{files_string}\n\tAssertions:\n\t\t{assertions_string}'
+    return f'\033[1mCocas end-to-end "{self.name}":\033[0m\n\tFiles:\n\t\t{files_string}\n\tAssertions:\n\t\t{assertions_string}'
