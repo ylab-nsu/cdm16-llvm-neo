@@ -29,7 +29,7 @@ entry:
 ; CHECK-NEXT: jsr bar
 ; CHECK-NEXT: addsp 8
 ; CHECK-NEXT: lsw r0, -2
-; CHECK-NEXT: add r0, 1
+; CHECK-NEXT: inc r0
 ; CHECK-NEXT: stsp fp
 ; CHECK-NEXT: pop fp
 ; CHECK-NEXT: rts

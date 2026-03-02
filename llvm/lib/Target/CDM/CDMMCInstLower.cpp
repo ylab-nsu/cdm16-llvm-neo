@@ -34,6 +34,9 @@ MCOperand CDMMCInstLower::lowerOperand(const MachineOperand &MO) const {
   default:
     llvm_unreachable("Unknown operand type");
   case MachineOperand::MO_Register:
+    // Ignore all implicit register operands.
+    if (MO.isImplicit())
+      break;
     return MCOperand::createReg(MO.getReg());
   case MachineOperand::MO_Immediate:
     return MCOperand::createImm(MO.getImm());

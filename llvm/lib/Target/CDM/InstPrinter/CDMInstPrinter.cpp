@@ -24,7 +24,8 @@ using namespace llvm;
 void CDMInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                StringRef Annot, const MCSubtargetInfo &STI,
                                raw_ostream &O) {
-  printInstruction(MI, Address, O);
+  if (!printAliasInstr(MI, Address, O))
+    printInstruction(MI, Address, O);
   printAnnotation(O, Annot);
 }
 

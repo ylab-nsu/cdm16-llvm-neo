@@ -315,10 +315,14 @@ let isTerminator = 1, isReturn = 1, isBarrier = 1 in {
   // them into PC and PS respectively.
   def RTI : Inst0Op<0b1001, (outs), (ins), "rti", [(cdm_rti)]>;
 
-  // Return from subroutine
+  // Pop PC
   // Pops a return address from the stack and loads it into PC.
-  def RTS : Inst0Op<0b1011, (outs), (ins), "rts", [(cdm_rts)]>;
+  def POPC : Inst0Op<0b1011, (outs), (ins), "popc", [(cdm_rts)]>;
 }
+
+// Return from subroutine
+// Alias for POPC.
+def RTS : InstAlias<"rts", (POPC)>;
 
 // Push PC
 // Pushes PC to the stack.
@@ -326,10 +330,6 @@ def PUPC : Inst0Op<0b1010, (outs), (ins), "pupc", []> {
   let Uses = [SP];
   let Defs = [SP];
 }
-
-// Pop PC
-// Pops PC from the stack. Alias for rts.
-def POPC : InstAlias<"popc", (RTS), 0>;
 
 // Push SP
 // Pushes SP to the stack.
@@ -579,17 +579,17 @@ def CMPImm6 : InstImm6<0b1110, (outs), (ins CPURegs:$rd, imm6Op:$imm), "cmp\t$rd
 
 // Increment register
 // Increments register by 1 and sets all flags according to the result.
-// Alias for add rd, 1
+// Alias for ADD rd, 1
 def INC : InstAlias<"inc\t$rd", (ADDImm6 CPURegs:$rd, 1)>;
 
 // Decrement register
 // Decrements register by 1 and sets all flags according to the result.
-// Alias for add rd, -1
+// Alias for ADD rd, -1
 def DEC : InstAlias<"dec\t$rd", (ADDImm6 CPURegs:$rd, -1)>;
 
 // Test register
 // Compares register with 0 and sets Z, N flags according to the result.
-// Alias for cmp rd, 0
+// Alias for CMP rd, 0
 def TST : InstAlias<"tst\t$rd", (CMPImm6 CPURegs:$rd, 0)>;
 
 //===----------------------------------------------------------------------===//
@@ -713,8 +713,8 @@ multiclass Shift<bits<3> op, string instr_asm, SDPatternOperator OpNode> {
 
   // CDM8-like 2 operand and 1 operand aliases
   def : InstAlias<!strconcat(instr_asm, "\t$rs, $rd"), (!cast<Instruction>(NAME) CPURegs:$rd, CPURegs:$rs, 1), 0>;
-  def : InstAlias<!strconcat(instr_asm, "\t$rd, $shamt"), (!cast<Instruction>(NAME) CPURegs:$rd, CPURegs:$rd, shamt:$shamt)>;
-  def : InstAlias<!strconcat(instr_asm, "\t$rd"), (!cast<Instruction>(NAME) CPURegs:$rd, CPURegs:$rd, 1)>;
+  def : InstAlias<!strconcat(instr_asm, "\t$rd, $shamt"), (!cast<Instruction>(NAME) CPURegs:$rd, CPURegs:$rd, shamt:$shamt), 0>;
+  def : InstAlias<!strconcat(instr_asm, "\t$rd"), (!cast<Instruction>(NAME) CPURegs:$rd, CPURegs:$rd, 1), 0>;
 }
 
 // Class for 32-bit shift pseudos.
@@ -796,10 +796,10 @@ def RCR : InstShifts<0b110, (outs CPURegs:$rd), (ins CPURegs:$rs, shamt:$shamt),
 // CDM8-like 2 operand and 1 operand aliases
 def : InstAlias<"rcl\t$rs, $rd", (RCL CPURegs:$rd, CPURegs:$rs, 1), 0>;
 def : InstAlias<"rcr\t$rs, $rd", (RCR CPURegs:$rd, CPURegs:$rs, 1), 0>;
-def : InstAlias<"rcl\t$rd, $shamt", (RCL CPURegs:$rd, CPURegs:$rd, shamt:$shamt)>;
-def : InstAlias<"rcr\t$rd, $shamt", (RCR CPURegs:$rd, CPURegs:$rd, shamt:$shamt)>;
-def : InstAlias<"rcl\t$rd", (RCL CPURegs:$rd, CPURegs:$rd, 1)>;
-def : InstAlias<"rcr\t$rd", (RCR CPURegs:$rd, CPURegs:$rd, 1)>;
+def : InstAlias<"rcl\t$rd, $shamt", (RCL CPURegs:$rd, CPURegs:$rd, shamt:$shamt), 0>;
+def : InstAlias<"rcr\t$rd, $shamt", (RCR CPURegs:$rd, CPURegs:$rd, shamt:$shamt), 0>;
+def : InstAlias<"rcl\t$rd", (RCL CPURegs:$rd, CPURegs:$rd, 1), 0>;
+def : InstAlias<"rcr\t$rd", (RCR CPURegs:$rd, CPURegs:$rd, 1), 0>;
 
 // 32-bit and 64-bit pseudos.
 // Expand to chains of 16-bit shifts and loops.
@@ -833,10 +833,10 @@ let Defs = [PSR] in {
 }
 
 //CDM8-like 1 operand aliases
-def : InstAlias<"neg\t$rd", (NEG CPURegs:$rd, CPURegs:$rd)>;
-def : InstAlias<"not\t$rd", (NOT CPURegs:$rd, CPURegs:$rd)>;
-def : InstAlias<"sxt\t$rd", (SXT CPURegs:$rd, CPURegs:$rd)>;
-def : InstAlias<"scl\t$rd", (SCL CPURegs:$rd, CPURegs:$rd)>;
+def : InstAlias<"neg\t$rd", (NEG CPURegs:$rd, CPURegs:$rd), 0>;
+def : InstAlias<"not\t$rd", (NOT CPURegs:$rd, CPURegs:$rd), 0>;
+def : InstAlias<"sxt\t$rd", (SXT CPURegs:$rd, CPURegs:$rd), 0>;
+def : InstAlias<"scl\t$rd", (SCL CPURegs:$rd, CPURegs:$rd), 0>;
 
 //===----------------------------------------------------------------------===//
 // alu3 format
