@@ -12,14 +12,14 @@ from producers.end_to_end.end_to_end_producer import EndToEndTestCaseProducer
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(__file__)
-  parser.add_argument('-c', '--clang', type=Path, help='path to clang executable', required=False)
-  parser.add_argument('-p', '--port', type=int, help='port for cocoemu-server binding', required=False, default=7001)
+  parser.add_argument('-c', '--clang', type=Path, help='path to clang executable, default: ../build/bin/clang', required=False, default=Path(__file__).parent.parent.parent / 'build' / 'bin' / 'clang')
+  parser.add_argument('-p', '--port', type=int, help='port for cocoemu-server binding, default: 7001', required=False, default=7001)
   parser.add_argument('-I', '--include', type=Path, action='append', dest='include_paths', help='add directory to headers search paths', default=[])
   parser.add_argument('-v', '--verbose', action='store_true')
-  parser.add_argument('tests_dir', type=Path, help='path to tests directory')
+  parser.add_argument('tests_to_run', type=Path, nargs='+', help='tests to run')
   args = parser.parse_args()
 
-  config = Configuration(args.port, args.verbose, args.tests_dir, Path(shutil.which(args.clang)).resolve().absolute(), args.include_paths, Path(Path(__file__).parent.parent / 'resources').resolve().absolute())
+  config = Configuration(args.port, args.verbose, args.tests_to_run, Path(shutil.which(args.clang)).resolve().absolute(), args.include_paths, Path(Path(__file__).parent.parent / 'resources').resolve().absolute())
 
   try:
     producers: dict[str, TestCaseProducer] = {'end_to_end' : EndToEndTestCaseProducer(config)}

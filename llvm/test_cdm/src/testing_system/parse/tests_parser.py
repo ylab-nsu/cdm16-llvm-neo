@@ -82,9 +82,9 @@ def parse_test(filepath: Path, producers: dict[str, TestCaseProducer]) -> list[T
 
   return parse_all_test_cases(filepath.stem, files, producers)
 
-def parse_all_tests(test_dir: Path, producers: dict[str, TestCaseProducer]) -> list[TestCase]:
+def parse_all_tests(tests_to_run: list[Path], producers: dict[str, TestCaseProducer]) -> list[TestCase]:
   tests: list[TestCase] = []
-  for test in filter((lambda f : f.is_file() or f.is_dir()), test_dir.iterdir()):
+  for test in filter((lambda f : f.is_file() or f.is_dir()), tests_to_run):
     tests.extend(parse_test(test, producers))
 
   return tests

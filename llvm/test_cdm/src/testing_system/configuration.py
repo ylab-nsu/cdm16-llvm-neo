@@ -5,7 +5,7 @@ from pathlib import Path
 class Configuration:
   cocoemu_port: int
   verbose: bool
-  test_dir: Path
+  tests_to_run: list[Path]
   clang_path: Path
   include_paths: list[Path]
   resources_path: Path

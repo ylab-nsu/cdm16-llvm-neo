@@ -29,7 +29,7 @@ def run_testing_system(config: Configuration, producers: dict[str, TestCaseProdu
       for _, producer in producers.items():
         producer.processor_info = connection.processor_info
 
-      test_cases = parse_all_tests(config.test_dir, producers)
+      test_cases = parse_all_tests(config.tests_to_run, producers)
       if (config.verbose):
         print("\033[32mFound tests:\033[0m")
         print('\n\n'.join(map(str, test_cases)), end = "\n\n")

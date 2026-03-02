@@ -7,7 +7,7 @@ COMMONS_DIR = commons
 MAIN_SCRIPT = $(SRC_DIR)/main.py
 
 test: $(VENV_DIR)
-	$(VENV_DIR)/bin/python3 $(MAIN_SCRIPT) -c $(CLANG) -I $(INCLUDE_DIR) --verbose $(TESTS_DIR)
+	$(VENV_DIR)/bin/python3 $(MAIN_SCRIPT) -I $(INCLUDE_DIR) --verbose $(TESTS_DIR)/*
 
 $(VENV_DIR):
 	python3 -m venv $@

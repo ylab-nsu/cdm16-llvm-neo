@@ -54,7 +54,7 @@ class CocasEndToEndTestCase(TestCase):
           ass.check(connection.get_processor_state())
 
       except (CompilationError, CocasError, AssertionError) as e:
-        print_error_big(f'Error in end-to-end test {self.name} with optimization level -O{opt_level}:\n{str(e)}', file = errors_stream)
+        print_error_big(f'Error in end-to-end test "{self.name}" for target "cdm-cocas" with optimization level -O{opt_level}:\n{str(e)}', file = errors_stream)
         yield False
       else:
         yield True
