@@ -14,7 +14,7 @@ define void @a$main$b() #0 {
     ret void
 }
 
-; CHECK-LABEL: ___2E___foo>
+; CHECK-LABEL: .foo>
 define void @".foo"() #0 {
     ret void
 }
@@ -24,17 +24,17 @@ define void @"a.foo"() #0 {
     ret void
 }
 
-; CHECK-LABEL: bar___2E___>
+; CHECK-LABEL: bar.>
 define void @"bar."() #0 {
     ret void
 }
 
-; CHECK-LABEL: ___30______2E___>
+; CHECK-LABEL: ___30___.>
 define void @"0."() #0 {
     ret void
 }
 
-; CHECK-LABEL: ___30___foo___2E___>
+; CHECK-LABEL: ___30___foo.>
 define void @"0foo."() #0 {
     ret void
 }
