@@ -39,9 +39,8 @@ static void printSymbolName(StringRef Name, raw_ostream &OS) {
   for (size_t I = 0; I < Name.size(); ++I) {
     char C = Name[I];
     bool IsFirst = I == 0;
-    bool IsLast = I == Name.size() - 1;
-    if (std::isalpha(C) || C == '_' || (std::isdigit(C) && !IsFirst) ||
-        (C == '.' && !IsFirst && !IsLast)) {
+    if (std::isalpha(C) || (std::isdigit(C) && !IsFirst) || C == '_' ||
+        C == '.') {
       OS << C;
     } else {
       OS << "___";
@@ -179,24 +178,10 @@ static void printQuotedString(StringRef Data, raw_ostream &OS,
   OS << '"';
 }
 
-static bool canPrintAsQuotedString(StringRef Data) {
-  for (char C : Data) {
-    // Cocas has UTF-8 strings so they cannot have arbitrary bytes
-    if ((unsigned)C > 127) {
-      return false;
-    }
-  }
-  return true;
-}
-
 void CDMAsmStreamer::emitBytes(StringRef Data) {
-  if (canPrintAsQuotedString(Data)) {
-    OS << "\tdb\t";
-    printQuotedString(Data, OS);
-    emitEOL();
-  } else {
-    emitBinaryData(Data);
-  }
+  OS << "\tdb\t";
+  printQuotedString(Data, OS);
+  emitEOL();
 }
 
 void CDMAsmStreamer::emitBinaryData(StringRef Data) {

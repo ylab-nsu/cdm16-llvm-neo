@@ -9,7 +9,7 @@ CDMMCAsmInfo::CDMMCAsmInfo(const Triple &TheTriple) {
   CodePointerSize = 2;
   MaxInstLength = 4;
   MinInstAlignment = 2;
-  PrivateGlobalPrefix = "__L";
-  PrivateLabelPrefix = "__L";
+  PrivateGlobalPrefix = ".L";
+  PrivateLabelPrefix = ".L";
 }
 } // namespace llvm
