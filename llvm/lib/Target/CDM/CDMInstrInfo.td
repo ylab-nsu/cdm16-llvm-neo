@@ -282,7 +282,7 @@ def cdmizeCondXform : SDNodeXForm<cond, [{
 
 // Invalid instruction
 // Encoded as 0x0000.
-def ZERO: Inst0Op<0b0000, (outs), (ins), "zero", []>;
+def ZERO: Inst0Op<0b0000, (outs), (ins), "zero", [(trap)]>;
 
 // Halt processor
 // Stops processor clock, changes processor status to HALTED.

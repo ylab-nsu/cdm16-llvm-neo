@@ -63,6 +63,9 @@ CDMISelLowering::CDMISelLowering(const CDMTargetMachine &TM,
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
   }
 
+  // llvm.trap is lowered to ZERO
+  setOperationAction(ISD::TRAP, MVT::Other, Legal);
+
   // Conditional operations are expanded to BR_CC
   setOperationAction(ISD::SELECT, MVT::i16, Expand);
   setOperationAction(ISD::BRCOND, MVT::Other, Expand);
