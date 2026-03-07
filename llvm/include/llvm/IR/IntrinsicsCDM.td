@@ -2,12 +2,12 @@ let TargetPrefix = "cdm" in {
   // Enable interrupts
   def int_cdm_ei : DefaultAttrsIntrinsic<[], [],
                        [IntrNoMem, IntrHasSideEffects, IntrWillReturn]>,
-                   ClangBuiltin<"__builtin_cdm_int_enable">;
+                   ClangBuiltin<"__builtin_cdm_ei">;
 
   // Disable interrupts
   def int_cdm_di : DefaultAttrsIntrinsic<[], [],
                        [IntrNoMem, IntrHasSideEffects, IntrWillReturn]>,
-                   ClangBuiltin<"__builtin_cdm_int_disable">;
+                   ClangBuiltin<"__builtin_cdm_di">;
 
   // Halt processor
   def int_cdm_halt : DefaultAttrsIntrinsic<[], [],
@@ -22,7 +22,7 @@ let TargetPrefix = "cdm" in {
   // Trigger software interrupt
   def int_cdm_int : DefaultAttrsIntrinsic<[], [llvm_i16_ty],
                         [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]>,
-                    ClangBuiltin<"__builtin_cdm_interrupt">;
+                    ClangBuiltin<"__builtin_cdm_int">;
 
   // Reset to interrupt vector
   def int_cdm_reset : DefaultAttrsIntrinsic<[], [llvm_i16_ty],
@@ -32,10 +32,10 @@ let TargetPrefix = "cdm" in {
   // Get PSR value
   def int_cdm_ldps : DefaultAttrsIntrinsic<[llvm_i16_ty], [],
                        [IntrNoMem, IntrHasSideEffects, IntrWillReturn]>,
-                     ClangBuiltin<"__builtin_cdm_get_ps">;
+                     ClangBuiltin<"__builtin_cdm_ldps">;
 
   // Set PSR value
   def int_cdm_stps : DefaultAttrsIntrinsic<[], [llvm_i16_ty],
                        [IntrNoMem, IntrHasSideEffects, IntrWillReturn]>,
-                     ClangBuiltin<"__builtin_cdm_set_ps">;
+                     ClangBuiltin<"__builtin_cdm_stps">;
 }

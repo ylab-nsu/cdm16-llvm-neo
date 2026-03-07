@@ -7,12 +7,12 @@ class CDMBuiltin<string prototype, string features = ""> : TargetBuiltin {
 }
 
 let Attributes = [NoThrow] in {
-  def int_enable : CDMBuiltin<"void()">;
-  def int_disable : CDMBuiltin<"void()">;
-  def get_ps : CDMBuiltin<"unsigned int()">;
-  def set_ps : CDMBuiltin<"void(unsigned int)">;
+  def ei : CDMBuiltin<"void()">;
+  def di : CDMBuiltin<"void()">;
+  def ldps : CDMBuiltin<"unsigned int()">;
+  def stps : CDMBuiltin<"void(unsigned int)">;
   def wait : CDMBuiltin<"void()">;
-  def interrupt : CDMBuiltin<"void(unsigned int)">;
+  def "int" : CDMBuiltin<"void(unsigned int)">;
 }
 
 let Attributes = [NoThrow, NoReturn] in {

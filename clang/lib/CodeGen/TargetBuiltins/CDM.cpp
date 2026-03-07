@@ -11,11 +11,11 @@ Value *CodeGenFunction::EmitCDMBuiltinExpr(unsigned BuiltinID,
   switch (BuiltinID) {
   default:
     llvm_unreachable("Unexpected CDM builtin");
-  case CDM::BI__builtin_cdm_int_enable: {
+  case CDM::BI__builtin_cdm_ei: {
     Function *Callee = CGM.getIntrinsic(Intrinsic::cdm_ei);
     return Builder.CreateCall(Callee);
   }
-  case CDM::BI__builtin_cdm_int_disable: {
+  case CDM::BI__builtin_cdm_di: {
     Function *Callee = CGM.getIntrinsic(Intrinsic::cdm_di);
     return Builder.CreateCall(Callee);
   }
@@ -27,17 +27,17 @@ Value *CodeGenFunction::EmitCDMBuiltinExpr(unsigned BuiltinID,
     Function *Callee = CGM.getIntrinsic(Intrinsic::cdm_wait);
     return Builder.CreateCall(Callee);
   }
-  case CDM::BI__builtin_cdm_get_ps: {
+  case CDM::BI__builtin_cdm_ldps: {
     llvm::Type *ResultType = ConvertType(E->getType());
     Function *Callee = CGM.getIntrinsic(Intrinsic::cdm_ldps, ResultType);
     return Builder.CreateCall(Callee);
   }
-  case CDM::BI__builtin_cdm_set_ps: {
+  case CDM::BI__builtin_cdm_stps: {
     Value *PsValue = {EmitScalarExpr(E->getArg(0))};
     Function *Callee = CGM.getIntrinsic(Intrinsic::cdm_stps);
     return Builder.CreateCall(Callee, {PsValue});
   }
-  case CDM::BI__builtin_cdm_interrupt: {
+  case CDM::BI__builtin_cdm_int: {
     Value *Vector = {EmitScalarExpr(E->getArg(0))};
     Function *Callee = CGM.getIntrinsic(Intrinsic::cdm_int);
     return Builder.CreateCall(Callee, {Vector});
