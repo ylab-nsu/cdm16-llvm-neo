@@ -16,6 +16,8 @@ class DriverOnlyTestCase(TestCase):
 
   def run(self, connection: CocoemuConnection, errors_stream: TextIOBase) -> bool:
     for file in filter(lambda f: f.suffix == '.c', self.files):
+      ret = False
+
       obj_from_clang: Path | None = None
       asm: Path | None = None
       obj_from_cocas: Path | None = None
@@ -30,9 +32,8 @@ class DriverOnlyTestCase(TestCase):
         if not compare_objs(obj_from_cocas, obj_from_clang):
           from_cocas, from_clang = get_objs_diff(obj_from_cocas, obj_from_clang)
           print_error_big(f'Error in {self.name}:\nClang driver and clang+cocas generated different output\nCocas:\n{from_cocas}\nClang:\n{from_clang}', file = errors_stream)
-          yield False
         else:
-          yield True
+          ret = True
       finally:
         if not obj_from_clang is None:
           os.remove(str(obj_from_clang))
@@ -40,6 +41,8 @@ class DriverOnlyTestCase(TestCase):
           os.remove(str(asm))
         if not obj_from_cocas is None:
           os.remove(str(obj_from_cocas))
+
+      return ret
 
   def __str__(self) -> str:
     files_string = '\n\t\t'.join(map(str, self.files))

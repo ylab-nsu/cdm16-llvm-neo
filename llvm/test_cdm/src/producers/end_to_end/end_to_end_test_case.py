@@ -32,9 +32,9 @@ class CocasEndToEndTestCase(TestCase):
   opt_level: str
 
   def run(self, connection: CocoemuConnection, errors_stream: TextIOBase) -> bool:
-    base_cocas_input = list(filter(lambda f : not f.suffix == '.c', self.files))
-    c_files = list(filter(lambda f : f.suffix == '.c', self.files))
     absolute_sections_file = None
+
+    ret = False
 
     absolute_sections = cast(list[AbsoluteSectionAssertion], list(filter(lambda a : isinstance(a, AbsoluteSectionAssertion), self.assertions)))
     section_addresses = None
@@ -45,27 +45,26 @@ class CocasEndToEndTestCase(TestCase):
     binary = None
     compiled = None
     try:
-      compiled = list(map(lambda f : clang_compile(f, self.clang_path, self.include_paths, self.opt_level), c_files))
+      binary = clang_compile_assemble_link(self.files, "cdm-cocas", self.clang_path, self.include_paths, self.opt_level)
 
-      binary = cocas_assemble_and_link(base_cocas_input + compiled)
       connection.run_binary(binary)
       for ass in self.assertions:
         ass.check(connection.get_processor_state())
 
     except (CompilationError, CocasError, AssertionError) as e:
       print_error_big(f'Error in {self.name}:\n{str(e)}', file = errors_stream)
-      yield False
     else:
-      yield True
+      ret = True
     finally:
       if not binary is None:
         os.remove(str(binary))
       if not compiled is None:
         for file in compiled:
           os.remove(str(file))
+      if not absolute_sections_file is None:
+        os.remove(str(absolute_sections_file))
 
-    if not absolute_sections_file is None:
-      os.remove(str(absolute_sections_file))
+    return ret
 
   def __str__(self) -> str:
     files_string = '\n\t\t'.join(map(str, self.files))
