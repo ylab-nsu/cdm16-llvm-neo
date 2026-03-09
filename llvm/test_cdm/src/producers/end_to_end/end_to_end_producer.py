@@ -35,7 +35,7 @@ class EndToEndTestCaseProducer(TestCaseProducer):
   def produce(self, name: str, files: list[Path], args: list[str], directives: list[Directive]) -> list[TestCase]:
     ret: list[TestCase] = []
     if 'cocas' in args:
-      ret.append(CocasEndToEndTestCase(name, files + self.common, list(map(lambda d: parse_directive(d, self.processor_info), directives)), self.config.clang_path, self.config.include_paths))
+      ret.extend([CocasEndToEndTestCase(f'Cocas end-to-end "{name}" with optimization level -O{opt_level}', files + self.common, list(map(lambda d: parse_directive(d, self.processor_info), directives)), self.config.clang_path, self.config.include_paths, opt_level) for opt_level in ['0', '1', '2', '3', 's']])
     if 'elf' in args:
       pass
 
