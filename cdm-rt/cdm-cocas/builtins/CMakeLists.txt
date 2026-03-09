@@ -1,19 +1,32 @@
 set(BUILDIN_SOURCES 
-  ${CMAKE_CURRENT_SOURCE_DIR}/mulhi3.asm
-  ${CMAKE_CURRENT_SOURCE_DIR}/mulsi3.asm
-  ${CMAKE_CURRENT_SOURCE_DIR}/muldi3.asm
-  ${CMAKE_CURRENT_SOURCE_DIR}/divhi3.asm
-  ${CMAKE_CURRENT_SOURCE_DIR}/divsi3.asm
-  ${CMAKE_CURRENT_SOURCE_DIR}/divdi3.asm
-  ${CMAKE_CURRENT_SOURCE_DIR}/udivhi3.asm
-  ${CMAKE_CURRENT_SOURCE_DIR}/udivsi3.asm
-  ${CMAKE_CURRENT_SOURCE_DIR}/udivdi3.asm
-  ${CMAKE_CURRENT_SOURCE_DIR}/modhi3.asm
-  ${CMAKE_CURRENT_SOURCE_DIR}/modsi3.asm
-  ${CMAKE_CURRENT_SOURCE_DIR}/moddi3.asm
-  ${CMAKE_CURRENT_SOURCE_DIR}/umodhi3.asm
-  ${CMAKE_CURRENT_SOURCE_DIR}/umodsi3.asm
-  ${CMAKE_CURRENT_SOURCE_DIR}/umoddi3.asm
+  ${CMAKE_CURRENT_SOURCE_DIR}/mulhi3.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/mulsi3.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/muldi3.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/mulosi4.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/divhi3.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/divsi3.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/divdi3.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/udivhi3.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/udivsi3.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/udivdi3.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/modhi3.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/modsi3.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/moddi3.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/umodhi3.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/umodsi3.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/umoddi3.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_add_2.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_and_2.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_nand_2.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_or_2.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_sub_2.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_xor_2.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_max_2.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_min_2.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_umax_2.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_umin_2.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/sync_lock_test_and_set_2.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/sync_val_compare_and_swap_2.S
   ${CMAKE_CURRENT_SOURCE_DIR}/cdm_asm.inc
 )
 
