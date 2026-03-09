@@ -7,4 +7,4 @@ from .driver_only_test_case import DriverOnlyTestCase
 
 class DriverOnlyTestCaseProducer(TestCaseProducer):
   def produce(self, name: str, files: list[Path], args: list[str], directives: list[Directive]) -> list[TestCase]:
-    return [DriverOnlyTestCase(name, files, self.config.clang_path, self.config.include_paths)]
+    return [DriverOnlyTestCase(f'Clang driver "{name}" with optimization level -O{opt_level}', files, self.config.clang_path, self.config.include_paths, opt_level) for opt_level in ['0', '1', '2', '3', 's']]
