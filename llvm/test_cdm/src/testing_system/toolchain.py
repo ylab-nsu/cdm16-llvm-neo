@@ -17,6 +17,27 @@ class CocasError(Exception):
   def __str__(self) -> str:
     return self.message
 
+def clang_compile_assemble_link(files: list[Path], target: str, clang_path: Path, include_paths: list[Path], opt_level: str) -> Path:
+  output_file = tempfile.NamedTemporaryFile(suffix = '.img', delete=False)
+  output_path = Path(output_file.name)
+  output_file.close()
+
+  clang_args = [str(clang_path), '-target', target, f'-O{opt_level}', '-o', str(output_path)]
+  for i in include_paths:
+      clang_args.append('-I')
+      clang_args.append(str(i))
+  for i in files:
+      clang_args.append(str(i))
+
+  #print(' '.join(clang_args), end = "\n\n")
+  clang_proc = subprocess.run(clang_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+  if not clang_proc.returncode == 0:
+    if os.path.exists(str(output_path)):
+      os.remove(str(output_path))
+    raise CompilationError(f"Failed when tried to compile files with return code {clang_proc.returncode}\nStdout:\n{clang_proc.stdout.decode()}\nStderr:\n{clang_proc.stderr.decode()}")
+  return output_path
+
 def clang_compile(filepath: Path, clang_path: Path, include_paths: list[Path], opt_level: str) -> Path:
   output_file = tempfile.NamedTemporaryFile(suffix = '.asm', delete=False)
   output_path = Path(output_file.name)
