@@ -1,4 +1,4 @@
-// RUN: clang -target cdm-cocas -O1 -S -o /dev/stdout %s | FileCheck %s
+// RUN: clang -target cdm-cocas -O1 -S -o - %s | FileCheck %s
 
 // CDM-specific clang builtins mapped to LLVM intrinsics and then instructions
 

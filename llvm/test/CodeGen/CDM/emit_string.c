@@ -1,4 +1,4 @@
-// RUN: clang -target cdm-cocas -O0 -S -o /dev/stdout %s | FileCheck %s
+// RUN: clang -target cdm-cocas -O0 -S -o - %s | FileCheck %s
 
 // Test emission of strings in assembly
 

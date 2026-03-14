@@ -1,4 +1,4 @@
-// RUN: clang -target cdm-cocas -O1 -S -o /dev/stdout %s | FileCheck %s
+// RUN: clang -target cdm-cocas -O1 -S -o - %s | FileCheck %s
 
 // Test for storing chars on stack.
 // Regression test for paddings in char arrays
