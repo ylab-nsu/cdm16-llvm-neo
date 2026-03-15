@@ -4,7 +4,7 @@
   #define EXTERN(name)      name: ext
   #define END               end.
 #else
-  #define RSECT(name)  
+  #define RSECT(name)       .section .text.name
   #define GLOBAL(name)      name: .global name
   #define EXTERN(name)
   #define END
