@@ -27,6 +27,8 @@ set(BUILDIN_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_umin_2.S
   ${CMAKE_CURRENT_SOURCE_DIR}/sync_lock_test_and_set_2.S
   ${CMAKE_CURRENT_SOURCE_DIR}/sync_val_compare_and_swap_2.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/atomic_load.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/atomic_store.S
   ${CMAKE_CURRENT_SOURCE_DIR}/cdm_asm.inc
 )
 
