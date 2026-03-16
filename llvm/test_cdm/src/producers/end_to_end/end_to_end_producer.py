@@ -4,8 +4,8 @@ from testing_system.parse.directive import Directive
 from testing_system.test_case import TestCase
 from testing_system.configuration import Configuration
 from testing_system.processor import ProcessorInfo
-from testing_system.toolchain import clang_compile_and_assemble, CompilationError
-from .end_to_end_test_case import CocasEndToEndTestCase
+from testing_system.toolchain import clang_compile_and_assemble, CompilationError, Target
+from .end_to_end_test_case import EndToEndTestCase
 from .parsing import parse_directive
 
 class EndToEndTestCaseProducer(TestCaseProducer):
@@ -27,7 +27,7 @@ class EndToEndTestCaseProducer(TestCaseProducer):
       for file in filter(Path.is_file, resources.iterdir()):
         output_path = (build / file.name).with_suffix('.obj')
         if (not output_path.exists()) or (file.stat().st_mtime > output_path.stat().st_mtime):
-          output_path = clang_compile_and_assemble(file, self.config.clang_path, self.config.include_paths, '3', output_path)
+          output_path = clang_compile_and_assemble(file, Target.CDM_COCAS, self.config, '3', output_path)
         self.common.append(output_path)
     except CompilationError as e:
       raise TestProducingError(str(e))
@@ -35,7 +35,12 @@ class EndToEndTestCaseProducer(TestCaseProducer):
   def produce(self, name: str, files: list[Path], args: list[str], directives: list[Directive]) -> list[TestCase]:
     ret: list[TestCase] = []
     if 'cocas' in args:
-      ret.extend([CocasEndToEndTestCase(f'Cocas end-to-end "{name}" with optimization level -O{opt_level}', files + self.common, list(map(lambda d: parse_directive(d, self.processor_info), directives)), self.config.clang_path, self.config.include_paths, opt_level) for opt_level in ['0', '1', '2', '3', 's']])
+      for opt_level in ['0', '1', '2', '3', 's']:
+        ret.append(EndToEndTestCase(f'Cocas end-to-end "{name}" with optimization level -O{opt_level}',
+                                    files + self.common,
+                                    list(map(lambda d: parse_directive(d, self.processor_info), directives)),
+                                    opt_level,
+                                    Target.CDM_COCAS))
     if 'elf' in args:
       pass
 
