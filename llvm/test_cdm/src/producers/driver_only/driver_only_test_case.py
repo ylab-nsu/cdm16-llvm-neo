@@ -6,34 +6,33 @@ from testing_system.cocoemu import CocoemuConnection
 from testing_system.toolchain import *
 from testing_system.test_case import TestCase
 from testing_system.util.errors_printing import print_error_big
+from testing_system.configuration import Configuration
 from .objs_comparing import get_objs_diff, compare_objs
 
 @dataclass
 class DriverOnlyTestCase(TestCase):
-  clang_path: Path
-  include_paths: list[Path]
   opt_level: str
 
-  def run(self, connection: CocoemuConnection, errors_stream: TextIOBase) -> bool:
+  def run(self, connection: CocoemuConnection, config: Configuration, errors_stream: TextIOBase) -> bool:
+    ret = True
     for file in filter(lambda f: f.suffix == '.c', self.files):
-      ret = False
-
       obj_from_clang: Path | None = None
       asm: Path | None = None
       obj_from_cocas: Path | None = None
       try:
-        obj_from_clang = clang_compile_and_assemble(file, self.clang_path, self.include_paths, self.opt_level)
-        asm = clang_compile(file, self.clang_path, self.include_paths, self.opt_level)
-        obj_from_cocas = cocas_assemble(asm)
+        obj_from_clang = clang_compile_and_assemble(file, Target.CDM_COCAS, config, self.opt_level)
+        asm = clang_compile(file, Target.CDM_COCAS, config, self.opt_level)
+        obj_from_cocas = cocas_assemble(asm, config)
       except (CompilationError, CocasError) as e:
         print_error_big(f'Error in {self.name}:\n{str(e)}', file = errors_stream)
-        yield False
+        ret = False
+        break
       else:
         if not compare_objs(obj_from_cocas, obj_from_clang):
           from_cocas, from_clang = get_objs_diff(obj_from_cocas, obj_from_clang)
           print_error_big(f'Error in {self.name}:\nClang driver and clang+cocas generated different output\nCocas:\n{from_cocas}\nClang:\n{from_clang}', file = errors_stream)
-        else:
-          ret = True
+          ret = False
+          break
       finally:
         if not obj_from_clang is None:
           os.remove(str(obj_from_clang))
@@ -42,7 +41,7 @@ class DriverOnlyTestCase(TestCase):
         if not obj_from_cocas is None:
           os.remove(str(obj_from_cocas))
 
-      return ret
+    return ret
 
   def __str__(self) -> str:
     files_string = '\n\t\t'.join(map(str, self.files))

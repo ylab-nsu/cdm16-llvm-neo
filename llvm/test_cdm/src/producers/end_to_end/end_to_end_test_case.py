@@ -13,7 +13,7 @@ from .assertions import Assertion, AbsoluteSectionAssertion
 
 _START_OF_ABSOLUTE_SECTIONS = 0x80
 
-def place_all_absolute_sections(absolute_sections: list[AbsoluteSectionAssertion]) -> Path:
+def place_all_absolute_sections(absolute_sections: list[AbsoluteSectionAssertion], target: Target) -> Path:
   next_address = _START_OF_ABSOLUTE_SECTIONS
 
   with tempfile.NamedTemporaryFile(suffix = '.asm', delete=False, mode='wt') as temp:
@@ -25,27 +25,24 @@ def place_all_absolute_sections(absolute_sections: list[AbsoluteSectionAssertion
     return Path(temp.name)
 
 @dataclass
-class CocasEndToEndTestCase(TestCase):
+class EndToEndTestCase(TestCase):
   assertions: list[Assertion]
-  clang_path: Path
-  include_paths: list[Path]
   opt_level: str
+  target: Target
 
-  def run(self, connection: CocoemuConnection, errors_stream: TextIOBase) -> bool:
-    absolute_sections_file = None
-
+  def run(self, connection: CocoemuConnection, config: Configuration, errors_stream: TextIOBase) -> bool:
     ret = False
 
     absolute_sections = cast(list[AbsoluteSectionAssertion], list(filter(lambda a : isinstance(a, AbsoluteSectionAssertion), self.assertions)))
-    section_addresses = None
+
+    absolute_sections_file = None
     if absolute_sections:
-      absolute_sections_file = place_all_absolute_sections(absolute_sections)
-      base_cocas_input.append(absolute_sections_file)
+      absolute_sections_file = place_all_absolute_sections(absolute_sections, self.target)
+      self.files += [absolute_sections_file]
 
     binary = None
-    compiled = None
     try:
-      binary = clang_compile_assemble_link(self.files, "cdm-cocas", self.clang_path, self.include_paths, self.opt_level)
+      binary = clang_compile_assemble_link(self.files, self.target, config, self.opt_level)
 
       connection.run_binary(binary)
       for ass in self.assertions:
@@ -58,9 +55,6 @@ class CocasEndToEndTestCase(TestCase):
     finally:
       if not binary is None:
         os.remove(str(binary))
-      if not compiled is None:
-        for file in compiled:
-          os.remove(str(file))
       if not absolute_sections_file is None:
         os.remove(str(absolute_sections_file))
 

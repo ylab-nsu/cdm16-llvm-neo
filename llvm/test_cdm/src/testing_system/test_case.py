@@ -13,5 +13,5 @@ class TestCase(ABC):
  files: list[Path]
 
  @abstractmethod
- def run(self, connection: CocoemuConnection, errors_stream: TextIOBase) -> bool:
+ def run(self, connection: CocoemuConnection, config: Configuration, errors_stream: TextIOBase) -> bool:
    pass
