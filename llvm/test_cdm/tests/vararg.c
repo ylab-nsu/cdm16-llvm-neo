@@ -1,4 +1,4 @@
-// CHECK prod(end_to_end cocas)
+// CHECK prod(end_to_end cocas elf)
 // CHECK reg(r0) 36
 // CHECK prod(driver_only)
 

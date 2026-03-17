@@ -1,4 +1,4 @@
-// CHECK prod(end_to_end cocas)
+// CHECK prod(end_to_end cocas elf)
 // CHECK reg(r0) 61270
 // CHECK reg(r1) 1525
 // CHECK reg(r2) 2006

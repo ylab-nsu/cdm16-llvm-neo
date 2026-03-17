@@ -1,4 +1,4 @@
-// CHECK prod(end_to_end cocas)
+// CHECK prod(end_to_end cocas elf)
 // CHECK reg(r0) 1024
 
 __attribute__((noinline)) int shl16_bigconst(int value) {
