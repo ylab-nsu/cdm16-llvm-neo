@@ -1,6 +1,6 @@
 #include "cdm_asm.inc"
 
-RSECT(__mulsi3)
+RSECT(.text.__mulsi3)
 
 GLOBAL(__mulsi3)
 

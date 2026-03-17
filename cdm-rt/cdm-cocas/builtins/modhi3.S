@@ -1,6 +1,6 @@
 #include "cdm_asm.inc"
 
-RSECT(__modhi3)
+RSECT(.text.__modhi3)
 
 EXTERN(__umodhi3)
 
