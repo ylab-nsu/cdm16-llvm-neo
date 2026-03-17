@@ -1,4 +1,5 @@
 import re
+import itertools
 from pathlib import Path
 from dataclasses import dataclass
 from collections.abc import Generator
@@ -56,7 +57,7 @@ def parse_all_test_cases(base_name: str, files: list[Path], producers: dict[str,
             curr_producer_args = directive.head[1:]
             directives = []
           except KeyError:
-            raise TestParsingError(f'{directive.line} Unknown tests producer: {curr_producer}')
+            raise TestParsingError(f'{directive.line} Unknown tests producer: {directive.head[0]}')
         else:
           directives.append(directive)
 
@@ -75,16 +76,17 @@ def parse_test(filepath: Path, producers: dict[str, TestCaseProducer]) -> list[T
   if filepath.is_file():
     files.append(filepath.absolute())
   elif filepath.is_dir():
-    for file in filter(Path.is_file, filepath.iterdir()):
+    for file in filter(lambda p: p.is_file() and not p.name == ".test_dummy", filepath.iterdir()):
       files.append(file.absolute())
   else:
     raise ValueError("Expected path to regular file or directory")
 
   return parse_all_test_cases(filepath.stem, files, producers)
 
-def parse_all_tests(tests_to_run: list[Path], producers: dict[str, TestCaseProducer]) -> list[TestCase]:
-  tests: list[TestCase] = []
-  for test in filter((lambda f : f.is_file() or f.is_dir()), tests_to_run):
-    tests.extend(parse_test(test, producers))
-
-  return tests
+def collect_tests(search_point: Path, producers: dict[str, TestCaseProducer]) -> list[TestCase]:
+  if search_point.is_file() or (search_point.is_dir() and (search_point / ".test_dummy").exists()):
+    return parse_test(search_point, producers)
+  elif search_point.is_dir():
+    return list(itertools.chain.from_iterable(map(lambda p: collect_tests(p, producers), search_point.iterdir())))
+  else:
+    return []

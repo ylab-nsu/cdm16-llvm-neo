@@ -18,7 +18,7 @@ if __name__ == "__main__":
   parser.add_argument('-p', '--port', type=int, help='port for cocoemu-server binding, default: 7001', required=False, default=7001)
   parser.add_argument('-I', '--include', type=Path, action='append', dest='include_paths', help='add directory to headers search paths', default=[])
   parser.add_argument('-v', '--verbose', action='store_true')
-  parser.add_argument('tests_to_run', type=Path, nargs='+', help='tests to run')
+  parser.add_argument('searching_points', type=Path, nargs='+', help='directories/files from which to search for tests recursevely')
   args = parser.parse_args()
 
   log = not sys.stdout.isatty()
@@ -34,7 +34,7 @@ if __name__ == "__main__":
                          args.port,
                          args.verbose,
                          log,
-                         args.tests_to_run,
+                         args.searching_points,
                          (args.llvm_tools_dir / 'clang').resolve().absolute(),
                          (args.llvm_tools_dir / 'llvm-objcopy').resolve().absolute(),
                          Path(shutil.which(args.cocas)).resolve().absolute(),
