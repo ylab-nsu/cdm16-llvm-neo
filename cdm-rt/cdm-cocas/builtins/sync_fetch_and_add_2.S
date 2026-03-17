@@ -1,6 +1,6 @@
 #include "cdm_asm.inc"
 
-RSECT(__sync_fetch_and_add_2)
+RSECT(.text.__sync_fetch_and_add_2)
 
 GLOBAL(__sync_fetch_and_add_2) 
     push r4

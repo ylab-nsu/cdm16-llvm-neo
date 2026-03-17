@@ -1,6 +1,6 @@
 #include "cdm_asm.inc"
 
-RSECT(__sync_val_compare_and_swap_2)
+RSECT(.text.__sync_val_compare_and_swap_2)
 
 GLOBAL(__sync_val_compare_and_swap_2)
 
