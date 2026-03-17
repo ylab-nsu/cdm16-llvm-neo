@@ -4,6 +4,7 @@ from typing import cast
 from io import TextIOBase
 from dataclasses import dataclass
 from pathlib import Path
+from testing_system.configuration import Configuration
 from testing_system.test_case import TestCase
 from testing_system.parse.directive import Directive
 from testing_system.toolchain import *

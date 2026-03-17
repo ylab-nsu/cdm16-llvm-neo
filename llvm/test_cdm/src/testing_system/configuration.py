@@ -6,7 +6,7 @@ class Configuration:
   cocoemu_port: int
   verbose: bool
   log: bool
-  tests_to_run: list[Path]
+  search_points: list[Path]
   clang_path: Path
   llvm_objcopy_path: Path
   cocas_path: Path
