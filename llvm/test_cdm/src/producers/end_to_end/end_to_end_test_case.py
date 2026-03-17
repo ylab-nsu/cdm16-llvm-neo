@@ -22,12 +22,12 @@ def place_all_absolute_sections(absolute_sections: list[AbsoluteSectionAssertion
     sec.address = next_address
     next_address += len(sec.content)
 
-def generate_absolute_sections_file(absolute_sections: list[AbsoluteSectionAssertion]) -> Path:
+def generate_absolute_sections_file(absolute_sections: list[AbsoluteSectionAssertion]) -> Path | None:
   if not absolute_sections:
     return None
   with tempfile.NamedTemporaryFile(suffix = '.asm', delete=False, mode='wt') as temp:
     for sec in absolute_sections:
-      temp.write(f"asect {next_address}\n{sec.symbol}> ds {len(sec.content)}\n")
+      temp.write(f"asect {sec.address}\n{sec.symbol}> ds {len(sec.content)}\n")
     temp.write('end.\n')
     return Path(temp.name)
 
@@ -39,14 +39,14 @@ def generate_linker_script(absolute_sections: list[AbsoluteSectionAssertion]) ->
                    .isr_vector : {
                        *(.isr_vector)
                    }
-                   . = 0x80;
+
                """)
     for sec in absolute_sections:
       temp.write(f"""
-                  .{sec.symbol}_{next_address} {{
+                  . = {sec.address};
+                  .{sec.symbol}_{sec.address} : {{
                       {sec.symbol} = .;
                   }}
-                  . = . + {len(sec.content)};
 
                   """)
 
