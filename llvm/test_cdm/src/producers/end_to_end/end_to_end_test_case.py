@@ -13,16 +13,63 @@ from .assertions import Assertion, AbsoluteSectionAssertion
 
 _START_OF_ABSOLUTE_SECTIONS = 0x80
 
-def place_all_absolute_sections(absolute_sections: list[AbsoluteSectionAssertion], target: Target) -> Path:
+# Returns assembly file for cocas target
+# And linker script for cocas-less target
+def place_all_absolute_sections(absolute_sections: list[AbsoluteSectionAssertion]) -> None:
   next_address = _START_OF_ABSOLUTE_SECTIONS
 
+  for sec in absolute_sections:
+    sec.address = next_address
+    next_address += len(sec.content)
+
+def generate_absolute_sections_file(absolute_sections: list[AbsoluteSectionAssertion]) -> Path:
+  if not absolute_sections:
+    return None
   with tempfile.NamedTemporaryFile(suffix = '.asm', delete=False, mode='wt') as temp:
     for sec in absolute_sections:
-      sec.address = next_address
       temp.write(f"asect {next_address}\n{sec.symbol}> ds {len(sec.content)}\n")
-      next_address += len(sec.content)
     temp.write('end.\n')
     return Path(temp.name)
+
+def generate_linker_script(absolute_sections: list[AbsoluteSectionAssertion]) -> Path:
+  with tempfile.NamedTemporaryFile(suffix = '.ld', delete=False, mode='wt') as temp:
+    temp.write("""
+               SECTIONS
+               {
+                   .isr_vector : {
+                       *(.isr_vector)
+                   }
+                   . = 0x80;
+               """)
+    for sec in absolute_sections:
+      temp.write(f"""
+                  .{sec.symbol}_{next_address} {{
+                      {sec.symbol} = .;
+                  }}
+                  . = . + {len(sec.content)};
+
+                  """)
+
+    temp.write("""
+               .text : ALIGN(2) {
+                 *(.text*)
+                 *(.rodata*)
+               }
+
+               .data : ALIGN(2){
+                 *(.data*)
+               }
+
+               .bss : ALIGN(2){
+                 *(.bss*)
+                 *(COMMON)
+               }
+
+               }
+               """)
+
+    return Path(temp.name)
+
 
 @dataclass
 class EndToEndTestCase(TestCase):
@@ -34,15 +81,23 @@ class EndToEndTestCase(TestCase):
     ret = False
 
     absolute_sections = cast(list[AbsoluteSectionAssertion], list(filter(lambda a : isinstance(a, AbsoluteSectionAssertion), self.assertions)))
+    place_all_absolute_sections(absolute_sections)
 
     absolute_sections_file = None
-    if absolute_sections:
-      absolute_sections_file = place_all_absolute_sections(absolute_sections, self.target)
-      self.files += [absolute_sections_file]
+    linker_script = None
+    if self.target == Target.CDM_COCAS:
+      absolute_sections_file = generate_absolute_sections_file(absolute_sections)
+      if not absolute_sections_file is None:
+        self.files += [absolute_sections_file]
+    elif self.target == Target.CDM_ELF:
+      linker_script = generate_linker_script(absolute_sections)
 
     binary = None
     try:
-      binary = clang_compile_assemble_link(self.files, self.target, config, self.opt_level)
+      if self.target == Target.CDM_COCAS:
+        binary = clang_compile_assemble_link(self.files, self.target, config, self.opt_level)
+      elif self.target == Target.CDM_ELF:
+        binary = clang_compile_assemble_link(self.files, self.target, config, self.opt_level, None, linker_script)
 
       connection.run_binary(binary)
       for ass in self.assertions:
