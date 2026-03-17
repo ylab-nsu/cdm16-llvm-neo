@@ -8,6 +8,7 @@ class Configuration:
   log: bool
   tests_to_run: list[Path]
   clang_path: Path
+  llvm_objcopy_path: Path
   cocas_path: Path
   include_paths: list[Path]
   resources_path: Path
