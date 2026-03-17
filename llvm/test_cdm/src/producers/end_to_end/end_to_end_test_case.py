@@ -112,6 +112,8 @@ class EndToEndTestCase(TestCase):
         os.remove(str(binary))
       if not absolute_sections_file is None:
         os.remove(str(absolute_sections_file))
+      if not linker_script is None:
+        os.remove(str(linker_script))
 
     return ret
 
