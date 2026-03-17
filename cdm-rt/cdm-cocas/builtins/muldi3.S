@@ -1,15 +1,15 @@
 #include "cdm_asm.inc"
 
-RSECT(__muldi3)
+RSECT(.text.__muldi3)
 
 GLOBAL(__muldi3)
 
     push fp
     ldsp fp
-    push r4
-    push r5
-    push r6
-    addsp -16
+    addsp -22
+    ssw r4, -2
+    ssw r5, -4
+    ssw r6, -6
 
     ssw r0, -8
     ssw r1, -10
@@ -78,10 +78,9 @@ __muldi3_no_add:
     br __muldi3_loop
 
 __muldi3_done:
-    addsp 16
-    pop r6
-    pop r5
-    pop r4
+    lsw r4, -2
+    lsw r5, -4
+    lsw r6, -6
     stsp fp
     pop fp
     rts

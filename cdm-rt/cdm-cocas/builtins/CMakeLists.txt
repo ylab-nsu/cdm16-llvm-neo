@@ -15,6 +15,7 @@ set(BUILDIN_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/umodhi3.S
   ${CMAKE_CURRENT_SOURCE_DIR}/umodsi3.S
   ${CMAKE_CURRENT_SOURCE_DIR}/umoddi3.S
+  ${CMAKE_CURRENT_SOURCE_DIR}/udivmoddi4.S
   ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_add_2.S
   ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_and_2.S
   ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_nand_2.S

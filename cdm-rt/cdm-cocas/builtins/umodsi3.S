@@ -1,6 +1,6 @@
 #include "cdm_asm.inc"
 
-RSECT(__umodsi3)
+RSECT(.text.__umodsi3)
 
 GLOBAL(__umodsi3)
 

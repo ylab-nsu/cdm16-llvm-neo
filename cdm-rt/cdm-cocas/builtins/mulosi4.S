@@ -1,15 +1,15 @@
 #include "cdm_asm.inc"
 
-RSECT(__mulosi4)
+RSECT(.text.__mulosi4)
 
 GLOBAL(__mulosi4)
 
     push fp
     ldsp fp
-    push r4
-    push r5
-    push r6
-    addsp -10
+    addsp -16
+    ssw r4, -2
+    ssw r5, -4
+    ssw r6, -6
 
     ldi r6, 0
     ssw r6, -8
@@ -87,14 +87,13 @@ __mulosi4_mul_done:
     tst r6
     bz __mulosi4_check_overflow
 
-    ldi r6, -1
-    xor r4, r6, r4
-    xor r5, r6, r5
+    not r4
+    not r5
     lsw r0, -14
-    xor r0, r6, r0
+    not r0
     ssw r0, -14
     lsw r0, -16
-    xor r0, r6, r0
+    not r0
     ssw r0, -16
 
     ldi r6, 0
@@ -144,10 +143,9 @@ __mulosi4_no_overflow:
 __mulosi4_done:
     move r4, r0
     move r5, r1
-    addsp 10
-    pop r6
-    pop r5
-    pop r4
+    lsw r4, -2
+    lsw r5, -4
+    lsw r6, -6
     stsp fp
     pop fp
     rts

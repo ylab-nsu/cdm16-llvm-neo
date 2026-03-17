@@ -1,6 +1,6 @@
 #include "cdm_asm.inc"
 
-RSECT(__sync_lock_test_and_set_2)
+RSECT(.text.__sync_lock_test_and_set_2)
 
 GLOBAL(__sync_lock_test_and_set_2)
 
