@@ -1,7 +1,12 @@
+#!@TEST_CDM_VENV_DIR@/@VENV_BIN_DIR_NAME@/python3
+
 import argparse
 import sys
 import shutil
 from pathlib import Path
+
+sys.path.append('@CMAKE_CURRENT_SOURCE_DIR@/src')
+
 from testing_system.tests_runner import run_testing_system
 from testing_system.cocoemu import CocoemuServerError
 from testing_system.parse.tests_parser import TestParsingError
@@ -13,20 +18,21 @@ from producers.driver_only.driver_only_producer import DriverOnlyTestCaseProduce
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(__file__)
-  parser.add_argument('--cocas', type=Path, help='path to cocas executable, default: .venv/bin/cocas', required=False, default=Path(f'{sys.prefix}/bin/cocas'))
-  parser.add_argument('-t', '--llvm-tools-dir', type=Path, help='path to directory with just built llvm tools. Required: clang, llvm-objcopy', required=False, default=Path(__file__).parent.parent.parent / 'build' / 'bin')
+  parser.add_argument('--cocas', type=Path, help='path to cocas executable, default: .venv/bin/cocas', required=False, default=Path(f'@TEST_CDM_VENV_DIR@/@VENV_BIN_DIR_NAME@/cocas'))
+  parser.add_argument('--cocoemu', type=Path, help='path to cocoemu-server executable, default: .venv/bin/cocoemu-server', required=False, default=Path(f'@TEST_CDM_VENV_DIR@/@VENV_BIN_DIR_NAME@/cocoemu-server'))
   parser.add_argument('-p', '--port', type=int, help='port for cocoemu-server binding, default: 7001', required=False, default=7001)
-  parser.add_argument('-I', '--include', type=Path, action='append', dest='include_paths', help='add directory to headers search paths', default=[])
+  parser.add_argument('-I', '--include', type=Path, action='append', dest='include_paths', help='add directory to headers search paths', default=["@CMAKE_CURRENT_SOURCE_DIR@/include"])
   parser.add_argument('-v', '--verbose', action='store_true')
   parser.add_argument('searching_points', type=Path, nargs='+', help='directories/files from which to search for tests recursevely')
   args = parser.parse_args()
 
   log = not sys.stdout.isatty()
+  llvm_tools_dir = Path('@LLVM_BINARY_DIR@/bin')
 
-  if not (args.llvm_tools_dir / 'clang').exists():
+  if not (llvm_tools_dir / 'clang').exists():
     print("No clang binary in llvm tools directory was found", file = sys.stderr)
     sys.exit(-1)
-  if not (args.llvm_tools_dir / 'llvm-objcopy').exists():
+  if not (llvm_tools_dir / 'llvm-objcopy').exists():
     print("No llvm-objcopy in llvm tools directory was found", file = sys.stderr)
     sys.exit(-1)
 
@@ -35,11 +41,12 @@ if __name__ == "__main__":
                          args.verbose,
                          log,
                          args.searching_points,
-                         (args.llvm_tools_dir / 'clang').resolve().absolute(),
-                         (args.llvm_tools_dir / 'llvm-objcopy').resolve().absolute(),
+                         (llvm_tools_dir / 'clang').resolve().absolute(),
+                         (llvm_tools_dir / 'llvm-objcopy').resolve().absolute(),
                          Path(shutil.which(args.cocas)).resolve().absolute(),
+                         Path(shutil.which(args.cocoemu)).resolve().absolute(),
                          args.include_paths,
-                         Path(Path(__file__).parent.parent / 'resources').resolve().absolute()
+                         Path('@CMAKE_CURRENT_SOURCE_DIR@/resources')
                         )
 
   try:

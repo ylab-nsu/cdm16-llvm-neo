@@ -14,11 +14,10 @@ from .configuration import Configuration
 
 def run_testing_system(config: Configuration, producers: dict[str, type[TestCaseProducer]]) -> int:
   server_proc = subprocess.Popen([
-                                   "bin/cocoemu-server",
+                                   str(config.cocoemu_path),
                                    "-p",
                                    str(config.cocoemu_port)
                                  ],
-                                 cwd = sys.prefix,
                                  stdout = subprocess.DEVNULL)
   try:
     with CocoemuConnection(config.cocoemu_port) as connection:
