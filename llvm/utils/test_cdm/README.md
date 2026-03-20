@@ -5,18 +5,31 @@
 - Java
 
 ## Usage
-`make CLANG=<path_to_clang>`
+`test_cdm [tests_search_point..]`
 
-`python3 tests_runner.py [-vh] [-c <path to clang>] [-I <headers search path>...] [-p <cocoemu-server port>] <test to run...>`
+See `test_cdm --help` for available options
 
 ## Tests format
 
-If file in `tests` directory is regular it's treated as a single-source test, if it's a directory, it's treated as a multi-source test.
+### Single-source test
+
+Every regular file located in directory which doesn't contain `.test_dummy` file is treated as a single-source test
+
+### Multi-source test
+
+Every directory, which contain `.test_dummy` file is treated as a multi-source test
+
+Directives are gathered from each C source file from this directory
 
 ### Source file format
 
 ```c
-// CHECK <directive>
+// CHECK prod(<some_producer> <producer_arg..>)
+// CHECK <prod_directive1>
+// CHECK <prod_directive2>
+
+// CHECK prod(<another_producer> <producer_arg..>)
+...
 
 <any c code>
 
@@ -25,17 +38,13 @@ int main(){
 }
 ```
 
-### End-to-end tests
+## Test producers
 
-To use test for end-to-end testing include directive `// CHECK prod(end_to_end [cocas] [elf])` to source file and specify assertions in directives below
+### End-to-end
 
-#### Single-source test
+To use this producer on test - include directive `// CHECK prod(end_to_end [cocas] [elf])` in some of its' source files and specify assertions in directives below
 
-Test consisting of the only one source file. All files from `resources/end_to_end_cocas` will be linked to it.
-
-#### Multi-source test
-
-Test consisting of several source files. Files from `resources/end_to_end_cocas` will be linked only if there is no source file with the same name in this test (e.g. if you want to have custom IVT, create file `ivt.asm` in test directory)
+This producer will produce end-to-end test cases for all targets specified with all possible optimization levels ('O0', 'O1', 'O2', 'O3', 'Os')
 
 #### Directives
 - `reg(<reg>) <value>` check if register \<reg\> contains \<value\> at the end of simulation
@@ -45,3 +54,9 @@ Test consisting of several source files. Files from `resources/end_to_end_cocas`
 - `mem(<address>) <content>` check if at the end of simulation memory region at address `<address>` contains `<content>`
   - `<address>` - unsigned int16
   - `<content>` - sequence of bytes written in hex (e.g. `FF 00 A2`)
+
+### Driver only
+
+To use this producer on test - include directive `// CHECK prod(driver_only)` in some of its' source files
+
+Test-cases, produced by this producer check that calling clang with '-c' flag specified result in same object files as calling clang with '-S' flag specified and then assembling generated file with cocas
