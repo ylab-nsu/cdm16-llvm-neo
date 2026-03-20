@@ -133,7 +133,6 @@ def cocas_assemble(filepath: Path, config: Configuration, output_path: Path | No
                                   str(output_path),
                                   str(filepath)
                                 ],
-                                cwd = sys.prefix,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
     if not cocas_proc.returncode == 0:
@@ -162,7 +161,6 @@ def cocas_assemble_and_link(cocas_input: list[Path], config: Configuration, outp
                                   "-o",
                                   str(output_path),
                                 ] + [str(i) for i in cocas_input],
-                                cwd = sys.prefix,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
     if not cocas_proc.returncode == 0:
