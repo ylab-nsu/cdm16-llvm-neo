@@ -1,15 +1,22 @@
 from pathlib import Path
 from dataclasses import dataclass
-from enum import StrEnum
+from enum import Enum
 import subprocess
 import tempfile
 import os
 import sys
 from .configuration import Configuration
 
-class Target(StrEnum):
-  CDM_COCAS = "cdm-cocas"
-  CDM_ELF = "cdm"
+class Target(Enum):
+  CDM_COCAS = 1
+  CDM_ELF = 2
+
+  def __str__(self) -> str:
+    match self:
+      case Target.CDM_ELF:
+        return "cdm"
+      case Target.CDM_COCAS:
+        return "cdm-cocas"
 
 @dataclass
 class CompilationError(Exception):
