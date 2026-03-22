@@ -76,7 +76,7 @@ def parse_test(filepath: Path, producers: dict[str, TestCaseProducer]) -> list[T
   if filepath.is_file():
     files.append(filepath.absolute())
   elif filepath.is_dir():
-    for file in filter(lambda p: p.is_file() and not p.name == ".test_dummy", filepath.iterdir()):
+    for file in filter(lambda p: p.is_file() and not p.name == ".multi_source", filepath.iterdir()):
       files.append(file.absolute())
   else:
     raise ValueError("Expected path to regular file or directory")
@@ -84,7 +84,7 @@ def parse_test(filepath: Path, producers: dict[str, TestCaseProducer]) -> list[T
   return parse_all_test_cases(filepath.stem, files, producers)
 
 def collect_tests(search_point: Path, producers: dict[str, TestCaseProducer]) -> list[TestCase]:
-  if search_point.is_file() or (search_point.is_dir() and (search_point / ".test_dummy").exists()):
+  if search_point.is_file() or (search_point.is_dir() and (search_point / ".multi_source").exists()):
     return parse_test(search_point, producers)
   elif search_point.is_dir():
     return list(itertools.chain.from_iterable(map(lambda p: collect_tests(p, producers), search_point.iterdir())))
