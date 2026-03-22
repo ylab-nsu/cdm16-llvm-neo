@@ -1,4 +1,4 @@
-// CHECK prod(end_to_end cocas elf)
+// CHECK prod(end_to_end)
 // CHECK reg(r0) 69
 
 __attribute__((noinline)) int foo(int x, int y, int z, int a, int b) {

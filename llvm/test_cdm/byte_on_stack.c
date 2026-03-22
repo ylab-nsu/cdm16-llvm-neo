@@ -1,4 +1,4 @@
-// CHECK prod(end_to_end cocas elf)
+// CHECK prod(end_to_end)
 // CHECK reg(r0) 8801
 
 __attribute__((noinline))

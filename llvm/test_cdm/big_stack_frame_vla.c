@@ -1,4 +1,4 @@
-// CHECK prod(end_to_end cocas elf)
+// CHECK prod(end_to_end)
 // CHECK reg(r0) 3045
 
 int lol_size = 228;

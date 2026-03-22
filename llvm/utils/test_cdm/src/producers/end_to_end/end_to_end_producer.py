@@ -53,19 +53,16 @@ class EndToEndTestCaseProducer(TestCaseProducer):
 
   def produce(self, name: str, files: list[Path], args: list[str], directives: list[Directive]) -> list[TestCase]:
     ret: list[TestCase] = []
-    if 'cocas' in args:
-      for opt_level in ['0', '1', '2', '3', 's']:
-        ret.append(EndToEndTestCase(f'Cocas end-to-end "{name}" with optimization level -O{opt_level}',
-                                    files + self.cocas,
-                                    list(map(lambda d: parse_directive(d, self.processor_info), directives)),
-                                    opt_level,
-                                    Target.CDM_COCAS))
-    if 'elf' in args:
-      for opt_level in ['0', '1', '2', '3', 's']:
-        ret.append(EndToEndTestCase(f'Cocas-less end-to-end "{name}" with optimization level -O{opt_level}',
-                                    files + self.elf,
-                                    list(map(lambda d: parse_directive(d, self.processor_info), directives)),
-                                    opt_level,
-                                    Target.CDM_ELF))
+    for opt_level in ['0', '1', '2', '3', 's']:
+      ret.append(EndToEndTestCase(f'Cocas end-to-end "{name}" with optimization level -O{opt_level}',
+                                  files + self.cocas,
+                                  list(map(lambda d: parse_directive(d, self.processor_info), directives)),
+                                  opt_level,
+                                  Target.CDM_COCAS))
+      ret.append(EndToEndTestCase(f'Cocas-less end-to-end "{name}" with optimization level -O{opt_level}',
+                                  files + self.elf,
+                                  list(map(lambda d: parse_directive(d, self.processor_info), directives)),
+                                  opt_level,
+                                  Target.CDM_ELF))
 
     return ret
