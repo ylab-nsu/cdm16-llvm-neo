@@ -1,4 +1,4 @@
-// CHECK prod(end_to_end cocas elf)
+// CHECK prod(end_to_end)
 // CHECK reg(r0) 15700
 // CHECK reg(r1) 48474
 // CHECK reg(r2) 6103
