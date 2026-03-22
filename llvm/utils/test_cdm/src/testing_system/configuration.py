@@ -8,7 +8,6 @@ class Configuration:
   log: bool
   search_points: list[Path]
   clang_path: Path
-  llvm_objcopy_path: Path
   cocas_path: Path
   cocoemu_path: Path
   include_paths: list[Path]

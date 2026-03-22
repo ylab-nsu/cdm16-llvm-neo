@@ -32,13 +32,15 @@ def clang_compile_assemble_link(files: list[Path], target: Target, config: Confi
 
     clang_args = [str(config.clang_path), '-target', str(target), f'-O{opt_level}', '-o', str(output_path) if target == Target.CDM_COCAS else '-']
     for i in config.include_paths:
-        clang_args.append('-I')
-        clang_args.append(str(i))
+      clang_args.append('-I')
+      clang_args.append(str(i))
     if not linker_script is None:
-        clang_args.append('-T')
-        clang_args.append(str(linker_script))
+      clang_args.append('-T')
+      clang_args.append(str(linker_script))
+    if target == Target.CDM_ELF:
+      clang_args.append('-Wl,--oformat=binary')
     for i in files:
-        clang_args.append(str(i))
+      clang_args.append(str(i))
 
     # print(' '.join(clang_args), end = "\n\n")
     clang_proc = subprocess.run(clang_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env = {'COCAS':config.cocas_path})
@@ -47,16 +49,9 @@ def clang_compile_assemble_link(files: list[Path], target: Target, config: Confi
       raise CompilationError(f"Failed when tried to compile files with return code {clang_proc.returncode}\nStdout:\n{clang_proc.stdout.decode()}\nStderr:\n{clang_proc.stderr.decode()}")
 
     if target == Target.CDM_ELF:
-      objcopy_args = [str(config.llvm_objcopy_path), '-O', 'binary', '-', '-']
-      # print(' '.join(objcopy_args), end = "\n\n")
-      objcopy_proc = subprocess.run(objcopy_args, input=clang_proc.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-      if not objcopy_proc.returncode == 0:
-        raise CompilationError(f"Failed when tried to make binary out of elf object with return code {objcopy_proc.returncode}\nStderr:\n{objcopy_proc.stderr.decode()}")
-
       with output_path.open(mode = 'wt') as out:
         out.write("v2.0 raw\n")
-        out.write(objcopy_proc.stdout.hex(sep = '\n'))
+        out.write(clang_proc.stdout.hex(sep = '\n'))
 
     return output_path
 

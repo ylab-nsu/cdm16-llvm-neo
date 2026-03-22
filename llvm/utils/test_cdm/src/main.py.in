@@ -32,9 +32,6 @@ if __name__ == "__main__":
   if not (llvm_tools_dir / 'clang').exists():
     print("No clang binary in llvm tools directory was found", file = sys.stderr)
     sys.exit(-1)
-  if not (llvm_tools_dir / 'llvm-objcopy').exists():
-    print("No llvm-objcopy in llvm tools directory was found", file = sys.stderr)
-    sys.exit(-1)
 
   config = Configuration(
                          args.port,
@@ -42,7 +39,6 @@ if __name__ == "__main__":
                          log,
                          args.searching_points,
                          (llvm_tools_dir / 'clang').resolve().absolute(),
-                         (llvm_tools_dir / 'llvm-objcopy').resolve().absolute(),
                          Path(shutil.which(args.cocas)).resolve().absolute(),
                          Path(shutil.which(args.cocoemu)).resolve().absolute(),
                          args.include_paths,
