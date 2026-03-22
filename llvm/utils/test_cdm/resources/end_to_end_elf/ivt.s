@@ -8,8 +8,6 @@
 
 .text
 
-.global _start, _cdm_default_handler_1, _cdm_default_handler_2, _cdm_default_handler_3, _cdm_default_handler_4
-
 _cdm_default_handler_1:
   ldi r0, 0xDED1
   br _cdm_default_handlers_end
