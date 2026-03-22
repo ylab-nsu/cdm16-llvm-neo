@@ -11,7 +11,7 @@ endif()
 
 # Set up venv if it is not set up yet
 if (NOT EXISTS ${TEST_CDM_VENV_DIR})
-    message(STATUS "Setuping venv for test_cdm")
+    message(STATUS "Setting up venv for test_cdm")
 
     execute_process(
         COMMAND ${Python3_EXECUTABLE} -m venv ${TEST_CDM_VENV_DIR}
