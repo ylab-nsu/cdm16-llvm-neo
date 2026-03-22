@@ -54,7 +54,7 @@ def parse_all_test_cases(base_name: str, files: list[Path], producers: dict[str,
             raise TestParsingError(f'{directive.line} Expected at least 1 argument in directive head, got {len(directive.head)}')
           try:
             curr_producer = producers[directive.head[0]]
-            curr_producer_args = directive.head[1:]
+            curr_producer_args = directive.body
             directives = []
           except KeyError:
             raise TestParsingError(f'{directive.line} Unknown tests producer: {directive.head[0]}')
