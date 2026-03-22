@@ -44,7 +44,7 @@ class CocoemuConnection:
     resp = self.check_server_response()
     self.processor_info = ProcessorInfo(resp['registerNames'], resp['registerSizes'], resp['ramSize'])
 
-  def __enter__(self) -> CocoemuConnection:
+  def __enter__(self) -> 'CocoemuConnection':
     return self
 
   def __exit__(self, type: type[BaseException], value: BaseException | None, traceback: TracebackType | None) -> None:
