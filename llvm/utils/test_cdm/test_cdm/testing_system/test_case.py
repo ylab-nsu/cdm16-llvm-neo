@@ -2,7 +2,7 @@ from pathlib import Path
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from io import TextIOBase
-from testing_system.parse.directive import Directive
+from .parse.directive import Directive
 from .cocoemu import CocoemuConnection
 from .processor import ProcessorInfo
 from .configuration import Configuration

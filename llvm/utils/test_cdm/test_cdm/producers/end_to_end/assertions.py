@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from testing_system.processor import ProcessorState
+from test_cdm.testing_system.processor import ProcessorState
 from .diff_printing import get_diff
 
 class Assertion(ABC):

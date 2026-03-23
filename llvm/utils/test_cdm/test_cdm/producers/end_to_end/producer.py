@@ -1,11 +1,11 @@
 from pathlib import Path
-from testing_system.test_case_producer import TestCaseProducer, TestProducingError
-from testing_system.parse.directive import Directive
-from testing_system.test_case import TestCase
-from testing_system.configuration import Configuration
-from testing_system.processor import ProcessorInfo
-from testing_system.toolchain import clang_compile_and_assemble, CompilationError, Target
-from .end_to_end_test_case import EndToEndTestCase
+from test_cdm.testing_system.test_case_producer import TestCaseProducer, TestProducingError
+from test_cdm.testing_system.parse.directive import Directive
+from test_cdm.testing_system.test_case import TestCase
+from test_cdm.testing_system.configuration import Configuration
+from test_cdm.testing_system.processor import ProcessorInfo
+from test_cdm.testing_system.toolchain import clang_compile_and_assemble, CompilationError, Target
+from .test_case import EndToEndTestCase
 from .parsing import parse_directive
 
 class EndToEndTestCaseProducer(TestCaseProducer):
