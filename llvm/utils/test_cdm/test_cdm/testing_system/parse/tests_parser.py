@@ -3,8 +3,8 @@ import itertools
 from pathlib import Path
 from dataclasses import dataclass
 from collections.abc import Generator
-from testing_system.test_case_producer import TestCaseProducer, TestProducingError
-from testing_system.test_case import TestCase
+from test_cdm.testing_system.test_case_producer import TestCaseProducer, TestProducingError
+from test_cdm.testing_system.test_case import TestCase
 from .directive import Directive
 
 _DIRECTIVE_PATTERN = re.compile("^.*?//\\s*CHECK\\s(.*)\n")

@@ -2,11 +2,11 @@ import os
 from io import TextIOBase
 from pathlib import Path
 from dataclasses import dataclass
-from testing_system.cocoemu import CocoemuConnection
-from testing_system.toolchain import *
-from testing_system.test_case import TestCase
-from testing_system.util.errors_printing import print_error_big
-from testing_system.configuration import Configuration
+from test_cdm.testing_system.cocoemu import CocoemuConnection
+from test_cdm.testing_system.toolchain import *
+from test_cdm.testing_system.test_case import TestCase
+from test_cdm.testing_system.util.errors_printing import print_error_big
+from test_cdm.testing_system.configuration import Configuration
 from .objs_comparing import get_objs_diff, compare_objs
 
 @dataclass

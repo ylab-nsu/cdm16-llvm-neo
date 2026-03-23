@@ -1,0 +1,24 @@
+#!@TEST_CDM_VENV_DIR@/@VENV_BIN_DIR_NAME@/python3
+
+import sys
+
+sys.path.append('@CMAKE_CURRENT_SOURCE_DIR@/src')
+
+from pathlib import Path
+from test_cdm.main import main
+from test_cdm.testing_system.configuration import Configuration
+
+if __name__ == "__main__":
+  if not Path('@LLVM_BINARY_DIR@/bin/clang').exists():
+    print("No clang binary in llvm tools directory was found", file = sys.stderr)
+    sys.exit(-1)
+
+  base_config = Configuration(
+                                cocas_path = Path(f'@TEST_CDM_VENV_DIR@/@VENV_BIN_DIR_NAME@/cocas'),
+                                cocoemu_path = Path(f'@TEST_CDM_VENV_DIR@/@VENV_BIN_DIR_NAME@/cocoemu-server'),
+                                include_paths = [Path("@CMAKE_CURRENT_SOURCE_DIR@/include")],
+                                clang_path = Path('@LLVM_BINARY_DIR@/bin/clang'),
+                                resources_path = Path('@CMAKE_CURRENT_SOURCE_DIR@/resources')
+                             )
+
+  sys.exit(main(base_config))

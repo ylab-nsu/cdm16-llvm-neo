@@ -4,12 +4,12 @@ from typing import cast
 from io import TextIOBase
 from dataclasses import dataclass
 from pathlib import Path
-from testing_system.configuration import Configuration
-from testing_system.test_case import TestCase
-from testing_system.parse.directive import Directive
-from testing_system.toolchain import *
-from testing_system.cocoemu import CocoemuConnection
-from testing_system.util.errors_printing import print_error_big
+from test_cdm.testing_system.configuration import Configuration
+from test_cdm.testing_system.test_case import TestCase
+from test_cdm.testing_system.parse.directive import Directive
+from test_cdm.testing_system.toolchain import *
+from test_cdm.testing_system.cocoemu import CocoemuConnection
+from test_cdm.testing_system.util.errors_printing import print_error_big
 from .assertions import Assertion, AbsoluteSectionAssertion
 
 _START_OF_ABSOLUTE_SECTIONS = 0x80

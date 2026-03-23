@@ -6,7 +6,7 @@ from pathlib import Path
 from abc import ABC, abstractmethod
 from collections.abc import Generator
 from dataclasses import dataclass
-from testing_system.test_case_producer import TestCaseProducer
+from .test_case_producer import TestCaseProducer
 from .cocoemu import CocoemuConnection
 from .test_case import TestCase
 from .parse.tests_parser import collect_tests

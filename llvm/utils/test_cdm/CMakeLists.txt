@@ -25,4 +25,4 @@ if (NOT EXISTS ${TEST_CDM_VENV_DIR})
     )
 endif()
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/main.py.in ${LLVM_BINARY_DIR}/bin/test_cdm)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/test_cdm.py.in ${LLVM_BINARY_DIR}/bin/test_cdm)
