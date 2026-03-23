@@ -5,7 +5,7 @@ from test_cdm.testing_system.test_case import TestCase
 from test_cdm.testing_system.configuration import Configuration
 from test_cdm.testing_system.processor import ProcessorInfo
 from test_cdm.testing_system.toolchain import clang_compile_and_assemble, CompilationError, Target
-from .test_case import EndToEndTestCase
+from .test_case import CocasEndToEndTestCase, ElfEndToEndTestCase
 from .parsing import parse_directive
 
 class EndToEndTestCaseProducer(TestCaseProducer):
@@ -54,15 +54,13 @@ class EndToEndTestCaseProducer(TestCaseProducer):
   def produce(self, name: str, files: list[Path], args: list[str], directives: list[Directive]) -> list[TestCase]:
     ret: list[TestCase] = []
     for opt_level in ['0', '1', '2', '3', 's']:
-      ret.append(EndToEndTestCase(f'Cocas end-to-end "{name}" with optimization level -O{opt_level}',
+      ret.append(CocasEndToEndTestCase(f'Cocas end-to-end "{name}" with optimization level -O{opt_level}',
                                   files + self.cocas,
                                   list(map(lambda d: parse_directive(d, self.processor_info), directives)),
-                                  opt_level,
-                                  Target.CDM_COCAS))
-      ret.append(EndToEndTestCase(f'Cocas-less end-to-end "{name}" with optimization level -O{opt_level}',
+                                  opt_level))
+      ret.append(ElfEndToEndTestCase(f'Cocas-less end-to-end "{name}" with optimization level -O{opt_level}',
                                   files + self.elf,
                                   list(map(lambda d: parse_directive(d, self.processor_info), directives)),
-                                  opt_level,
-                                  Target.CDM_ELF))
+                                  opt_level))
 
     return ret
