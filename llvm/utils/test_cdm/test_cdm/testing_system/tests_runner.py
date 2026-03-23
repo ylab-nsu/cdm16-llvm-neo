@@ -2,10 +2,7 @@ import subprocess
 import signal
 import io
 import sys
-from pathlib import Path
-from abc import ABC, abstractmethod
 from collections.abc import Generator
-from dataclasses import dataclass
 from .test_case_producer import TestCaseProducer
 from .cocoemu import CocoemuConnection
 from .test_case import TestCase
