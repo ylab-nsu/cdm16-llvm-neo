@@ -2,7 +2,7 @@
 
 import sys
 
-sys.path.append('@CMAKE_CURRENT_SOURCE_DIR@/src')
+sys.path.append('@CMAKE_CURRENT_SOURCE_DIR@')
 
 from pathlib import Path
 from test_cdm.main import main

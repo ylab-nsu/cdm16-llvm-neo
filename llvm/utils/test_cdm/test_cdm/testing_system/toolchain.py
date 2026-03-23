@@ -4,7 +4,6 @@ from enum import Enum
 import subprocess
 import tempfile
 import os
-import sys
 from .configuration import Configuration
 
 class Target(Enum):
