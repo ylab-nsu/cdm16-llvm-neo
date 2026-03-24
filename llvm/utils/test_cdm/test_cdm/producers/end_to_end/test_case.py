@@ -41,6 +41,7 @@ class EndToEndTestCase(TestCase):
     absolute_sections = cast(list[AbsoluteSectionAssertion], list(filter(lambda a : isinstance(a, AbsoluteSectionAssertion), self.assertions)))
     self.place_all_absolute_sections(absolute_sections)
 
+    binary = None
     try:
       binary = self.produce_binary(self.files, config, self.opt_level, absolute_sections)
 
