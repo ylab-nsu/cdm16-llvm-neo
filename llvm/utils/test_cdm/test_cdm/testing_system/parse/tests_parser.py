@@ -84,7 +84,9 @@ def parse_test(filepath: Path, producers: dict[str, TestCaseProducer]) -> list[T
   return parse_all_test_cases(filepath.stem, files, producers)
 
 def collect_tests(search_point: Path, producers: dict[str, TestCaseProducer]) -> list[TestCase]:
-  if search_point.is_file() or (search_point.is_dir() and (search_point / ".multi_source").exists()):
+  if not search_point.exists():
+    raise TestParsingError(f'Failed to collect tests from "{str(search_point)}": No such file or directory')
+  elif search_point.is_file() or (search_point.is_dir() and (search_point / ".multi_source").exists()):
     return parse_test(search_point, producers)
   elif search_point.is_dir():
     return list(itertools.chain.from_iterable(map(lambda p: collect_tests(p, producers), search_point.iterdir())))
