@@ -9,20 +9,12 @@ else()
     set(VENV_BIN_DIR_NAME "bin")
 endif()
 
-# Set up venv if it is not set up yet
-if (NOT EXISTS ${TEST_CDM_VENV_DIR})
-    message(STATUS "Setting up venv for test_cdm")
-
-    execute_process(
-        COMMAND ${Python3_EXECUTABLE} -m venv ${TEST_CDM_VENV_DIR}
-        COMMAND_ERROR_IS_FATAL ANY
-    )
-
-    message(STATUS "Installing dependencies for test_cdm")
-    execute_process(
-        COMMAND ${TEST_CDM_VENV_DIR}/${VENV_BIN_DIR_NAME}/pip install -r ${TEST_CDM_REQUIREMENTS_PATH}
-        COMMAND_ERROR_IS_FATAL ANY
-    )
-endif()
+# Set up venv
+add_custom_command(OUTPUT ${TEST_CDM_VENV_DIR}
+                   COMMAND ${Python3_EXECUTABLE} -m venv ${TEST_CDM_VENV_DIR}
+                   COMMAND ${TEST_CDM_VENV_DIR}/${VENV_BIN_DIR_NAME}/pip install -q -r ${TEST_CDM_REQUIREMENTS_PATH}
+                   DEPENDS ${TEST_CDM_REQUIREMENTS_PATH})
+add_custom_target(test_cdm_setup_venv ALL
+                  DEPENDS ${TEST_CDM_VENV_DIR})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test_cdm/test_cdm.py.in ${LLVM_BINARY_DIR}/bin/test_cdm)
