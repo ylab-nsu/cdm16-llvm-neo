@@ -7,7 +7,7 @@ from test_cdm.testing_system.cocoemu import CocoemuServerError
 from test_cdm.testing_system.parse.tests_parser import TestParsingError
 from test_cdm.testing_system.util.errors_printing import print_error
 from test_cdm.testing_system.test_case_producer import TestCaseProducer, TestProducingError
-from test_cdm.testing_system.configuration import Configuration
+from test_cdm.testing_system.configuration import Configuration, InvalidConfigurationError
 from test_cdm.producers.end_to_end.producer import EndToEndTestCaseProducer
 from test_cdm.producers.driver_only.producer import DriverOnlyTestCaseProducer
 
@@ -22,7 +22,11 @@ def main(base_config: Configuration) -> int:
   args = parser.parse_args()
 
   if not args.cocas is None:
-    base_config.cocas_path = Path(shutil.which(args.cocas)).resolve().absolute()
+    resolved = shutil.which(args.cocas)
+    if resolved is None:
+      print_error(f'Cannot find {str(args.cocas)}', file = sys.stderr)
+      return 1;
+    base_config.cocas_path = Path(resolved)
   base_config.include_paths.extend(args.include_paths)
 
   base_config.cocoemu_port = args.port
@@ -31,13 +35,15 @@ def main(base_config: Configuration) -> int:
   base_config.search_points = args.searching_points
 
   try:
+    base_config.verify()
+
     producers: dict[str, type[TestCaseProducer]] = {'end_to_end' : EndToEndTestCaseProducer, 'driver_only' : DriverOnlyTestCaseProducer}
     return run_testing_system(base_config, producers)
   except KeyboardInterrupt:
     print("")
   except CocoemuServerError as e:
     print_error(f"Cocoemu-server responded with error: {str(e)}", file = sys.stderr)
-  except (TestParsingError, TestProducingError) as e:
+  except (TestParsingError, TestProducingError, InvalidConfigurationError) as e:
     print_error(str(e))
   else:
     return 0
