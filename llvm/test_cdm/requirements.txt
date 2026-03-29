@@ -1,2 +1,2 @@
-cdm-devkit
-websockets
+cdm-devkit>=0.2.3
+websockets>=16.0
