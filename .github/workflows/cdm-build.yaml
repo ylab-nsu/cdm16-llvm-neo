@@ -95,10 +95,9 @@ jobs:
             $WIN_BINARIES lib/cdm* lib/clang/21/lib/cdm* include/cdm*
       - name: Upload artifacts
         if: inputs.upload
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
-          compression-level: 0
-          name: ${{ matrix.os }}
+          archive: false
           path: |
             ./llvm/build/*.tar.gz
             ./llvm/build/*.zip

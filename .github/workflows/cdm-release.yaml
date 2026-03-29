@@ -24,8 +24,9 @@ jobs:
       - name: Create subfolder
         run: mkdir artifacts_download
       - name: Download artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
+          skip-decompress: true
           path: ./artifacts_download
       - id: get-version
         name: Get version
