@@ -11,24 +11,29 @@ on:
         required: true
 
 env:
-  BINARIES: "bin/clang-21 \
-             bin/clang \
-             bin/opt \
-             bin/llc \
-             bin/lld \
-             bin/ld.lld \
-             bin/llvm-ar \
-             bin/llvm-as \
-             bin/llvm-dis \
-             bin/llvm-link \
-             bin/llvm-mc \
-             bin/llvm-nm \
-             bin/llvm-objcopy \
-             bin/llvm-objdump \
-             bin/llvm-readelf \
-             bin/llvm-readobj \
-             bin/llvm-size \
-             bin/llvm-strings"
+  BINARIES: |
+    bin/clang-21 \
+    bin/clang \
+    bin/opt \
+    bin/llc \
+    bin/lld \
+    bin/ld.lld \
+    bin/llvm-ar \
+    bin/llvm-as \
+    bin/llvm-dis \
+    bin/llvm-link \
+    bin/llvm-mc \
+    bin/llvm-nm \
+    bin/llvm-objcopy \
+    bin/llvm-objdump \
+    bin/llvm-readelf \
+    bin/llvm-readobj \
+    bin/llvm-size \
+    bin/llvm-strings
+  RESOURCES: |
+    lib/cdm* \
+    lib/clang/21/lib/cdm* \
+    include/cdm*
 
 jobs:
   build-test:
@@ -53,42 +58,31 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           rm /usr/bin/link
-      - name: Build LLVM (static linking)
-        if: inputs.static-build && runner.os == 'Linux'
+      - name: Build LLVM
         run: |
-          ./llvm/utils/cdm/build.py --static -j 2 -v
-      - name: Build LLVM (dynamic linking)
-        if: ${{ !(inputs.static-build && runner.os == 'Linux') }}
-        run: |
-          ./llvm/utils/cdm/build.py -j 2 -v
+          STATIC=${{ inputs.static-build && runner.os == 'Linux' && '--static' || '' }}
+          ./llvm/utils/cdm/build.py -j 2 -v $STATIC
       - name: Run end-to-end tests
         if: runner.os != 'Windows' ## TODO: Enable when test system is updated
         run: make -C llvm/test_cdm CLANG=$(realpath llvm/build/bin/clang) test
-      - name: Run lit tests (POSIX)
-        if: runner.os != 'Windows'
-        run: ./llvm/build/bin/llvm-lit ./llvm/test/CodeGen/CDM
-      - name: Run lit tests (Windows)
-        if: runner.os == 'Windows'
-        run: python3 ./llvm/build/bin/llvm-lit.py ./llvm/test/CodeGen/CDM
-      - name: Compress artifacts (tarball)
-        if: inputs.upload && (runner.os != 'Windows')
+      - name: Run lit tests
         run: |
-          OS=${{ runner.os }}
-          cd llvm/build && tar -czvf \
-            cdm16-llvm-$(echo $OS | tr '[:upper:]' '[:lower:]')-$(uname -m).tar.gz \
-              $BINARIES lib/cdm* lib/clang/21/lib/cdm* include/cdm*
-      - name: Compress artifacts (zip.. ball?)
-        if: inputs.upload && (runner.os == 'Windows')
+          LLVM_LIT=${{ runner.os == 'Windows' && 'llvm-lit.py' || 'llvm-lit' }}
+          python3 ./llvm/build/bin/$LLVM_LIT ./llvm/test/CodeGen/CDM
+      - name: Compress artifacts
+        if: inputs.upload
         run: |
+          OUT_EXT=${{ runner.os == 'Windows' && '.zip' || '.tar.gz' }}
+          BIN_EXT=${{ runner.os == 'Windows' && '.exe' || '' }}
+          BINARIES=$( for file in $BINARIES; do ([ -f "$file"$BIN_EXT ] && echo "$file"$BIN_EXT); done )
+          OS=$(echo ${{ runner.os }} | tr '[:upper:]' '[:lower:]')-$(uname -m)
           cd llvm/build
-          WIN_BINARIES=$( for file in $BINARIES; do ([ -f "$file".exe ] && echo "$file".exe); done )
-          tar -aczf cdm16-llvm-windows-$(uname -m).zip \
-            $WIN_BINARIES lib/cdm* lib/clang/21/lib/cdm* include/cdm*
+          tar -cvaf cdm16-llvm-$OS$OUT_EXT $BINARIES $RESOURCES
       - name: Upload artifacts
         if: inputs.upload
         uses: actions/upload-artifact@v7
         with:
           archive: false
           path: |
-            ./llvm/build/*.tar.gz
-            ./llvm/build/*.zip
+            ./llvm/build/cdm16-llvm-*.tar.gz
+            ./llvm/build/cdm16-llvm-*.zip
