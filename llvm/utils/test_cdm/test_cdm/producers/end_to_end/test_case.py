@@ -30,9 +30,9 @@ class EndToEndTestCase(TestCase):
       sec.address = next_address
       next_address += len(sec.content)
 
-  @staticmethod
+  @classmethod
   @abstractmethod
-  def produce_binary(files: list[Path], config: Configuration, opt_level: str, absolute_sections: list[AbsoluteSectionAssertion]) -> Path:
+  def produce_binary(cls, files: list[Path], config: Configuration, opt_level: str, absolute_sections: list[AbsoluteSectionAssertion]) -> Path:
     pass
 
   def run(self, connection: CocoemuConnection, config: Configuration, errors_stream: TextIOBase) -> bool:
@@ -75,11 +75,11 @@ class CocasEndToEndTestCase(EndToEndTestCase):
       temp.write('end.\n')
       return Path(temp.name)
 
-  @staticmethod
-  def produce_binary(files: list[Path], config: Configuration, opt_level: str, absolute_sections: list[AbsoluteSectionAssertion]) -> Path:
+  @classmethod
+  def produce_binary(cls, files: list[Path], config: Configuration, opt_level: str, absolute_sections: list[AbsoluteSectionAssertion]) -> Path:
     absolute_sections_file = None
     try:
-      absolute_sections_file = CocasEndToEndTestCase.generate_absolute_sections_file(absolute_sections)
+      absolute_sections_file = cls.generate_absolute_sections_file(absolute_sections)
       if not absolute_sections_file is None:
         files += [absolute_sections_file]
 
@@ -129,11 +129,11 @@ class ElfEndToEndTestCase(EndToEndTestCase):
 
       return Path(temp.name)
 
-  @staticmethod
-  def produce_binary(files: list[Path], config: Configuration, opt_level: str, absolute_sections: list[AbsoluteSectionAssertion]) -> Path:
+  @classmethod
+  def produce_binary(cls, files: list[Path], config: Configuration, opt_level: str, absolute_sections: list[AbsoluteSectionAssertion]) -> Path:
     linker_script = None
     try:
-      linker_script = ElfEndToEndTestCase.generate_linker_script(absolute_sections)
+      linker_script = cls.generate_linker_script(absolute_sections)
       return clang_compile_assemble_link(files, Target.CDM_ELF, config, opt_level, None, linker_script)
     finally:
       if not linker_script is None:
