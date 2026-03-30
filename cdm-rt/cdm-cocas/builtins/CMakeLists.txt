@@ -30,7 +30,22 @@ set(BUILDIN_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/sync_val_compare_and_swap_2.S
   ${CMAKE_CURRENT_SOURCE_DIR}/atomic_load.S
   ${CMAKE_CURRENT_SOURCE_DIR}/atomic_store.S
-  ${CMAKE_CURRENT_SOURCE_DIR}/cdm_asm.inc
 )
 
-create_object_library(target_name ${CDM_COCAS_RT_LIB_DIR}/cdm-builtins.lib SRCS ${BUILDIN_SOURCES})
+set(BUILTIN_OBJECTS "")
+
+foreach(src ${BUILDIN_SOURCES})
+    get_filename_component(name ${src} NAME_WE)
+    set(obj ${CMAKE_CURRENT_BINARY_DIR}/${name}.o)
+    list(APPEND BUILTIN_OBJECTS ${obj})
+
+    add_custom_command(OUTPUT ${obj}
+        COMMAND ${CMAKE_COMMAND} -E env COCAS="${COCAS_EXECUTABLE}" ${CMAKE_ASM_COMPILER} -target cdm-cocas -c -o ${obj} ${src}
+        DEPENDS ${src} ${CMAKE_CURRENT_SOURCE_DIR}/cdm_asm.inc)
+endforeach()
+
+add_custom_command(OUTPUT ${CDM_RT_COCAS_LIB_DIR}/cdm-builtins.lib
+    COMMAND ${CMAKE_COMMAND} -E env COCAS="${COCAS_EXECUTABLE}" ${CMAKE_ASM_COMPILER} -target cdm-cocas -r -o ${CDM_RT_COCAS_LIB_DIR}/cdm-builtins.lib ${BUILTIN_OBJECTS}
+    DEPENDS ${BUILTIN_OBJECTS})
+
+add_custom_target(cdm_builtins ALL DEPENDS ${CDM_RT_COCAS_LIB_DIR}/cdm-builtins.lib)

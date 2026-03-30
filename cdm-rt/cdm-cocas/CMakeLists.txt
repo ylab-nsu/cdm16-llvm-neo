@@ -9,3 +9,4 @@ else()
 endif()
 
 add_subdirectory(crt0)
+add_subdirectory(builtins)
