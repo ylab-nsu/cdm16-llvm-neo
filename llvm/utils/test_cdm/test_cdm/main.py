@@ -9,7 +9,7 @@ from test_cdm.testing_system.util.errors_printing import print_error
 from test_cdm.testing_system.test_case_producer import TestCaseProducer, TestProducingError
 from test_cdm.testing_system.configuration import Configuration, InvalidConfigurationError
 from test_cdm.producers.end_to_end.producer import EndToEndTestCaseProducer
-from test_cdm.producers.driver_only.producer import DriverOnlyTestCaseProducer
+from test_cdm.producers.driver.producer import DriverTestCaseProducer
 
 def main(base_config: Configuration) -> int:
 
@@ -37,7 +37,7 @@ def main(base_config: Configuration) -> int:
   try:
     base_config.verify()
 
-    producers: dict[str, type[TestCaseProducer]] = {'end_to_end' : EndToEndTestCaseProducer, 'driver_only' : DriverOnlyTestCaseProducer}
+    producers: dict[str, type[TestCaseProducer]] = {'end_to_end' : EndToEndTestCaseProducer, 'driver' : DriverTestCaseProducer}
     return run_testing_system(base_config, producers)
   except KeyboardInterrupt:
     print("")

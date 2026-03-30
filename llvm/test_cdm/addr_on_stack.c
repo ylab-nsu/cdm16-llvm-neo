@@ -1,6 +1,6 @@
 // CHECK prod(end_to_end)
 // CHECK sym(dst) 48 45 6C 6C 6F
-// CHECK prod(driver_only)
+// CHECK prod(driver)
 
 extern char dst[];
 
