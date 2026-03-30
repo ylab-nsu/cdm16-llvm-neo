@@ -2,18 +2,17 @@ import subprocess
 import signal
 import io
 import sys
+import os
 from .tests_parser import get_tests
 from .cocoemu import connect_to_server
 from .cocoemu import init_server
 
 def run_tests_producers(cocoemu_port, tests_dir, clang_path, include_paths, producers):
-  print(sys.prefix)
   server_proc = subprocess.Popen([
-                                   "bin/cocoemu-server",
+                                   f"{os.path.dirname(sys.executable)}/cocoemu-server",
                                    "-p",
                                    str(cocoemu_port)
                                  ],
-                                 cwd = sys.prefix,
                                  stdout = subprocess.DEVNULL)
   try:
     with connect_to_server(cocoemu_port) as ws:
@@ -35,7 +34,7 @@ def run_tests_producers(cocoemu_port, tests_dir, clang_path, include_paths, prod
               succ, fails = prod(ws, base_test, processor_info, clang_path, include_paths, errors_stream)
               total_fails += fails
               total_succ += succ
-        finally: 
+        finally:
           print("\n", errors_stream.getvalue(), sep = "")
 
       print(f'Passed {total_succ} out of {total_succ + total_fails}')
