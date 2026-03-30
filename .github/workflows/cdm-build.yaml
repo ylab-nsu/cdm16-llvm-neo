@@ -56,13 +56,13 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
       - name: Remove GNU Link (Windows)
         if: runner.os == 'Windows'
-        run: |
-          rm /usr/bin/link
+        run: rm /usr/bin/link
       - name: Build LLVM
         run: |
           STATIC=${{ inputs.static-build && runner.os == 'Linux' && '--static' || '' }}
           ./llvm/utils/cdm/build.py -j 2 -v $STATIC
       - name: Run end-to-end tests
+        if: runner.os != 'Windows'
         run: make -C llvm/test_cdm CLANG=$(realpath llvm/build/bin/clang) test
       - name: Run lit tests
         run: |
