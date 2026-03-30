@@ -10,7 +10,7 @@ from test_cdm.testing_system.configuration import Configuration
 from .objs_comparing import get_objs_diff, compare_objs
 
 @dataclass
-class DriverOnlyTestCase(TestCase):
+class DriverTestCase(TestCase):
   opt_level: str
 
   def run(self, connection: CocoemuConnection, config: Configuration, errors_stream: TextIOBase) -> bool:
