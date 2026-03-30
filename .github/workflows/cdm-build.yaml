@@ -12,28 +12,28 @@ on:
 
 env:
   BINARIES: |
-    bin/clang-21 \
-    bin/clang \
-    bin/opt \
-    bin/llc \
-    bin/lld \
-    bin/ld.lld \
-    bin/llvm-ar \
-    bin/llvm-as \
-    bin/llvm-dis \
-    bin/llvm-link \
-    bin/llvm-mc \
-    bin/llvm-nm \
-    bin/llvm-objcopy \
-    bin/llvm-objdump \
-    bin/llvm-readelf \
-    bin/llvm-readobj \
-    bin/llvm-size \
+    bin/clang-21
+    bin/clang
+    bin/opt
+    bin/llc
+    bin/lld
+    bin/ld.lld
+    bin/llvm-ar
+    bin/llvm-as
+    bin/llvm-dis
+    bin/llvm-link
+    bin/llvm-mc
+    bin/llvm-nm
+    bin/llvm-objcopy
+    bin/llvm-objdump
+    bin/llvm-readelf
+    bin/llvm-readobj
+    bin/llvm-size
     bin/llvm-strings
   RESOURCES: |
-    lib/cdm* \
-    lib/clang/21/lib/cdm* \
-    include/cdm*
+    lib/cdm
+    lib/cdm-unknown-unknown-cocas
+    include/cdm
 
 jobs:
   build-test:
@@ -71,11 +71,12 @@ jobs:
       - name: Compress artifacts
         if: inputs.upload
         run: |
+          OS=$(echo ${{ runner.os }} | tr '[:upper:]' '[:lower:]')-$(uname -m)
           OUT_EXT=${{ runner.os == 'Windows' && '.zip' || '.tar.gz' }}
           BIN_EXT=${{ runner.os == 'Windows' && '.exe' || '' }}
-          BINARIES=$( for file in $BINARIES; do ([ -f "$file"$BIN_EXT ] && echo "$file"$BIN_EXT); done )
-          OS=$(echo ${{ runner.os }} | tr '[:upper:]' '[:lower:]')-$(uname -m)
           cd llvm/build
+          BINARIES=$( for file in $BINARIES; do ([ -f "$file"$BIN_EXT ] && echo "$file"$BIN_EXT); done )
+          RESOURCES=$( for file in $RESOURCES; do ([ -e "$file" ] && echo "$file"); done )
           tar -cvaf cdm16-llvm-$OS$OUT_EXT $BINARIES $RESOURCES
       - name: Upload artifacts
         if: inputs.upload
