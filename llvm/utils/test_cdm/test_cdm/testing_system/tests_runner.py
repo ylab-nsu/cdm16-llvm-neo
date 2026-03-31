@@ -48,7 +48,7 @@ def run_tests(connection: CocoemuConnection, config: Configuration, test_cases: 
   with io.StringIO() as errors_stream:
     try:
       for case in test_cases:
-        result = case.run(connection, config, errors_stream)
+        result = case.run(connection, errors_stream)
         if result:
           total_succ+=1
           if config.log:
