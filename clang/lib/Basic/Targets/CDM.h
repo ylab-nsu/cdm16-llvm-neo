@@ -36,9 +36,12 @@ public:
     SizeType = UnsignedInt;
     PtrDiffType = SignedInt;
     IntPtrType = SignedInt;
-    Char16Type = UnsignedInt;
-    WIntType = SignedInt;
     Int16Type = SignedInt;
+    Int64Type = SignedLongLong;
+    IntMaxType = SignedLongLong;
+    WCharType = SignedLong;
+    WIntType = SignedLong;
+    Char16Type = UnsignedInt;
     Char32Type = UnsignedLong;
     SigAtomicType = SignedChar;
     resetDataLayout("e-S16-p:16:16-i8:8-i16:16-i32:16-i64:16-f16:16-f32:16-"
