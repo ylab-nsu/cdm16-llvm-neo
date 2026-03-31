@@ -11,18 +11,20 @@ from .objs_comparing import get_objs_diff, compare_objs
 
 @dataclass
 class DriverTestCase(TestCase):
+  clang: ClangCocas
+  cocas: Cocas
   opt_level: str
 
-  def run(self, connection: CocoemuConnection, config: Configuration, errors_stream: TextIOBase) -> bool:
+  def run(self, connection: CocoemuConnection, errors_stream: TextIOBase) -> bool:
     ret = True
     for file in filter(lambda f: f.suffix == '.c', self.files):
       obj_from_clang: Path | None = None
       asm: Path | None = None
       obj_from_cocas: Path | None = None
       try:
-        obj_from_clang = clang_compile_and_assemble(file, Target.CDM_COCAS, config, self.opt_level)
-        asm = clang_compile(file, Target.CDM_COCAS, config, self.opt_level)
-        obj_from_cocas = cocas_assemble(asm, config)
+        obj_from_clang = self.clang.assemble(file, self.opt_level)
+        asm = self.clang.compile(file, self.opt_level)
+        obj_from_cocas = self.cocas.assemble(asm)
       except (CompilationError, CocasError) as e:
         print_error_big(f'Error in {self.name}:\n{str(e)}', file = errors_stream)
         ret = False

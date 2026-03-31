@@ -4,17 +4,21 @@ from test_cdm.testing_system.parse.directive import Directive
 from test_cdm.testing_system.test_case import TestCase
 from test_cdm.testing_system.configuration import Configuration
 from test_cdm.testing_system.processor import ProcessorInfo
-from test_cdm.testing_system.toolchain import clang_compile_and_assemble, CompilationError, Target
+from test_cdm.testing_system.toolchain import ClangCocas, ClangELF, CompilationError
 from .test_case import CocasEndToEndTestCase, ElfEndToEndTestCase
 from .parsing import parse_directive
 
 class EndToEndTestCaseProducer(TestCaseProducer):
+  clang_cocas: ClangCocas
+  clang_elf: ClangELF
   cocas: list[Path] = []
   elf: list[Path] = []
 
   def __init__(self, config: Configuration, processor_info: ProcessorInfo):
-    self.config = config
-    self.processor_info = processor_info
+    super().__init__(config, processor_info)
+
+    self.clang_elf = ClangELF(config)
+    self.clang_cocas = ClangCocas(config)
 
     common_resources = config.resources_path / "end_to_end_common"
     elf_resources = config.resources_path / "end_to_end_elf"
@@ -34,18 +38,18 @@ class EndToEndTestCaseProducer(TestCaseProducer):
       for file in filter(Path.is_file, common_resources.iterdir()):
         output_path = (cocas_build / file.name).with_suffix('.o')
         if (not output_path.exists()) or (file.stat().st_mtime > output_path.stat().st_mtime):
-          output_path = clang_compile_and_assemble(file, Target.CDM_COCAS, self.config, '3', output_path)
+          output_path = self.clang_cocas.assemble(file, '3', output_path)
         self.cocas.append(output_path)
 
         output_path = (elf_build / file.name).with_suffix('.o')
         if (not output_path.exists()) or (file.stat().st_mtime > output_path.stat().st_mtime):
-          output_path = clang_compile_and_assemble(file, Target.CDM_ELF, self.config, '3', output_path)
+          output_path = self.clang_elf.assemble(file, '3', output_path)
         self.elf.append(output_path)
 
       for file in filter(Path.is_file, elf_resources.iterdir()):
         output_path = (elf_build / file.name).with_suffix('.o')
         if (not output_path.exists()) or (file.stat().st_mtime > output_path.stat().st_mtime):
-          output_path = clang_compile_and_assemble(file, Target.CDM_ELF, self.config, '3', output_path)
+          output_path = self.clang_elf.assemble(file, '3', output_path)
         self.elf.append(output_path)
 
     except CompilationError as e:
@@ -56,10 +60,12 @@ class EndToEndTestCaseProducer(TestCaseProducer):
     for opt_level in ['0', '1', '2', '3', 's']:
       ret.append(CocasEndToEndTestCase(f'Cocas end-to-end "{name}" with optimization level -O{opt_level}',
                                   files + self.cocas,
+                                  self.clang_cocas,
                                   list(map(lambda d: parse_directive(d, self.processor_info), directives)),
                                   opt_level))
       ret.append(ElfEndToEndTestCase(f'Cocas-less end-to-end "{name}" with optimization level -O{opt_level}',
                                   files + self.elf,
+                                  self.clang_elf,
                                   list(map(lambda d: parse_directive(d, self.processor_info), directives)),
                                   opt_level))
 

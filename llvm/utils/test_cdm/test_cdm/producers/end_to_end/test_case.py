@@ -8,13 +8,14 @@ from pathlib import Path
 from test_cdm.testing_system.configuration import Configuration
 from test_cdm.testing_system.test_case import TestCase
 from test_cdm.testing_system.parse.directive import Directive
-from test_cdm.testing_system.toolchain import *
+from test_cdm.testing_system.toolchain import Clang, CompilationError, CocasError
 from test_cdm.testing_system.cocoemu import CocoemuConnection
 from test_cdm.testing_system.util.errors_printing import print_error_big
 from .assertions import Assertion, AbsoluteSectionAssertion
 
 @dataclass
 class EndToEndTestCase(TestCase):
+  clang: Clang
   assertions: list[Assertion]
   opt_level: str
 
@@ -30,12 +31,11 @@ class EndToEndTestCase(TestCase):
       sec.address = next_address
       next_address += len(sec.content)
 
-  @classmethod
   @abstractmethod
-  def produce_binary(cls, files: list[Path], config: Configuration, opt_level: str, absolute_sections: list[AbsoluteSectionAssertion]) -> Path:
+  def produce_binary(cls, files: list[Path], opt_level: str, absolute_sections: list[AbsoluteSectionAssertion]) -> Path:
     pass
 
-  def run(self, connection: CocoemuConnection, config: Configuration, errors_stream: TextIOBase) -> bool:
+  def run(self, connection: CocoemuConnection, errors_stream: TextIOBase) -> bool:
     ret = False
 
     absolute_sections = cast(list[AbsoluteSectionAssertion], list(filter(lambda a : isinstance(a, AbsoluteSectionAssertion), self.assertions)))
@@ -43,7 +43,7 @@ class EndToEndTestCase(TestCase):
 
     binary = None
     try:
-      binary = self.produce_binary(self.files, config, self.opt_level, absolute_sections)
+      binary = self.produce_binary(self.files, self.opt_level, absolute_sections)
 
       connection.run_binary(binary)
       for ass in self.assertions:
@@ -75,15 +75,14 @@ class CocasEndToEndTestCase(EndToEndTestCase):
       temp.write('end.\n')
       return Path(temp.name)
 
-  @classmethod
-  def produce_binary(cls, files: list[Path], config: Configuration, opt_level: str, absolute_sections: list[AbsoluteSectionAssertion]) -> Path:
+  def produce_binary(self, files: list[Path], opt_level: str, absolute_sections: list[AbsoluteSectionAssertion]) -> Path:
     absolute_sections_file = None
     try:
-      absolute_sections_file = cls.generate_absolute_sections_file(absolute_sections)
+      absolute_sections_file = self.generate_absolute_sections_file(absolute_sections)
       if not absolute_sections_file is None:
         files += [absolute_sections_file]
 
-      return clang_compile_assemble_link(files, Target.CDM_COCAS, config, opt_level)
+      return self.clang.link(files, opt_level)
     finally:
       if not absolute_sections_file is None:
         os.remove(str(absolute_sections_file))
@@ -129,12 +128,11 @@ class ElfEndToEndTestCase(EndToEndTestCase):
 
       return Path(temp.name)
 
-  @classmethod
-  def produce_binary(cls, files: list[Path], config: Configuration, opt_level: str, absolute_sections: list[AbsoluteSectionAssertion]) -> Path:
+  def produce_binary(self, files: list[Path], opt_level: str, absolute_sections: list[AbsoluteSectionAssertion]) -> Path:
     linker_script = None
     try:
-      linker_script = cls.generate_linker_script(absolute_sections)
-      return clang_compile_assemble_link(files, Target.CDM_ELF, config, opt_level, None, linker_script)
+      linker_script = self.generate_linker_script(absolute_sections)
+      return self.clang.link(files, opt_level, None, linker_script)
     finally:
       if not linker_script is None:
         os.remove(str(linker_script))
