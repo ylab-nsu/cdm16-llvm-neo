@@ -31,6 +31,7 @@ env:
     bin/llvm-size
     bin/llvm-strings
   RESOURCES: |
+    lib/clang
     lib/cdm
     lib/cdm-unknown-unknown-cocas
     include/cdm
