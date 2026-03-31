@@ -598,10 +598,6 @@ Error DataLayout::parseSpecification(
     case 'a':
       ManglingMode = MM_XCOFF;
       break;
-
-    case 'C':
-      ManglingMode = MM_CDM;
-      break;
     }
     break;
   default:
