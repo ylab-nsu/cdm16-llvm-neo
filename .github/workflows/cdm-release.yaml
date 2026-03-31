@@ -1,0 +1,44 @@
+name: '[CDM] Release binaries'
+
+on:
+  push:
+    tags:
+      - 'release-*'
+env:
+  REF_NAME: ${{ github.ref_name }}
+
+jobs:
+  build-test:
+    uses: ./.github/workflows/cdm-build.yaml
+    with:
+      static-build: true
+      upload: true
+
+  release:
+    needs: build-test
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+    steps:
+      - name: Create subfolder
+        run: mkdir artifacts_download
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          skip-decompress: true
+          path: ./artifacts_download
+      - id: get-version
+        name: Get version
+        run: echo "VERSION=${REF_NAME}" | tr -d "release-" >> $GITHUB_OUTPUT
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ steps.get-version.outputs.VERSION }}
+          body: ' '
+          draft: false
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: |
+            ${{github.workspace}}/artifacts_download/*/*.tar.gz
+            ${{github.workspace}}/artifacts_download/*/*.zip

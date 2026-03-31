@@ -52,7 +52,7 @@ def clang_compile_and_assemble(filepath, clang_path, include_paths, opt_level):
       clang_args.append(str(i))
 
   clang_args.append(str(filepath))
-  clang_proc = subprocess.run(clang_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env = {'COCAS':f'{sys.prefix}/bin/cocas'})
+  clang_proc = subprocess.run(clang_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env = {'COCAS':f'{os.path.dirname(sys.executable)}/cocas'})
   # print(' '.join(clang_args), end = "\n\n")
 
   if not clang_proc.returncode == 0:
@@ -66,10 +66,8 @@ def cocas_assemble(filepath):
   output_path = Path(output_file.name)
   output_file.close()
 
-  #print(' '.join([".venv/bin/cocas","-t","cdm16","-o", str(output_path), ] + [str(i) for i in cocas_input]))
-
   cocas_proc = subprocess.run([
-                                "bin/cocas",
+                                f"{os.path.dirname(sys.executable)}/cocas",
                                 "-t",
                                 "cdm16",
                                 "-c",
@@ -77,7 +75,6 @@ def cocas_assemble(filepath):
                                 str(output_path),
                                 str(filepath)
                               ],
-                              cwd = sys.prefix,
                               stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE)
   if not cocas_proc.returncode == 0:
@@ -92,16 +89,13 @@ def cocas_assemble_and_link(cocas_input):
   output_path = Path(output_file.name)
   output_file.close()
 
-  #print(' '.join([".venv/bin/cocas","-t","cdm16","-o", str(output_path), ] + [str(i) for i in cocas_input]))
-
   cocas_proc = subprocess.run([
-                                "bin/cocas",
+                                f"{os.path.dirname(sys.executable)}/cocas",
                                 "-t",
                                 "cdm16",
                                 "-o",
                                 str(output_path),
                               ] + [str(i) for i in cocas_input],
-                              cwd = sys.prefix,
                               stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE)
   if not cocas_proc.returncode == 0:

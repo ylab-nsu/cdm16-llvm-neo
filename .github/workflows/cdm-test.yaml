@@ -1,0 +1,14 @@
+name: '[CDM] Run tests on PR'
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-test:
+    uses: ./.github/workflows/cdm-build.yaml
+    with:
+      static-build: false
+      upload: false

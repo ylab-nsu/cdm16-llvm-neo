@@ -14,7 +14,7 @@ def connect_to_server(port):
     except ConnectionRefusedError:
       time.sleep(0.5)
     tries += 1
-  
+
   raise CocoemuServerError(f"Failed to connect to server after {MAX_TRIES} attempts")
 
 def check_server_response(ws):
@@ -25,73 +25,55 @@ def check_server_response(ws):
   return resp_dict
 
 def init_server(ws):
-  ws.send(
-          """
-          {
-            "action": "init",
-            "target": "cdm16",
-            "memoryConfiguration": "vonNeumann"
-          }
-          """
-        )
+  message = {
+    "action": "init",
+    "target": "cdm16",
+    "memoryConfiguration": "vonNeumann",
+  }
+  ws.send(json.dumps(message))
   resp = check_server_response(ws)
 
   return ProcessorInfo(resp['registerNames'], resp['registerSizes'], resp['ramSize'])
 
 def reset_server(ws):
-  ws.send(
-          """
-          {
-            "action": "reset"
-          }
-          """
-         )
+  message = {
+    "action": "reset",
+  }
+  ws.send(json.dumps(message))
   check_server_response(ws)
 
 def load_image_to_server(ws, filepath):
-  ws.send(
-          f"""
-           {{
-             "action": "load",
-             "source": "path",
-             "path" = "{str(filepath)}"
-           }}
-           """
-         )
+  message = {
+    "action": "load",
+    "source": "path",
+    "path": str(filepath),
+  }
+  ws.send(json.dumps(message))
   check_server_response(ws)
 
 def run_server(ws):
-  ws.send(
-          """
-          {
-            "action": "run",
-            "stopConditions": []
-          }
-          """
-         )
+  message = {
+    "action": "run",
+    "stopConditions": [],
+  }
+  ws.send(json.dumps(message))
   check_server_response(ws) # Run confirming
   check_server_response(ws) # Stop message
 
 def get_regs_from_server(ws):
-  ws.send(
-          """
-          {
-            "action": "getRegisters"
-          }
-          """
-         )
+  message = {
+    "action": "getRegisters",
+  }
+  ws.send(json.dumps(message))
   resp = check_server_response(ws)
 
   return resp['registers']
 
 def get_memory_from_server(ws):
-  ws.send(
-          """
-          {
-            "action": "getMemory"
-          }
-          """
-         )
+  message = {
+    "action": "getMemory",
+  }
+  ws.send(json.dumps(message))
   resp = check_server_response(ws)
 
   return resp['bytes']

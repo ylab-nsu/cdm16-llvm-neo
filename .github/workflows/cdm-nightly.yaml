@@ -1,0 +1,38 @@
+name: '[CDM] Nightly build'
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 21 * * *" # every day 21:00 UTC (4:00 UTC+7)
+
+jobs:
+  build-test:
+    uses: ./.github/workflows/cdm-build.yaml
+    with:
+      static-build: true
+      upload: true
+
+  release:
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create subfolder
+        run: mkdir artifacts_download
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          skip-decompress: true
+          path: ./artifacts_download
+      - name: Update Nightly Release
+        uses: andelf/nightly-release@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: nightly
+          name: 'Nightly'
+          body: 'Nightly releases are made every night. They contain the newest features and fixes, but may be unstable.'
+          prerelease: true
+          files: |
+            ${{github.workspace}}/artifacts_download/*/*.tar.gz
+            ${{github.workspace}}/artifacts_download/*/*.zip
+
