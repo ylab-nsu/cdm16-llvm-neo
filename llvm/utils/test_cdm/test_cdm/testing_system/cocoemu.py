@@ -1,5 +1,7 @@
+import subprocess
 import json
 import time
+import sys
 from pathlib import Path
 from types import TracebackType
 from dataclasses import dataclass
@@ -7,6 +9,7 @@ from websockets.sync.client import connect
 from websockets.sync.client import ClientConnection
 from typing import Any, cast
 from .processor import ProcessorInfo, ProcessorState
+from .configuration import Configuration
 
 @dataclass
 class CocoemuServerError(Exception):
@@ -17,38 +20,51 @@ class CocoemuServerError(Exception):
 class CocoemuConnection:
   processor_info: ProcessorInfo
   ws: ClientConnection
+  server_proc: subprocess.Popen
 
-  def __init__(self, port: int) -> None:
+  def __init__(self, config: Configuration) -> None:
+    self.server_proc = subprocess.Popen([
+                                     str(config.cocoemu_path),
+                                     "-p",
+                                     str(config.cocoemu_port)
+                                   ],
+                                   stdout = subprocess.DEVNULL)
     MAX_TRIES = 10
 
     tries = 0
     while tries < MAX_TRIES:
+      tries += 1
+
       try:
-       self.ws = connect(f"ws://localhost:{port}")
+       self.ws = connect(f"ws://localhost:{config.cocoemu_port}")
        break
       except ConnectionRefusedError:
-        time.sleep(0.5)
-      tries += 1
+        # Don't wait if it was last attempt
+        if tries != MAX_TRIES:
+          print("Failed to connect to server, retry...", file=sys.stderr)
+          time.sleep(0.5)
     else:
       raise CocoemuServerError(f"Failed to connect to server after {MAX_TRIES} attempts")
 
-    self.ws.send(
-            """
-            {
-              "action": "init",
-              "target": "cdm16",
-              "memoryConfiguration": "vonNeumann"
-            }
-            """
-          )
+    message = {
+      "action": "init",
+      "target": "cdm16",
+      "memoryConfiguration": "vonNeumann",
+    }
+    self.ws.send(json.dumps(message))
     resp = self.check_server_response()
     self.processor_info = ProcessorInfo(resp['registerNames'], resp['registerSizes'], resp['ramSize'])
+
+  def close(self) -> None:
+    self.ws.close()
+    self.server_proc.terminate()
+    self.server_proc.wait()
 
   def __enter__(self) -> 'CocoemuConnection':
     return self
 
   def __exit__(self, type: type[BaseException], value: BaseException | None, traceback: TracebackType | None) -> None:
-    self.ws.close()
+    self.close()
 
   def check_server_response(self) -> Any:
     resp = self.ws.recv()
@@ -61,47 +77,35 @@ class CocoemuConnection:
     return resp_dict
 
   def reset_server(self) -> None:
-    self.ws.send(
-            """
-            {
-              "action": "reset"
-            }
-            """
-           )
+    message = {
+      "action": "reset",
+    }
+    self.ws.send(json.dumps(message))
     self.check_server_response()
 
   def load_image_to_server(self, filepath: Path) -> None:
-    self.ws.send(
-            f"""
-             {{
-               "action": "load",
-               "source": "path",
-               "path" = "{str(filepath)}"
-             }}
-             """
-           )
+    message = {
+      "action": "load",
+      "source": "path",
+      "path": str(filepath),
+    }
+    self.ws.send(json.dumps(message))
     self.check_server_response()
 
   def run_server(self) -> None:
-    self.ws.send(
-            """
-            {
-              "action": "run",
-              "stopConditions": []
-            }
-            """
-           )
+    message = {
+      "action": "run",
+      "stopConditions": [],
+    }
+    self.ws.send(json.dumps(message))
     self.check_server_response() # Run confirmation
     self.check_server_response() # Stop message
 
   def get_regs_from_server(self) -> dict[str, int]:
-    self.ws.send(
-            """
-            {
-              "action": "getRegisters"
-            }
-            """
-           )
+    message = {
+      "action": "getRegisters",
+    }
+    self.ws.send(json.dumps(message))
     resp = self.check_server_response()
 
     try:
@@ -110,13 +114,10 @@ class CocoemuConnection:
       raise CocoemuServerError(f'No "registers" field in cocoemu answer: {resp}')
 
   def get_memory_from_server(self) -> list[int]:
-    self.ws.send(
-            """
-            {
-              "action": "getMemory"
-            }
-            """
-           )
+    message = {
+      "action": "getMemory",
+    }
+    self.ws.send(json.dumps(message))
     resp = self.check_server_response()
 
     try:
