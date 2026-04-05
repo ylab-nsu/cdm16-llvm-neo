@@ -13,13 +13,13 @@ See `test_cdm --help` for available options
 
 ### Single-source test
 
-Every regular file located in directory which doesn't contain `.multi_source` file is treated as a single-source test
+Every regular file located in directory which doesn't contain `multi_source` file is treated as a single-source test
 
 ### Multi-source test
 
-Every directory, which contain `.multi_source` file is treated as a multi-source test
+Every directory, which contain `multi_source` file is treated as a multi-source test
 
-Directives are gathered from each C source file from this directory
+Directives are gathered from `multi_source` file (since it's not source file they shouldn't be commented e.g. `CHECK reg(r0) 0`, not `// CHECK reg(r0) 0`)
 
 ### Source file format
 
