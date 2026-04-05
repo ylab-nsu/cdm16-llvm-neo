@@ -1,4 +1,3 @@
-// CHECK prod(end_to_end)
 // CHECK reg(r0) 65514
 
 struct lol {

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from test_cdm.testing_system.processor import ProcessorState
-from .diff_printing import get_diff
+from test_cdm.testing_system.util.diff_printing import get_diff
+from .processor import ProcessorState
 
 class Assertion(ABC):
   @abstractmethod

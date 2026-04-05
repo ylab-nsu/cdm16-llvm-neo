@@ -1,6 +1,4 @@
-// CHECK prod(end_to_end)
 // CHECK reg(r0) 35
-// CHECK prod(driver)
 
 struct S {
   int A[10];

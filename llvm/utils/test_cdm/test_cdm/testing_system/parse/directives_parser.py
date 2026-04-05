@@ -1,7 +1,7 @@
 from test_cdm.testing_system.parse.directive import Directive
-from test_cdm.testing_system.parse.tests_parser import TestParsingError
 from test_cdm.testing_system.processor import ProcessorInfo
-from .assertions import Assertion, RegisterAssertion, MemoryAssertion, AbsoluteSectionAssertion
+from test_cdm.testing_system.assertions import Assertion, RegisterAssertion, MemoryAssertion, AbsoluteSectionAssertion
+from .test_parsing_error import TestParsingError
 
 def parse_int(string: str, numsize: int) -> int:
   try:
