@@ -76,14 +76,14 @@ class Clang(ABC):
       raise e
 
   @abstractmethod
-  def link(self, files: list[Path], opt_level: str, output_path: Path | None = None, linker_script: Path | None = None) -> Path:
+  def link(self, files: list[Path], opt_level: str, output_path: Path | None = None, linker_script: list[Path] | None = None) -> Path:
     pass
 
 class ClangELF(Clang):
   def __init__(self, config: Configuration) -> None:
     super().__init__(config, "cdm")
 
-  def link(self, files: list[Path], opt_level: str, output_path: Path | None = None, linker_script: Path | None = None) -> Path:
+  def link(self, files: list[Path], opt_level: str, output_path: Path | None = None, linker_script: list[Path] | None = None) -> Path:
     try:
       if output_path is None:
         output_file = tempfile.NamedTemporaryFile(suffix = '.img', delete=False)
@@ -95,8 +95,9 @@ class ClangELF(Clang):
         clang_args.append('-I')
         clang_args.append(str(i))
       if not linker_script is None:
-        clang_args.append('-T')
-        clang_args.append(str(linker_script))
+        for script in linker_script:
+          clang_args.append('-T')
+          clang_args.append(str(script))
       clang_args.append('-Wl,--oformat=binary')
       for i in files:
         clang_args.append(str(i))
@@ -123,7 +124,7 @@ class ClangCocas(Clang):
   def __init__(self, config: Configuration) -> None:
     super().__init__(config, "cdm-cocas")
 
-  def link(self, files: list[Path], opt_level: str, output_path: Path | None = None, linker_script: Path | None = None) -> Path:
+  def link(self, files: list[Path], opt_level: str, output_path: Path | None = None, linker_script: list[Path] | None = None) -> Path:
     try:
       if output_path is None:
         output_file = tempfile.NamedTemporaryFile(suffix = '.img', delete=False)
@@ -135,8 +136,9 @@ class ClangCocas(Clang):
         clang_args.append('-I')
         clang_args.append(str(i))
       if not linker_script is None:
-        clang_args.append('-T')
-        clang_args.append(str(linker_script))
+        for script in linker_script:
+          clang_args.append('-T')
+          clang_args.append(str(script))
       for i in files:
         clang_args.append(str(i))
 

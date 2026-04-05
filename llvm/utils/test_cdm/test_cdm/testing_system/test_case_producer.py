@@ -19,8 +19,10 @@ class TestCaseProducer:
   config: Configuration
   clang_cocas: ClangCocas
   clang_elf: ClangELF
+
   cocas: list[Path] = []
   elf: list[Path] = []
+  common_linker_script: Path
 
 
   def __init__(self, config: Configuration):
@@ -28,13 +30,16 @@ class TestCaseProducer:
 
     self.clang_elf = ClangELF(config)
     self.clang_cocas = ClangCocas(config)
-
     common_resources = config.resources_path / "end_to_end_common"
     elf_resources = config.resources_path / "end_to_end_elf"
 
     elf_build = config.resources_path / "build" / "end_to_end_elf"
     cocas_build = config.resources_path / "build" / "end_to_end_cocas"
 
+    self.common_linker_script = elf_resources / "common.ld"
+
+    if not self.common_linker_script.exists():
+      raise TestProducingError(f'Cannot find common linker script at {self.common_linker_script}')
     if not common_resources.exists():
       raise TestProducingError(f'Cannot find resources directory at {common_resources}')
     if not elf_resources.exists():
@@ -44,7 +49,7 @@ class TestCaseProducer:
     cocas_build.mkdir(exist_ok=True, parents=True)
 
     try:
-      for file in filter(Path.is_file, common_resources.iterdir()):
+      for file in filter(lambda p: p.is_file() and (p.suffix == '.c' or p.suffix == '.s'), common_resources.iterdir()):
         output_path = (cocas_build / file.name).with_suffix('.o')
         if (not output_path.exists()) or (file.stat().st_mtime > output_path.stat().st_mtime):
           output_path = self.clang_cocas.assemble(file, '3', output_path)
@@ -55,7 +60,7 @@ class TestCaseProducer:
           output_path = self.clang_elf.assemble(file, '3', output_path)
         self.elf.append(output_path)
 
-      for file in filter(Path.is_file, elf_resources.iterdir()):
+      for file in filter(lambda p: p.is_file() and (p.suffix == '.c' or p.suffix == '.s'), elf_resources.iterdir()):
         output_path = (elf_build / file.name).with_suffix('.o')
         if (not output_path.exists()) or (file.stat().st_mtime > output_path.stat().st_mtime):
           output_path = self.clang_elf.assemble(file, '3', output_path)
@@ -76,6 +81,7 @@ class TestCaseProducer:
                                   files + self.elf,
                                   self.clang_elf,
                                   assertions,
-                                  opt_level))
+                                  opt_level,
+                                  self.common_linker_script))
 
     return ret
