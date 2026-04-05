@@ -88,44 +88,23 @@ class CocasEndToEndTestCase(TestCase):
       if not absolute_sections_file is None:
         os.remove(str(absolute_sections_file))
 
+@dataclass
 class ElfEndToEndTestCase(TestCase):
+  common_linker_script: Path
+
   @staticmethod
   def generate_linker_script(absolute_sections: list[AbsoluteSectionAssertion]) -> Path:
     with tempfile.NamedTemporaryFile(suffix = '.ld', delete=False, mode='wt') as temp:
-      temp.write("""
-                 SECTIONS
-                 {
-                     .isr_vector : {
-                         *(.isr_vector)
-                     }
-
-                 """)
+      temp.write("SECTIONS {\n")
       for sec in absolute_sections:
         temp.write(f"""
-                    . = {sec.address};
-                    .{sec.symbol}_{sec.address} : {{
-                        {sec.symbol} = .;
+                    .{sec.symbol}_{sec.address} {sec.address} : {{
+                        {sec.symbol} = {sec.address};
                     }}
 
                     """)
 
-      temp.write("""
-                 .text : ALIGN(2) {
-                   *(.text*)
-                   *(.rodata*)
-                 }
-
-                 .data : ALIGN(2){
-                   *(.data*)
-                 }
-
-                 .bss : ALIGN(2){
-                   *(.bss*)
-                   *(COMMON)
-                 }
-
-                 }
-                 """)
+      temp.write("}")
 
       return Path(temp.name)
 
@@ -133,7 +112,7 @@ class ElfEndToEndTestCase(TestCase):
     linker_script = None
     try:
       linker_script = self.generate_linker_script(absolute_sections)
-      return self.clang.link(files, opt_level, None, linker_script)
+      return self.clang.link(files, opt_level, None, [linker_script, self.common_linker_script])
     finally:
       if not linker_script is None:
         os.remove(str(linker_script))
