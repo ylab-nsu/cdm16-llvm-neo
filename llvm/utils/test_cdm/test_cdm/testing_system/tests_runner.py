@@ -1,5 +1,3 @@
-import subprocess
-import signal
 import io
 import sys
 from collections.abc import Generator
@@ -10,36 +8,26 @@ from .parse.tests_parser import TestsParser
 from .configuration import Configuration
 
 def run_testing_system(config: Configuration) -> int:
-  server_proc = subprocess.Popen([
-                                   str(config.cocoemu_path),
-                                   "-p",
-                                   str(config.cocoemu_port)
-                                 ],
-                                 stdout = subprocess.DEVNULL)
-  try:
-    with CocoemuConnection(config.cocoemu_port) as connection:
-      print("\033[32mServer initialized\033[0m")
-      if config.verbose:
-        print(connection.processor_info, end = "\n\n")
+  with CocoemuConnection(config) as connection:
+    print("\033[32mServer initialized\033[0m")
+    if config.verbose:
+      print(connection.processor_info, end = "\n\n")
 
-      tests_parser = TestsParser(connection.processor_info, TestCaseProducer(config))
+    tests_parser = TestsParser(connection.processor_info, TestCaseProducer(config))
 
-      test_cases: list[TestCase] = []
-      for search_point in config.search_points:
-        test_cases.extend(tests_parser.collect_tests(search_point))
+    test_cases: list[TestCase] = []
+    for search_point in config.search_points:
+      test_cases.extend(tests_parser.collect_tests(search_point))
 
-      if (config.verbose):
-        print("\033[32mFound tests:\033[0m")
-        print('\n\n'.join(map(str, test_cases)), end = "\n\n")
-      else:
-        print(f"\033[32mFound {len(test_cases)} tests\033[0m")
+    if (config.verbose):
+      print("\033[32mFound tests:\033[0m")
+      print('\n\n'.join(map(str, test_cases)), end = "\n\n")
+    else:
+      print(f"\033[32mFound {len(test_cases)} tests\033[0m")
 
-      succ, fails = run_tests(connection, config, test_cases)
+    succ, fails = run_tests(connection, config, test_cases)
 
-      return -1 if fails else 0
-  finally:
-    server_proc.send_signal(signal.SIGINT)
-    server_proc.wait()
+    return -1 if fails else 0
 
 def run_tests(connection: CocoemuConnection, config: Configuration, test_cases: list[TestCase]) -> tuple[int, int]:
   total_succ = 0
