@@ -32,7 +32,7 @@ class Clang(ABC):
         output_path = Path(output_file.name)
         output_file.close()
 
-      clang_args = [str(self.config.clang_path), '-target', self.target, '-S', f'-O{opt_level}', '-o', str(output_path)]
+      clang_args = [str(self.config.clang_path), '-target', self.target, '-ffreestanding', '-S', f'-O{opt_level}', '-o', str(output_path)]
       for i in self.config.include_paths:
           clang_args.append('-I')
           clang_args.append(str(i))
@@ -56,7 +56,7 @@ class Clang(ABC):
         output_path = Path(output_file.name)
         output_file.close()
 
-      clang_args = [str(self.config.clang_path), '-target', self.target, '-c', f'-O{opt_level}', '-o', str(output_path)]
+      clang_args = [str(self.config.clang_path), '-target', self.target, '-ffreestanding', '-c', f'-O{opt_level}', '-o', str(output_path)]
       for i in self.config.include_paths:
           clang_args.append('-I')
           clang_args.append(str(i))
@@ -88,7 +88,7 @@ class ClangELF(Clang):
         output_path = Path(output_file.name)
         output_file.close()
 
-      clang_args = [str(self.config.clang_path), '-target', self.target, f'-O{opt_level}', '-o', '-']
+      clang_args = [str(self.config.clang_path), '-target', self.target, '-ffreestanding', f'-O{opt_level}', '-o', '-']
       for i in self.config.include_paths:
         clang_args.append('-I')
         clang_args.append(str(i))
@@ -127,7 +127,7 @@ class ClangCocas(Clang):
         output_path = Path(output_file.name)
         output_file.close()
 
-      clang_args = [str(self.config.clang_path), '-target', self.target, f'-O{opt_level}', '-o', str(output_path)]
+      clang_args = [str(self.config.clang_path), '-target', self.target, '-ffreestanding', f'-O{opt_level}', '-o', str(output_path)]
       for i in self.config.include_paths:
         clang_args.append('-I')
         clang_args.append(str(i))
