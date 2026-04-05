@@ -1,4 +1,3 @@
-// CHECK prod(end_to_end)
 // CHECK reg(r0) 69
 
 typedef int (*volatile FuncT)(int, int, int, int, int);

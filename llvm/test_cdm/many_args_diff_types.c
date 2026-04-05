@@ -1,4 +1,3 @@
-// CHECK prod(end_to_end)
 // CHECK reg(r0) 6
 
 __attribute__((noinline)) int foo(char a, float b, long long c, long d, short e,

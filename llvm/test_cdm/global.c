@@ -1,4 +1,3 @@
-// CHECK prod(end_to_end)
 // CHECK reg(r0) 1342
 // CHECK mem(0xCAFE) BE BA
 

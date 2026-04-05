@@ -1,4 +1,3 @@
-// CHECK prod(end_to_end)
 // CHECK reg(r0) 1
 
 __attribute__((noinline)) int shra16_bigconst(int value) {

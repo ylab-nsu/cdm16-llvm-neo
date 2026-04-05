@@ -1,4 +1,3 @@
-// CHECK prod(end_to_end)
 // CHECK reg(r0) 23421
 // CHECK reg(r1) 65469
 

@@ -4,17 +4,15 @@ import shutil
 from pathlib import Path
 from test_cdm.testing_system.tests_runner import run_testing_system
 from test_cdm.testing_system.cocoemu import CocoemuServerError
-from test_cdm.testing_system.parse.tests_parser import TestParsingError
+from test_cdm.testing_system.parse.test_parsing_error import TestParsingError
 from test_cdm.testing_system.util.errors_printing import print_error
-from test_cdm.testing_system.test_case_producer import TestCaseProducer, TestProducingError
+from test_cdm.testing_system.test_case_producer import TestProducingError
 from test_cdm.testing_system.configuration import Configuration, InvalidConfigurationError
-from test_cdm.producers.end_to_end.producer import EndToEndTestCaseProducer
-from test_cdm.producers.driver.producer import DriverTestCaseProducer
 
 def main(base_config: Configuration) -> int:
 
   parser = argparse.ArgumentParser(__file__)
-  parser.add_argument('--cocas', type=Path, help='path to cocas executable, default: .venv/bin/cocas', required=False)
+  parser.add_argument('--cocas', type=Path, help=f'path to cocas executable, default: {base_config.cocas_path}', required=False)
   parser.add_argument('-p', '--port', type=int, help='port for cocoemu-server binding, default: 7001', required=False, default=7001)
   parser.add_argument('-I', '--include', type=Path, action='append', dest='include_paths', help='add directory to headers search paths', default=[])
   parser.add_argument('-v', '--verbose', action='store_true')
@@ -37,8 +35,7 @@ def main(base_config: Configuration) -> int:
   try:
     base_config.verify()
 
-    producers: dict[str, type[TestCaseProducer]] = {'end_to_end' : EndToEndTestCaseProducer, 'driver' : DriverTestCaseProducer}
-    return run_testing_system(base_config, producers)
+    return run_testing_system(base_config)
   except KeyboardInterrupt:
     print("")
   except CocoemuServerError as e:

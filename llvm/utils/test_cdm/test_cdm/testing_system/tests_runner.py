@@ -6,10 +6,10 @@ from collections.abc import Generator
 from .test_case_producer import TestCaseProducer
 from .cocoemu import CocoemuConnection
 from .test_case import TestCase
-from .parse.tests_parser import collect_tests
+from .parse.tests_parser import TestsParser
 from .configuration import Configuration
 
-def run_testing_system(config: Configuration, producers: dict[str, type[TestCaseProducer]]) -> int:
+def run_testing_system(config: Configuration) -> int:
   server_proc = subprocess.Popen([
                                    str(config.cocoemu_path),
                                    "-p",
@@ -22,11 +22,11 @@ def run_testing_system(config: Configuration, producers: dict[str, type[TestCase
       if config.verbose:
         print(connection.processor_info, end = "\n\n")
 
-      producer_instances = dict(map(lambda item: (item[0], item[1](config, connection.processor_info)), producers.items()))
+      tests_parser = TestsParser(connection.processor_info, TestCaseProducer(config))
 
       test_cases: list[TestCase] = []
       for search_point in config.search_points:
-        test_cases.extend(collect_tests(search_point, producer_instances))
+        test_cases.extend(tests_parser.collect_tests(search_point))
 
       if (config.verbose):
         print("\033[32mFound tests:\033[0m")
