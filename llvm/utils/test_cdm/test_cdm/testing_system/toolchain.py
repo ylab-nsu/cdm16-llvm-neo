@@ -41,7 +41,8 @@ class Clang(ABC):
       clang_proc = subprocess.run(clang_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
       if not clang_proc.returncode == 0:
-        raise CompilationError(f"Failed when tried to compile {str(filepath)} with return code {clang_proc.returncode}\nStdout:\n{clang_proc.stdout.decode()}\nStderr:\n{clang_proc.stderr.decode()}")
+        clang_invokation = ' '.join(clang_args)
+        raise CompilationError(f"Failed when tried to compile {str(filepath)} with return code {clang_proc.returncode}\nInvokation: {clang_invokation}\nStdout:\n{clang_proc.stdout.decode()}\nStderr:\n{clang_proc.stderr.decode()}")
       return output_path
 
     except BaseException as e:
@@ -65,7 +66,8 @@ class Clang(ABC):
       clang_proc = subprocess.run(clang_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env = {'COCAS':self.config.cocas_path})
 
       if not clang_proc.returncode == 0:
-        raise CompilationError(f"Failed when tried to assemble {str(filepath)} with return code {clang_proc.returncode}\nStdout:\n{clang_proc.stdout.decode()}\nStderr:\n{clang_proc.stderr.decode()}")
+        clang_invokation = ' '.join(clang_args)
+        raise CompilationError(f"Failed when tried to assemble {str(filepath)} with return code {clang_proc.returncode}\nInvokation: {clang_invokation}\nStdout:\n{clang_proc.stdout.decode()}\nStderr:\n{clang_proc.stderr.decode()}")
       return output_path
 
     except BaseException as e:
@@ -103,7 +105,8 @@ class ClangELF(Clang):
       clang_proc = subprocess.run(clang_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env = {'COCAS':self.config.cocas_path})
 
       if not clang_proc.returncode == 0:
-        raise CompilationError(f"Failed when tried to link files with return code {clang_proc.returncode}\nStdout:\n{clang_proc.stdout.decode()}\nStderr:\n{clang_proc.stderr.decode()}")
+        clang_invokation = ' '.join(clang_args)
+        raise CompilationError(f"Failed when tried to link files with return code {clang_proc.returncode}\nInvokation: {clang_invokation}\nStdout:\n{clang_proc.stdout.decode()}\nStderr:\n{clang_proc.stderr.decode()}")
 
       with output_path.open(mode = 'wt') as out:
         out.write("v2.0 raw\n")
@@ -141,7 +144,8 @@ class ClangCocas(Clang):
       clang_proc = subprocess.run(clang_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env = {'COCAS':self.config.cocas_path})
 
       if not clang_proc.returncode == 0:
-        raise CompilationError(f"Failed when tried to link files with return code {clang_proc.returncode}\nStdout:\n{clang_proc.stdout.decode()}\nStderr:\n{clang_proc.stderr.decode()}")
+        clang_invokation = ' '.join(clang_args)
+        raise CompilationError(f"Failed when tried to link files with return code {clang_proc.returncode}\nInvokation: {clang_invokation}\nStdout:\n{clang_proc.stdout.decode()}\nStderr:\n{clang_proc.stderr.decode()}")
 
       return output_path
 
