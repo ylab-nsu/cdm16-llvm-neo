@@ -1,4 +1,5 @@
 import subprocess
+import signal
 import json
 import time
 import sys
@@ -57,7 +58,10 @@ class CocoemuConnection:
 
   def close(self) -> None:
     self.ws.close()
-    self.server_proc.terminate()
+    if sys.platform == 'win32':
+      self.server_proc.terminate()
+    else:
+      self.server_proc.send_signal(signal.SIGINT)
     self.server_proc.wait()
 
   def __enter__(self) -> 'CocoemuConnection':
