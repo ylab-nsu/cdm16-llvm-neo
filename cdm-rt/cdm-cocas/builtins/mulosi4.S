@@ -1,6 +1,6 @@
 #include "cdm_asm.inc"
 
-RSECT(.text.__mulosi4)
+RSECT(__mulosi4)
 
 GLOBAL(__mulosi4)
 

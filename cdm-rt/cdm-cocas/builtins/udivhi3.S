@@ -1,6 +1,6 @@
 #include "cdm_asm.inc"
 
-RSECT(.text.__udivhi3)
+RSECT(__udivhi3)
 
 GLOBAL(__udivhi3)
 

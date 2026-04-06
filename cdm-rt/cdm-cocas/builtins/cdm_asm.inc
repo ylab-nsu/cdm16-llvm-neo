@@ -1,5 +1,5 @@
 #ifdef __COCAS__
-  #define RSECT(name)       rsect name
+  #define RSECT(name)       rsect .text.name
   #define GLOBAL(name)      name>
   #define EXTERN(name)      name: ext
   #define END               end.

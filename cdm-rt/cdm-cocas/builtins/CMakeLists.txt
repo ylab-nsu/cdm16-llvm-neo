@@ -1,4 +1,4 @@
-set(BUILDIN_SOURCES 
+set(BUILTIN_SOURCES 
   ${CMAKE_CURRENT_SOURCE_DIR}/mulhi3.S
   ${CMAKE_CURRENT_SOURCE_DIR}/mulsi3.S
   ${CMAKE_CURRENT_SOURCE_DIR}/muldi3.S
@@ -16,25 +16,11 @@ set(BUILDIN_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/umodsi3.S
   ${CMAKE_CURRENT_SOURCE_DIR}/umoddi3.S
   ${CMAKE_CURRENT_SOURCE_DIR}/udivmoddi4.S
-  ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_add_2.S
-  ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_and_2.S
-  ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_nand_2.S
-  ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_or_2.S
-  ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_sub_2.S
-  ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_xor_2.S
-  ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_max_2.S
-  ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_min_2.S
-  ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_umax_2.S
-  ${CMAKE_CURRENT_SOURCE_DIR}/sync_fetch_and_umin_2.S
-  ${CMAKE_CURRENT_SOURCE_DIR}/sync_lock_test_and_set_2.S
-  ${CMAKE_CURRENT_SOURCE_DIR}/sync_val_compare_and_swap_2.S
-  ${CMAKE_CURRENT_SOURCE_DIR}/atomic_load.S
-  ${CMAKE_CURRENT_SOURCE_DIR}/atomic_store.S
 )
 
 set(BUILTIN_OBJECTS "")
 
-foreach(src ${BUILDIN_SOURCES})
+foreach(src ${BUILTIN_SOURCES})
     get_filename_component(name ${src} NAME_WE)
     set(obj ${CMAKE_CURRENT_BINARY_DIR}/${name}.o)
     list(APPEND BUILTIN_OBJECTS ${obj})
