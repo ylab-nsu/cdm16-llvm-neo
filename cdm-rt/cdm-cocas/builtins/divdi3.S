@@ -1,6 +1,6 @@
 #include "cdm_asm.inc"
 
-RSECT(.text.__divdi3)
+RSECT(__divdi3)
 
 EXTERN(__udivmoddi4)
 
