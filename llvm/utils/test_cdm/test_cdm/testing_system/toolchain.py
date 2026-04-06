@@ -63,7 +63,7 @@ class Clang(ABC):
           clang_args.append(str(i))
 
       clang_args.append(str(filepath))
-      clang_proc = subprocess.run(clang_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env = {'COCAS':self.config.cocas_path})
+      clang_proc = subprocess.run(clang_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env = {'COCAS':str(self.config.cocas_path)})
 
       if not clang_proc.returncode == 0:
         clang_invokation = ' '.join(clang_args)
@@ -103,7 +103,7 @@ class ClangELF(Clang):
         clang_args.append(str(i))
 
       # print(' '.join(clang_args), end = "\n\n")
-      clang_proc = subprocess.run(clang_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env = {'COCAS':self.config.cocas_path})
+      clang_proc = subprocess.run(clang_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env = {'COCAS':str(self.config.cocas_path)})
 
       if not clang_proc.returncode == 0:
         clang_invokation = ' '.join(clang_args)
@@ -143,7 +143,7 @@ class ClangCocas(Clang):
         clang_args.append(str(i))
 
       # print(' '.join(clang_args), end = "\n\n")
-      clang_proc = subprocess.run(clang_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env = {'COCAS':self.config.cocas_path})
+      clang_proc = subprocess.run(clang_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env = {'COCAS':str(self.config.cocas_path)})
 
       if not clang_proc.returncode == 0:
         clang_invokation = ' '.join(clang_args)

@@ -1,17 +1,23 @@
-#!@TEST_CDM_VENV_DIR@/@VENV_BIN_DIR_NAME@/python3
+#!@VENV_PYTHON_EXECUTABLE@
 
 import sys
 
-sys.path.append('@CMAKE_CURRENT_SOURCE_DIR@')
+sys.path.insert(0, '@CMAKE_CURRENT_SOURCE_DIR@')
 
 from pathlib import Path
 from test_cdm.main import main
 from test_cdm.testing_system.configuration import Configuration
 
+def get_executable_name(name: str) -> str:
+  return name + '.exe' if sys.platform == 'win32' else name
+
+def get_venv_executable_path(name: str) -> Path:
+  return Path(sys.executable).parent / get_executable_name(name)
+
 if __name__ == "__main__":
   sys.exit(main(Configuration(
-                                cocas_path = Path(f'@TEST_CDM_VENV_DIR@/@VENV_BIN_DIR_NAME@/cocas'),
-                                cocoemu_path = Path(f'@TEST_CDM_VENV_DIR@/@VENV_BIN_DIR_NAME@/cocoemu-server'),
+                                cocas_path = get_venv_executable_path('cocas'),
+                                cocoemu_path = get_venv_executable_path('cocoemu-server'),
                                 include_paths = [Path("@CMAKE_CURRENT_SOURCE_DIR@/include")],
-                                clang_path = Path('@LLVM_BINARY_DIR@/bin/clang'),
+                                clang_path = Path('@LLVM_BINARY_DIR@/bin/' + get_executable_name('clang')),
                                 resources_path = Path('@CMAKE_CURRENT_SOURCE_DIR@/resources'))))
