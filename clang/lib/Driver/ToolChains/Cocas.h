@@ -22,7 +22,7 @@ class LLVM_LIBRARY_VISIBILITY CocasToolChain : public ToolChain {
   // TODO: Add names of builtins to link
   // Each name <name> corresponds to file
   // <clang_resources_dir>/lib/cdm/clang_rt.<name>.o
-  const std::vector<const char *> BuiltinNames = {};
+  const std::vector<const char *> BuiltinNames = {"cdm-builtins"};
 
 public:
   CocasToolChain(const Driver &D, const llvm::Triple &Triple,
