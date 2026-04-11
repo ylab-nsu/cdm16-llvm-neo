@@ -14,6 +14,12 @@ namespace driver {
 namespace toolchains {
 
 class LLVM_LIBRARY_VISIBILITY CDMToolChain : public Generic_ELF {
+  // TODO: Add standard lib object files
+  const std::vector<const char *> StdLibObjs = {};
+  // TODO: Add names of builtins to link
+  // Each name <name> corresponds to file
+  // <clang_resources_dir>/lib/cdm/clang_rt.<name>.o
+  const std::vector<const char *> BuiltinNames = {"cdm-builtins"};
 public:
   CDMToolChain(const Driver &D, const llvm::Triple &Triple,
                const llvm::opt::ArgList &Args)
