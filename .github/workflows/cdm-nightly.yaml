@@ -32,7 +32,13 @@ jobs:
         with:
           tag_name: nightly
           name: 'Nightly'
-          body: 'Nightly releases are made every night. They contain the newest features and fixes, but may be unstable.'
+          body: |
+            Nightly releases are made every night. They contain the newest features and fixes, but may be unstable. Feedback is welcome.
+
+            #### Install on Linux/macOS
+            ```sh
+            curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/ylab-nsu/cdm16-llvm-neo/main/llvm/utils/cdm/install.sh | sh -s -- -v nightly
+            ```
           prerelease: true
           files: |
             ${{github.workspace}}/artifacts_download/*/*.tar.gz
