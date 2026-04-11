@@ -34,7 +34,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: Release ${{ steps.get-version.outputs.VERSION }}
-          body: ' '
+          body: |
+            #### Install on Linux/macOS
+            ```sh
+            curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/ylab-nsu/cdm16-llvm-neo/main/llvm/utils/cdm/install.sh | sh -s -- -v ${{ github.ref_name }}
+            ```
           draft: false
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
