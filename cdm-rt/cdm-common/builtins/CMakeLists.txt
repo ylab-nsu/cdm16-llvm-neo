@@ -26,12 +26,12 @@ foreach(src ${BUILTIN_SOURCES})
     list(APPEND BUILTIN_OBJECTS ${obj})
 
     add_custom_command(OUTPUT ${obj}
-        COMMAND ${CMAKE_COMMAND} -E env COCAS="${COCAS_EXECUTABLE}" ${CMAKE_ASM_COMPILER} -target cdm-cocas -c -o ${obj} ${src}
+        COMMAND ${CMAKE_ASM_COMPILER} -target cdm -c -o ${obj} ${src}
         DEPENDS ${src} ${CMAKE_CURRENT_SOURCE_DIR}/cdm_asm.inc)
 endforeach()
 
-add_custom_command(OUTPUT ${CDM_RT_COCAS_BUILTINS_DIR}/clang_rt.cdm-builtins.o
-    COMMAND ${CMAKE_COMMAND} -E env COCAS="${COCAS_EXECUTABLE}" ${CMAKE_ASM_COMPILER} -target cdm-cocas -r -o ${CDM_RT_COCAS_BUILTINS_DIR}/clang_rt.cdm-builtins.o ${BUILTIN_OBJECTS}
+add_custom_command(OUTPUT ${CDM_RT_ELF_RT_BUILTINS_DIR}/clang_rt.cdm-builtins.o
+    COMMAND ${CMAKE_AR} rcs ${CDM_RT_ELF_RT_BUILTINS_DIR}/clang_rt.cdm-builtins.o ${BUILTIN_OBJECTS}
     DEPENDS ${BUILTIN_OBJECTS})
 
-add_custom_target(cdm_builtins ALL DEPENDS ${CDM_RT_COCAS_BUILTINS_DIR}/clang_rt.cdm-builtins.o)
+add_custom_target(cdm_builtins_elf ALL DEPENDS ${CDM_RT_ELF_RT_BUILTINS_DIR}/clang_rt.cdm-builtins.o)
