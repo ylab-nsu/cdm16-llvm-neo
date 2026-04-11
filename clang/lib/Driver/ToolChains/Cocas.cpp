@@ -138,6 +138,11 @@ CocasToolChain::CocasToolChain(const Driver &D, const llvm::Triple &Triple,
   if (CocasEnv != NULL) {
     CocasPath = CocasEnv;
   }
+  // Try to search the toolchain binary directory
+  else if (llvm::ErrorOr<std::string> P =
+               llvm::sys::findProgramByName("cocas", {getDriver().Dir})) {
+    CocasPath = *P;
+  }
   // Try to search cocas in PATH
   else if (llvm::ErrorOr<std::string> P =
                llvm::sys::findProgramByName("cocas")) {
