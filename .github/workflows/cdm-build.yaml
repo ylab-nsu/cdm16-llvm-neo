@@ -64,7 +64,7 @@ jobs:
           ./llvm/utils/cdm/build.py -j 2 -v $STATIC
       - name: Run end-to-end tests
         run: |
-          TEST_CDM=${{ runner.os == 'Windows' && 'test_cdm.py' || 'test_cdm' }}
+          TEST_CDM=${{ runner.os == 'Windows' && 'test-cdm.py' || 'test-cdm' }}
           ./llvm/build/bin/$TEST_CDM ./llvm/test_cdm
       - name: Run lit tests
         run: |
