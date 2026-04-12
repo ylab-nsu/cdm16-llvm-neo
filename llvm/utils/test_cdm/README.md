@@ -5,9 +5,9 @@
 - Java
 
 ## Usage
-`test_cdm [tests_search_point..]`
+`test-cdm [tests_search_point..]`
 
-See `test_cdm --help` for available options
+See `test-cdm --help` for available options
 
 ## Tests format
 
@@ -24,11 +24,8 @@ Directives are gathered from `multi_source` file (since it's not source file the
 ### Source file format
 
 ```c
-// CHECK prod(<some_producer> <producer_arg..>)
-// CHECK <prod_directive1>
-// CHECK <prod_directive2>
-
-// CHECK prod(<another_producer> <producer_arg..>)
+// CHECK <directive1>
+// CHECK <directive2>
 ...
 
 <any c code>
@@ -38,15 +35,7 @@ int main(){
 }
 ```
 
-## Test producers
-
-### End-to-end
-
-To use this producer on test - include directive `// CHECK prod(end_to_end [cocas] [elf])` in some of its' source files and specify assertions in directives below
-
-This producer will produce end-to-end test cases for all targets specified with all possible optimization levels ('O0', 'O1', 'O2', 'O3', 'Os')
-
-#### Directives
+### Directives
 - `reg(<reg>) <value>` check if register \<reg\> contains \<value\> at the end of simulation
   - `<reg>` - `r0`, `r1`, `r2`, `r3`, ...
   - `<value>` - int16 value (signed or unsigned)
@@ -55,8 +44,3 @@ This producer will produce end-to-end test cases for all targets specified with 
   - `<address>` - unsigned int16
   - `<content>` - sequence of bytes written in hex (e.g. `FF 00 A2`)
 
-### Driver only
-
-To use this producer on test - include directive `// CHECK prod(driver_only)` in some of its' source files
-
-Test-cases, produced by this producer check that calling clang with '-c' flag specified result in same object files as calling clang with '-S' flag specified and then assembling generated file with cocas
