@@ -3,7 +3,7 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 set(VENV_DIR "${CMAKE_CURRENT_SOURCE_DIR}/.venv")
 set(REQUIREMENTS_PATH "${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt")
 
-set(TEST_CDM_FILE_NAME "test_cdm")
+set(TEST_CDM_FILE_NAME "test-cdm")
 if (WIN32)
     set(TEST_CDM_FILE_NAME "${TEST_CDM_FILE_NAME}.py")
     set(VENV_PYTHON_EXECUTABLE "${VENV_DIR}/Scripts/python.exe")
