@@ -1,6 +1,6 @@
 from test_cdm.testing_system.parse.directive import Directive
 from test_cdm.testing_system.processor import ProcessorInfo
-from test_cdm.testing_system.assertions import Assertion, RegisterAssertion, MemoryAssertion, AbsoluteSectionAssertion
+from test_cdm.testing_system.assertions import Assertion, RegisterAssertion, MemoryAssertion, SymbolAssertion
 from .test_parsing_error import TestParsingError
 
 def parse_int(string: str, numsize: int) -> int:
@@ -64,7 +64,7 @@ def parse_memory_directive(directive: Directive, processor_info: ProcessorInfo) 
 
   return MemoryAssertion(address, parsed_content)
 
-def parse_symbol_directive(directive: Directive, processor_info: ProcessorInfo) -> AbsoluteSectionAssertion:
+def parse_symbol_directive(directive: Directive, processor_info: ProcessorInfo) -> SymbolAssertion:
   if not len(directive.head) == 1:
     raise TestParsingError(f"Wrong amount of arguments in head, expected 1, got: {len(directive.head)}")
   if not directive.body:
@@ -81,7 +81,7 @@ def parse_symbol_directive(directive: Directive, processor_info: ProcessorInfo) 
   except ValueError:
     raise TestParsingError(f'Cannot parse byte from : "{byte}"')
 
-  return AbsoluteSectionAssertion(directive.head[0], parsed_content)
+  return SymbolAssertion(directive.head[0], parsed_content)
 
 def parse_directive(directive: Directive, processor_info: ProcessorInfo) -> Assertion:
   match directive.name:
