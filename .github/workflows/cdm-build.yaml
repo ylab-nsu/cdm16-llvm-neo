@@ -69,7 +69,7 @@ jobs:
       - name: Run lit tests
         run: |
           LLVM_LIT=${{ runner.os == 'Windows' && 'llvm-lit.py' || 'llvm-lit' }}
-          python3 ./llvm/build/bin/$LLVM_LIT ./llvm/test/CodeGen/CDM
+          ./llvm/build/bin/$LLVM_LIT ./llvm/test/CodeGen/CDM
       - name: Compress artifacts
         if: inputs.upload
         run: |
