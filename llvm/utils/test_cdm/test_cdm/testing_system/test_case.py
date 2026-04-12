@@ -31,7 +31,7 @@ class TestCase(ABC):
       next_address += len(sec.content)
 
   @abstractmethod
-  def produce_binary(self) -> Path:
+  def produce_image(self) -> Path:
     pass
 
   def run(self, connection: CocoemuConnection, errors_stream: TextIOBase) -> bool:
@@ -39,7 +39,7 @@ class TestCase(ABC):
 
     binary = None
     try:
-      binary = self.produce_binary()
+      binary = self.produce_image()
 
       connection.run_binary(binary)
       for ass in self.assertions:
@@ -72,7 +72,7 @@ class CocasEndToEndTestCase(TestCase):
       temp.write('end.\n')
       return Path(temp.name)
 
-  def produce_binary(self) -> Path:
+  def produce_image(self) -> Path:
     absolute_sections = cast(list[AbsoluteSectionAssertion], list(filter(lambda a : isinstance(a, AbsoluteSectionAssertion), self.assertions)))
     self.place_all_absolute_sections(absolute_sections)
 
@@ -108,15 +108,27 @@ class ElfEndToEndTestCase(TestCase):
 
       return Path(temp.name)
 
-  def produce_binary(self) -> Path:
+  @staticmethod
+  def binary_to_image(file: Path) -> Path:
+      with tempfile.NamedTemporaryFile(suffix = '.img', delete=False, mode='wt') as output_file, file.open(mode = 'rb') as binary:
+        output_file.write("v2.0 raw\n")
+        output_file.write(binary.read().hex(sep = '\n'))
+        return Path(output_file.name)
+
+  def produce_image(self) -> Path:
     absolute_sections = cast(list[AbsoluteSectionAssertion], list(filter(lambda a : isinstance(a, AbsoluteSectionAssertion), self.assertions)))
     self.place_all_absolute_sections(absolute_sections)
 
     linker_script = None
+    binary_file = None
     try:
       linker_script = self.generate_linker_script(absolute_sections)
-      return self.clang.link(self.files, self.include_paths, self.opt_level, None, [linker_script, self.common_linker_script])
+      binary_file = self.clang.link(self.files, self.include_paths, self.opt_level, None, [linker_script, self.common_linker_script])
+
+      return self.binary_to_image(binary_file)
     finally:
       if not linker_script is None:
         os.remove(str(linker_script))
+      if not binary_file is None:
+        os.remove(str(binary_file))
 

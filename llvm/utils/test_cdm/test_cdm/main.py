@@ -35,7 +35,7 @@ def main(base_config: Configuration) -> int:
 
     return run_testing_system(base_config)
   except KeyboardInterrupt:
-    print("")
+    print("Received keyboard interrupt")
   except CocoemuServerError as e:
     print_error(f"Cocoemu-server responded with error: {str(e)}", file = sys.stderr)
   except (TestParsingError, TestProducingError, InvalidConfigurationError) as e:

@@ -17,3 +17,5 @@ SECTIONS {
         *(COMMON)
     }
 }
+
+OUTPUT_FORMAT(binary)

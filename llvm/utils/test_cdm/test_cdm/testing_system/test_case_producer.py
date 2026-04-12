@@ -5,7 +5,7 @@ from .configuration import Configuration
 from .processor import ProcessorInfo
 from .test_case import TestCase
 from .configuration import Configuration
-from .toolchain import ClangCocas, ClangELF, CompilationError
+from .toolchain import Clang, CompilationError
 from .test_case import CocasEndToEndTestCase, ElfEndToEndTestCase
 from .assertions import Assertion
 
@@ -17,8 +17,8 @@ class TestProducingError(Exception):
 
 class TestCaseProducer:
   config: Configuration
-  clang_cocas: ClangCocas
-  clang_elf: ClangELF
+  clang_cocas: Clang
+  clang_elf: Clang
 
   cocas: list[Path] = []
   elf: list[Path] = []
@@ -28,8 +28,8 @@ class TestCaseProducer:
   def __init__(self, config: Configuration):
     self.config = config
 
-    self.clang_elf = ClangELF(config)
-    self.clang_cocas = ClangCocas(config)
+    self.clang_elf = Clang(config, "cdm")
+    self.clang_cocas = Clang(config, "cdm-cocas")
 
     common_resources = config.resources_path / "common"
     elf_resources = config.resources_path / "elf"
