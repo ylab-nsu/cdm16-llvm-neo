@@ -23,23 +23,28 @@ class TestCaseProducer:
   cocas: list[Path] = []
   elf: list[Path] = []
   common_linker_script: Path
-
+  include_paths: list[Path] = []
 
   def __init__(self, config: Configuration):
     self.config = config
 
     self.clang_elf = ClangELF(config)
     self.clang_cocas = ClangCocas(config)
-    common_resources = config.resources_path / "end_to_end_common"
-    elf_resources = config.resources_path / "end_to_end_elf"
 
-    elf_build = config.resources_path / "build" / "end_to_end_elf"
-    cocas_build = config.resources_path / "build" / "end_to_end_cocas"
+    common_resources = config.resources_path / "common"
+    elf_resources = config.resources_path / "elf"
+
+    elf_build = config.resources_path / "build" / "elf"
+    cocas_build = config.resources_path / "build" / "cocas"
 
     self.common_linker_script = elf_resources / "common.ld"
+    common_include_dir = common_resources / "include"
+    self.include_paths.append(common_include_dir)
 
     if not self.common_linker_script.exists():
       raise TestProducingError(f'Cannot find common linker script at {self.common_linker_script}')
+    if not common_include_dir.exists():
+      raise TestProducingError(f'Cannot find include directory at {common_include_dir}')
     if not common_resources.exists():
       raise TestProducingError(f'Cannot find resources directory at {common_resources}')
     if not elf_resources.exists():
@@ -52,18 +57,18 @@ class TestCaseProducer:
       for file in filter(lambda p: p.is_file() and (p.suffix == '.c' or p.suffix == '.s'), common_resources.iterdir()):
         output_path = (cocas_build / file.name).with_suffix('.o')
         if (not output_path.exists()) or (file.stat().st_mtime > output_path.stat().st_mtime):
-          output_path = self.clang_cocas.assemble(file, '3', output_path)
+          output_path = self.clang_cocas.assemble(file, self.include_paths, '3', output_path)
         self.cocas.append(output_path)
 
         output_path = (elf_build / file.name).with_suffix('.o')
         if (not output_path.exists()) or (file.stat().st_mtime > output_path.stat().st_mtime):
-          output_path = self.clang_elf.assemble(file, '3', output_path)
+          output_path = self.clang_elf.assemble(file, self.include_paths, '3', output_path)
         self.elf.append(output_path)
 
       for file in filter(lambda p: p.is_file() and (p.suffix == '.c' or p.suffix == '.s'), elf_resources.iterdir()):
         output_path = (elf_build / file.name).with_suffix('.o')
         if (not output_path.exists()) or (file.stat().st_mtime > output_path.stat().st_mtime):
-          output_path = self.clang_elf.assemble(file, '3', output_path)
+          output_path = self.clang_elf.assemble(file, self.include_paths, '3', output_path)
         self.elf.append(output_path)
 
     except CompilationError as e:
@@ -74,11 +79,13 @@ class TestCaseProducer:
     for opt_level in ['0', '1', '2', '3', 's']:
       ret.append(CocasEndToEndTestCase(f'Cocas end-to-end "{name}" with optimization level -O{opt_level}',
                                   files + self.cocas,
+                                  self.include_paths,
                                   self.clang_cocas,
                                   assertions,
                                   opt_level))
       ret.append(ElfEndToEndTestCase(f'Cocas-less end-to-end "{name}" with optimization level -O{opt_level}',
                                   files + self.elf,
+                                  self.include_paths,
                                   self.clang_elf,
                                   assertions,
                                   opt_level,

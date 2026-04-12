@@ -14,7 +14,6 @@ def main(base_config: Configuration) -> int:
   parser = argparse.ArgumentParser(__file__)
   parser.add_argument('--cocas', type=Path, help=f'path to cocas executable, default: {base_config.cocas_path}', required=False)
   parser.add_argument('-p', '--port', type=int, help='port for cocoemu-server binding, default: 7001', required=False, default=7001)
-  parser.add_argument('-I', '--include', type=Path, action='append', dest='include_paths', help='add directory to headers search paths', default=[])
   parser.add_argument('-v', '--verbose', action='store_true')
   parser.add_argument('searching_points', type=Path, nargs='+', help='directories/files from which to search for tests recursevely')
   args = parser.parse_args()
@@ -25,7 +24,6 @@ def main(base_config: Configuration) -> int:
       print_error(f'Cannot find {str(args.cocas)}', file = sys.stderr)
       return 1;
     base_config.cocas_path = Path(resolved)
-  base_config.include_paths.extend(args.include_paths)
 
   base_config.cocoemu_port = args.port
   base_config.verbose = args.verbose

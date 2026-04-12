@@ -25,7 +25,7 @@ class Clang(ABC):
   config: Configuration
   target: str
 
-  def compile(self, filepath: Path, opt_level: str, output_path: Path | None = None) -> Path:
+  def compile(self, filepath: Path, include_paths: list[Path], opt_level: str, output_path: Path | None = None) -> Path:
     try:
       if output_path is None:
         output_file = tempfile.NamedTemporaryFile(suffix = '.s', delete=False)
@@ -33,7 +33,7 @@ class Clang(ABC):
         output_file.close()
 
       clang_args = [str(self.config.clang_path), '-target', self.target, '-ffreestanding', '-S', f'-O{opt_level}', '-o', str(output_path)]
-      for i in self.config.include_paths:
+      for i in include_paths:
           clang_args.append('-I')
           clang_args.append(str(i))
 
@@ -50,7 +50,7 @@ class Clang(ABC):
         os.remove(str(output_path))
       raise e
 
-  def assemble(self, filepath: Path, opt_level: str, output_path: Path | None = None) -> Path:
+  def assemble(self, filepath: Path, include_paths: list[Path], opt_level: str, output_path: Path | None = None) -> Path:
     try:
       if output_path is None:
         output_file = tempfile.NamedTemporaryFile(suffix = '.obj', delete=False)
@@ -58,7 +58,7 @@ class Clang(ABC):
         output_file.close()
 
       clang_args = [str(self.config.clang_path), '-target', self.target, '-ffreestanding', '-c', f'-O{opt_level}', '-o', str(output_path)]
-      for i in self.config.include_paths:
+      for i in include_paths:
           clang_args.append('-I')
           clang_args.append(str(i))
 
@@ -76,14 +76,14 @@ class Clang(ABC):
       raise e
 
   @abstractmethod
-  def link(self, files: list[Path], opt_level: str, output_path: Path | None = None, linker_script: list[Path] | None = None) -> Path:
+  def link(self, files: list[Path], include_paths: list[Path], opt_level: str, output_path: Path | None = None, linker_script: list[Path] | None = None) -> Path:
     pass
 
 class ClangELF(Clang):
   def __init__(self, config: Configuration) -> None:
     super().__init__(config, "cdm")
 
-  def link(self, files: list[Path], opt_level: str, output_path: Path | None = None, linker_script: list[Path] | None = None) -> Path:
+  def link(self, files: list[Path], include_paths: list[Path], opt_level: str, output_path: Path | None = None, linker_script: list[Path] | None = None) -> Path:
     try:
       if output_path is None:
         output_file = tempfile.NamedTemporaryFile(suffix = '.img', delete=False)
@@ -91,7 +91,7 @@ class ClangELF(Clang):
         output_file.close()
 
       clang_args = [str(self.config.clang_path), '-target', self.target, '-ffreestanding', f'-O{opt_level}', '-o', '-']
-      for i in self.config.include_paths:
+      for i in include_paths:
         clang_args.append('-I')
         clang_args.append(str(i))
       if not linker_script is None:
@@ -124,7 +124,7 @@ class ClangCocas(Clang):
   def __init__(self, config: Configuration) -> None:
     super().__init__(config, "cdm-cocas")
 
-  def link(self, files: list[Path], opt_level: str, output_path: Path | None = None, linker_script: list[Path] | None = None) -> Path:
+  def link(self, files: list[Path], include_paths: list[Path], opt_level: str, output_path: Path | None = None, linker_script: list[Path] | None = None) -> Path:
     try:
       if output_path is None:
         output_file = tempfile.NamedTemporaryFile(suffix = '.img', delete=False)
@@ -132,7 +132,7 @@ class ClangCocas(Clang):
         output_file.close()
 
       clang_args = [str(self.config.clang_path), '-target', self.target, '-ffreestanding', f'-O{opt_level}', '-o', str(output_path)]
-      for i in self.config.include_paths:
+      for i in include_paths:
         clang_args.append('-I')
         clang_args.append(str(i))
       if not linker_script is None:

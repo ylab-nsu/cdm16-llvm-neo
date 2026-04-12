@@ -15,6 +15,7 @@ from .assertions import Assertion, AbsoluteSectionAssertion
 class TestCase(ABC):
   name: str
   files: list[Path]
+  include_paths: list[Path]
   clang: Clang
   assertions: list[Assertion]
   opt_level: str
@@ -30,18 +31,15 @@ class TestCase(ABC):
       next_address += len(sec.content)
 
   @abstractmethod
-  def produce_binary(self, files: list[Path], opt_level: str, absolute_sections: list[AbsoluteSectionAssertion]) -> Path:
+  def produce_binary(self) -> Path:
     pass
 
   def run(self, connection: CocoemuConnection, errors_stream: TextIOBase) -> bool:
     ret = False
 
-    absolute_sections = cast(list[AbsoluteSectionAssertion], list(filter(lambda a : isinstance(a, AbsoluteSectionAssertion), self.assertions)))
-    self.place_all_absolute_sections(absolute_sections)
-
     binary = None
     try:
-      binary = self.produce_binary(self.files, self.opt_level, absolute_sections)
+      binary = self.produce_binary()
 
       connection.run_binary(binary)
       for ass in self.assertions:
@@ -74,14 +72,18 @@ class CocasEndToEndTestCase(TestCase):
       temp.write('end.\n')
       return Path(temp.name)
 
-  def produce_binary(self, files: list[Path], opt_level: str, absolute_sections: list[AbsoluteSectionAssertion]) -> Path:
+  def produce_binary(self) -> Path:
+    absolute_sections = cast(list[AbsoluteSectionAssertion], list(filter(lambda a : isinstance(a, AbsoluteSectionAssertion), self.assertions)))
+    self.place_all_absolute_sections(absolute_sections)
+
     absolute_sections_file = None
     try:
+      files = self.files
       absolute_sections_file = self.generate_absolute_sections_file(absolute_sections)
       if not absolute_sections_file is None:
         files += [absolute_sections_file]
 
-      return self.clang.link(files, opt_level)
+      return self.clang.link(files, self.include_paths, self.opt_level)
     finally:
       if not absolute_sections_file is None:
         os.remove(str(absolute_sections_file))
@@ -106,11 +108,14 @@ class ElfEndToEndTestCase(TestCase):
 
       return Path(temp.name)
 
-  def produce_binary(self, files: list[Path], opt_level: str, absolute_sections: list[AbsoluteSectionAssertion]) -> Path:
+  def produce_binary(self) -> Path:
+    absolute_sections = cast(list[AbsoluteSectionAssertion], list(filter(lambda a : isinstance(a, AbsoluteSectionAssertion), self.assertions)))
+    self.place_all_absolute_sections(absolute_sections)
+
     linker_script = None
     try:
       linker_script = self.generate_linker_script(absolute_sections)
-      return self.clang.link(files, opt_level, None, [linker_script, self.common_linker_script])
+      return self.clang.link(self.files, self.include_paths, self.opt_level, None, [linker_script, self.common_linker_script])
     finally:
       if not linker_script is None:
         os.remove(str(linker_script))
