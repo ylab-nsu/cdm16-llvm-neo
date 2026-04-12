@@ -21,8 +21,6 @@ class TestCase(ABC):
 
   _START_OF_ABSOLUTE_SECTIONS = 0x80
 
-  # Returns assembly file for cocas target
-  # And linker script for cocas-less target
   @classmethod
   def place_all_absolute_sections(cls, absolute_sections: list[AbsoluteSectionAssertion]) -> None:
     next_address = cls._START_OF_ABSOLUTE_SECTIONS
