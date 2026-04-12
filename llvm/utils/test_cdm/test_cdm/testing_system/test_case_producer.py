@@ -34,6 +34,9 @@ class TestCaseProducer:
     common_resources = config.resources_path / "common"
     elf_resources = config.resources_path / "elf"
 
+    common_src = common_resources / "src"
+    elf_src = elf_resources / "src"
+
     elf_build = config.resources_path / "build" / "elf"
     cocas_build = config.resources_path / "build" / "cocas"
 
@@ -54,7 +57,7 @@ class TestCaseProducer:
     cocas_build.mkdir(exist_ok=True, parents=True)
 
     try:
-      for file in filter(lambda p: p.is_file() and (p.suffix == '.c' or p.suffix == '.s'), common_resources.iterdir()):
+      for file in filter(Path.is_file, common_src.iterdir()):
         output_path = (cocas_build / file.name).with_suffix('.o')
         if (not output_path.exists()) or (file.stat().st_mtime > output_path.stat().st_mtime):
           output_path = self.clang_cocas.assemble(file, self.include_paths, '3', output_path)
@@ -65,7 +68,7 @@ class TestCaseProducer:
           output_path = self.clang_elf.assemble(file, self.include_paths, '3', output_path)
         self.elf.append(output_path)
 
-      for file in filter(lambda p: p.is_file() and (p.suffix == '.c' or p.suffix == '.s'), elf_resources.iterdir()):
+      for file in filter(Path.is_file, elf_src.iterdir()):
         output_path = (elf_build / file.name).with_suffix('.o')
         if (not output_path.exists()) or (file.stat().st_mtime > output_path.stat().st_mtime):
           output_path = self.clang_elf.assemble(file, self.include_paths, '3', output_path)
