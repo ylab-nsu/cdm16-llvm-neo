@@ -11,34 +11,8 @@ from .test_parsing_error import TestParsingError
 from .directive import Directive
 from .directives_parser import parse_directive
 
-_TXT_DIRECTIVE_PATTERN = re.compile("^\\s*?\\s*CHECK\\s(.*)\n")
-_C_DIRECTIVE_PATTERN = re.compile("^.*?//\\s*CHECK\\s(.*)\n")
+_DIRECTIVE_PATTERN = re.compile("^.*?//\\s*CHECK\\s(.*)\n")
 _DIRECTIVE_INNER_PATTERN = re.compile("\\s*(\\S+)\\((.*)\\)\\s*(.*)")
-
-def iter_directives(filepath: Path) -> Generator[Directive]:
-  if not filepath.is_file():
-    raise ValueError("Expected regular file")
-
-  directive_pattern: re.Pattern
-  if filepath.suffix == '.c':
-    directive_pattern = _C_DIRECTIVE_PATTERN
-  elif filepath.suffix == '':
-    directive_pattern = _TXT_DIRECTIVE_PATTERN
-  else:
-    return
-
-  with filepath.open() as file:
-    line_num = 1
-
-    for line in file:
-      m = directive_pattern.fullmatch(line)
-      if not m is None:
-        m = _DIRECTIVE_INNER_PATTERN.fullmatch(m.group(1))
-        if not m is None:
-          yield Directive(m.group(1), m.group(2).strip().split(), m.group(3).strip().split(), line_num)
-        else:
-          raise TestParsingError(f'{filepath.name}:{line_num} Wrong directive format')
-      line_num += 1
 
 @dataclass
 class TestsParser:
@@ -46,6 +20,27 @@ class TestsParser:
   producer: TestCaseProducer
 
   _MULTISOURCE_DIRECTIVES_FILE = "multi_source"
+
+  @classmethod
+  def iter_directives(cls, filepath: Path) -> Generator[Directive]:
+    if not filepath.is_file():
+      raise ValueError("Expected regular file")
+
+    if not filepath.suffix == '.c' and not filepath.name == cls._MULTISOURCE_DIRECTIVES_FILE:
+      return
+
+    with filepath.open() as file:
+      line_num = 1
+
+      for line in file:
+        m = _DIRECTIVE_PATTERN.fullmatch(line)
+        if not m is None:
+          m = _DIRECTIVE_INNER_PATTERN.fullmatch(m.group(1))
+          if not m is None:
+            yield Directive(m.group(1), m.group(2).strip().split(), m.group(3).strip().split(), line_num)
+          else:
+            raise TestParsingError(f'{filepath.name}:{line_num} Wrong directive format')
+        line_num += 1
 
   def parse_test(self, filepath: Path) -> list[TestCase]:
     try:
@@ -63,7 +58,7 @@ class TestsParser:
         raise ValueError("Expected path to regular file or directory")
 
       assertions: list[Assertion] = []
-      for directive in iter_directives(directives_file):
+      for directive in self.iter_directives(directives_file):
         assertions.append(parse_directive(directive, self.processor_info))
 
       return self.producer.produce(filepath.stem, files, assertions)

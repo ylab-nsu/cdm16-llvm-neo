@@ -19,7 +19,7 @@ Every regular file located in directory which doesn't contain `multi_source` fil
 
 Every directory, which contain `multi_source` file is treated as a multi-source test
 
-Directives are gathered from `multi_source` file (since it's not source file they shouldn't be commented e.g. `CHECK reg(r0) 0`, not `// CHECK reg(r0) 0`)
+Directives are gathered from `multi_source` file (they have the same format as in C source files)
 
 ### Source file format
 
