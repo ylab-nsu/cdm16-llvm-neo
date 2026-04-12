@@ -18,6 +18,5 @@ if __name__ == "__main__":
   sys.exit(main(Configuration(
                                 cocas_path = get_venv_executable_path('cocas'),
                                 cocoemu_path = get_venv_executable_path('cocoemu-server'),
-                                include_paths = [Path("@CMAKE_CURRENT_SOURCE_DIR@/include")],
                                 clang_path = Path('@LLVM_BINARY_DIR@/bin/' + get_executable_name('clang')),
                                 resources_path = Path('@CMAKE_CURRENT_SOURCE_DIR@/resources'))))
