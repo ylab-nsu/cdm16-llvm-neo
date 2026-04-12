@@ -18,7 +18,7 @@ class RegisterAssertion(Assertion):
       raise AssertionError(f'Incorrect value of register {self.reg}. Expected: {self.value}, got: {processor_state.regs[self.reg]}')
 
 @dataclass
-class AbsoluteSectionAssertion(Assertion):
+class SymbolAssertion(Assertion):
   symbol: str
   content: list[int]
   address: int | None = None

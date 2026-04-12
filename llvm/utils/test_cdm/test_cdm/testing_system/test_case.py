@@ -9,7 +9,7 @@ from test_cdm.testing_system.util.errors_printing import print_error_big
 from .configuration import Configuration
 from .toolchain import Clang, CompilationError, CocasError
 from .cocoemu import CocoemuConnection
-from .assertions import Assertion, AbsoluteSectionAssertion
+from .assertions import Assertion, SymbolAssertion
 
 @dataclass
 class TestCase(ABC):
@@ -23,7 +23,7 @@ class TestCase(ABC):
   _START_OF_ABSOLUTE_SECTIONS = 0x80
 
   @classmethod
-  def place_all_absolute_sections(cls, absolute_sections: list[AbsoluteSectionAssertion]) -> None:
+  def place_all_absolute_sections(cls, absolute_sections: list[SymbolAssertion]) -> None:
     next_address = cls._START_OF_ABSOLUTE_SECTIONS
 
     for sec in absolute_sections:
@@ -63,7 +63,7 @@ class TestCase(ABC):
 
 class CocasEndToEndTestCase(TestCase):
   @staticmethod
-  def generate_absolute_sections_file(absolute_sections: list[AbsoluteSectionAssertion]) -> Path | None:
+  def generate_absolute_sections_file(absolute_sections: list[SymbolAssertion]) -> Path | None:
     if not absolute_sections:
       return None
     with tempfile.NamedTemporaryFile(suffix = '.asm', delete=False, mode='wt') as temp:
@@ -73,7 +73,7 @@ class CocasEndToEndTestCase(TestCase):
       return Path(temp.name)
 
   def produce_image(self) -> Path:
-    absolute_sections = cast(list[AbsoluteSectionAssertion], list(filter(lambda a : isinstance(a, AbsoluteSectionAssertion), self.assertions)))
+    absolute_sections = cast(list[SymbolAssertion], list(filter(lambda a : isinstance(a, SymbolAssertion), self.assertions)))
     self.place_all_absolute_sections(absolute_sections)
 
     absolute_sections_file = None
@@ -93,7 +93,7 @@ class ElfEndToEndTestCase(TestCase):
   common_linker_script: Path
 
   @staticmethod
-  def generate_linker_script(absolute_sections: list[AbsoluteSectionAssertion]) -> Path:
+  def generate_linker_script(absolute_sections: list[SymbolAssertion]) -> Path:
     with tempfile.NamedTemporaryFile(suffix = '.ld', delete=False, mode='wt') as temp:
       temp.write("SECTIONS {\n")
       for sec in absolute_sections:
@@ -116,7 +116,7 @@ class ElfEndToEndTestCase(TestCase):
         return Path(output_file.name)
 
   def produce_image(self) -> Path:
-    absolute_sections = cast(list[AbsoluteSectionAssertion], list(filter(lambda a : isinstance(a, AbsoluteSectionAssertion), self.assertions)))
+    absolute_sections = cast(list[SymbolAssertion], list(filter(lambda a : isinstance(a, SymbolAssertion), self.assertions)))
     self.place_all_absolute_sections(absolute_sections)
 
     linker_script = None
