@@ -1,1 +1,1 @@
-CHECK reg(r0) 3
+// CHECK reg(r0) 3
