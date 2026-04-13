@@ -87,6 +87,7 @@ __modhi3_r0_pos:
     neg r1
 __modhi3_r1_pos:
     jsr __udivmodhi3
+    move r2, r0
     tst r4
     bz __modhi3_done
     neg r0
