@@ -1,4 +1,5 @@
 import subprocess
+import os
 import signal
 import json
 import time
@@ -24,12 +25,15 @@ class CocoemuConnection:
   server_proc: subprocess.Popen
 
   def __init__(self, config: Configuration) -> None:
-    self.server_proc = subprocess.Popen([
-                                     str(config.cocoemu_path),
-                                     "-p",
-                                     str(config.cocoemu_port)
-                                   ],
-                                   stdout = subprocess.DEVNULL)
+    cocoemu_args = [str(config.cocoemu_path), "-p", str(config.cocoemu_port)]
+    if sys.platform == 'win32':
+      self.server_proc = subprocess.Popen(cocoemu_args,
+                                     stdout = subprocess.DEVNULL,
+                                     creationflags = subprocess.CREATE_NEW_PROCESS_GROUP)
+    else:
+      self.server_proc = subprocess.Popen(cocoemu_args,
+                                     stdout = subprocess.DEVNULL,
+                                     preexec_fn=os.setpgrp)
     MAX_TRIES = 10
 
     tries = 0
@@ -59,9 +63,9 @@ class CocoemuConnection:
   def close(self) -> None:
     self.ws.close()
     if sys.platform == 'win32':
-      self.server_proc.terminate()
+      self.server_proc.send_signal(signal.CTRL_BREAK_EVENT)
     else:
-      self.server_proc.send_signal(signal.SIGINT)
+      os.killpg(os.getpgid(self.server_proc.pid), signal.SIGTERM)
     self.server_proc.wait()
 
   def __enter__(self) -> 'CocoemuConnection':
