@@ -83,10 +83,10 @@ GLOBAL(__modhi3)
 __modhi3_r0_pos:
     tst r1
     bpl __modhi3_r1_pos
-    dec r4
     neg r1
 __modhi3_r1_pos:
     jsr __udivmodhi3
+    move r2, r0
     tst r4
     bz __modhi3_done
     neg r0
