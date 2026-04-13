@@ -30,6 +30,6 @@ file(MAKE_DIRECTORY ${CDM_RT_ELF_LIB_DIR})
 file(MAKE_DIRECTORY ${CDM_RT_INC_DIR})
 
 add_subdirectory(cdm-cocas)
-add_subdirectory(cdm-common)
+add_subdirectory(common)
 #add_subdirectory(cdm-elf)
 add_subdirectory(common)
