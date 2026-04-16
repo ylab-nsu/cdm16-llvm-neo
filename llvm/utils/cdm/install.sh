@@ -268,7 +268,7 @@ install_dir_abs=$(cd "$install_dir" && pwd -P)
 echo "Installing cdm-devkit..."
 $python -m venv "$install_dir/venv"
 "$install_dir/venv/bin/python" -m pip install "cdm-devkit>=0.2.3"
-mkdir -p "$install_dir/bin"
+mkdir -p "$install_dir/bin/cdm"
 ln -s "$install_dir_abs/venv/bin/cocas" "$install_dir/bin/cocas"
 
 download_url="https://github.com/ylab-nsu/cdm16-llvm-neo/releases/download"
@@ -278,6 +278,7 @@ curl --proto "=https" --tlsv1.2 -#fLo "$download_dir/llvm.tar.gz" "$download_url
 mkdir -p "$download_dir/llvm"
 echo "Extracting LLVM..."
 tar -xzf "$download_dir/llvm.tar.gz" -C "$install_dir"
+ln -s "$install_dir_abs/bin/clang" "$install_dir/bin/cdm/clang-cdm"
 
 llvm_info="$install_dir/.cdm-llvm"
 uninstall_script="$install_dir/cdm-uninstall.sh"
@@ -372,13 +373,19 @@ EOF
 chmod a+x "$uninstall_script"
 echo "Uninstall script written to $uninstall_script"
 echo "Installation completed successfully."
-echo
-echo "To run 'clang-cdm' from any terminal, create a symlink in ~/.local/bin:"
-echo "  mkdir -p ~/.local/bin"
-echo "  ln -s \"$install_dir_abs/bin/clang\" ~/.local/bin/clang-cdm"
-echo
-echo "Then add ~/.local/bin to your PATH (if not already) by adding this line to your shell config file (e.g. ~/.bash_profile, ~/.zshrc):"
-echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
-echo
-echo "Then restart your shell or source the config file."
+if ! command -v "clang-cdm" >/dev/null 2>&1; then
+    echo
+    echo "To make 'clang-cdm' command available anywhere, add $install_dir_abs/bin/cdm to your PATH."
+    echo
+    echo "bash: add this line to ~/.bash_profile or ~/.bashrc"
+    echo "  export PATH=\"$install_dir_abs/bin/cdm:\$PATH\""
+    echo
+    echo "zsh: add this line to ~/.zprofile or ~/.zshrc"
+    echo "  export PATH=\"$install_dir_abs/bin/cdm:\$PATH\""
+    echo
+    echo "fish: run this line once or add it to ~/.config/fish/config.fish"
+    echo "  fish_add_path \"$install_dir_abs/bin/cdm\""
+    echo
+    echo "Then restart the shell or source the config file."
+fi
 install_success=1
