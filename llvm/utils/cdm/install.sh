@@ -100,7 +100,7 @@ check_existing() {
     if ! [ -f "$1/.cdm-llvm" ]; then
         return 1
     fi
-    if ! [ -f "$1/cdm-uninstall.sh" ] || ! [ -x "$1/cdm-uninstall.sh" ]; then
+    if ! [ -f "$1/lib/uninstall.sh" ] || ! [ -x "$1/lib/uninstall.sh" ]; then
         return 1
     fi
     . "$1/.cdm-llvm"
@@ -247,7 +247,7 @@ fi
 
 if [ "$update" -ne 0 ]; then
     echo "Uninstalling existing LLVM..."
-    "$install_dir/cdm-uninstall.sh" -s
+    "$install_dir/lib/uninstall.sh" -s
 fi
 
 download_dir=$(mktemp -d "${TMPDIR:-/tmp}/llvm-cdm-download.XXXXXX")
@@ -266,10 +266,11 @@ mkdir -p "$install_dir"
 install_dir_abs=$(cd "$install_dir" && pwd -P)
 
 echo "Installing cdm-devkit..."
-$python -m venv "$install_dir/venv"
-"$install_dir/venv/bin/python" -m pip install "cdm-devkit>=0.2.3"
-mkdir -p "$install_dir/bin/cdm"
-ln -s "$install_dir_abs/venv/bin/cocas" "$install_dir/bin/cocas"
+mkdir -p "$install_dir/lib/cdm-devkit"
+$python -m venv "$install_dir/lib/cdm-devkit"
+"$install_dir/lib/cdm-devkit/bin/python" -m pip install "cdm-devkit>=0.2.3"
+mkdir -p "$install_dir/lib/llvm/bin"
+ln -s "$install_dir_abs/lib/cdm-devkit/bin/cocas" "$install_dir/lib/llvm/bin/cocas"
 
 download_url="https://github.com/ylab-nsu/cdm16-llvm-neo/releases/download"
 echo "Downloading LLVM..."
@@ -277,11 +278,12 @@ curl --proto "=https" --tlsv1.2 -#fLo "$download_dir/llvm.tar.gz" "$download_url
 
 mkdir -p "$download_dir/llvm"
 echo "Extracting LLVM..."
-tar -xzf "$download_dir/llvm.tar.gz" -C "$install_dir"
-ln -s "$install_dir_abs/bin/clang" "$install_dir/bin/cdm/clang-cdm"
+tar -xzf "$download_dir/llvm.tar.gz" -C "$install_dir/lib/llvm"
+mkdir -p "$install_dir/bin"
+ln -s "$install_dir_abs/lib/llvm/bin/clang" "$install_dir/bin/clang-cdm"
 
 llvm_info="$install_dir/.cdm-llvm"
-uninstall_script="$install_dir/cdm-uninstall.sh"
+uninstall_script="$install_dir/lib/uninstall.sh"
 
 echo "Writing LLVM info..."
 cat >"$llvm_info" <<EOF
@@ -375,16 +377,16 @@ echo "Uninstall script written to $uninstall_script"
 echo "Installation completed successfully."
 if ! command -v "clang-cdm" >/dev/null 2>&1; then
     echo
-    echo "To make 'clang-cdm' command available anywhere, add $install_dir_abs/bin/cdm to your PATH."
+    echo "To make 'clang-cdm' command available anywhere, add $install_dir_abs/bin to your PATH."
     echo
     echo "bash: add this line to ~/.bash_profile or ~/.bashrc"
-    echo "  export PATH=\"$install_dir_abs/bin/cdm:\$PATH\""
+    echo "  export PATH=\"$install_dir_abs/bin:\$PATH\""
     echo
     echo "zsh: add this line to ~/.zprofile or ~/.zshrc"
-    echo "  export PATH=\"$install_dir_abs/bin/cdm:\$PATH\""
+    echo "  export PATH=\"$install_dir_abs/bin:\$PATH\""
     echo
     echo "fish: run this line once or add it to ~/.config/fish/config.fish"
-    echo "  fish_add_path \"$install_dir_abs/bin/cdm\""
+    echo "  fish_add_path \"$install_dir_abs/bin\""
     echo
     echo "Then restart the shell or source the config file."
 fi
