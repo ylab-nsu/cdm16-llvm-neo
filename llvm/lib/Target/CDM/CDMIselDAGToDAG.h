@@ -27,6 +27,10 @@ private:
   bool selectAddr(SDValue N, SDValue &Addr);
   bool selectAddr2Reg(SDValue N, SDValue &Base, SDValue &Offset);
 
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                    InlineAsm::ConstraintCode ConstraintID,
+                                    std::vector<SDValue> &OutOps) override;
+
   inline CDMCOND::CondOp condCodeToCDMCond(ISD::CondCode CC) const {
     switch (CC) {
     case ISD::CondCode::SETLT:

@@ -165,8 +165,12 @@ void CDMAsmPrinter::emitEndOfAsmFile(Module &Module) {
   TS->emitEnd();
 }
 
-void CDMAsmPrinter::printOperand(const MachineInstr *MI, int OpNum, raw_ostream &OS) {
-  const MachineOperand &MO = MI->getOperand(OpNum);
+bool CDMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                                    const char *ExtraCode, raw_ostream &OS) {
+  if (ExtraCode && ExtraCode[0]) {
+    return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS);
+  }
+  const MachineOperand &MO = MI->getOperand(OpNo);
   switch (MO.getType()) {
   case MachineOperand::MO_Register:
     OS << CDMInstPrinter::getRegisterName(MO.getReg());
@@ -193,15 +197,24 @@ void CDMAsmPrinter::printOperand(const MachineInstr *MI, int OpNum, raw_ostream 
     break;
   }
   default:
-    llvm_unreachable("not implemented");
+    return true;
   }
+  return false;
 }
 
-bool CDMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                    const char *ExtraCode, raw_ostream &OS) {
-  if (!ExtraCode || !ExtraCode[0]) {
-    printOperand(MI, OpNo, OS);
-    return false;
+bool CDMAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
+                                          const char *ExtraCode,
+                                          raw_ostream &OS) {
+  if (ExtraCode) {
+    return AsmPrinter::PrintAsmMemoryOperand(MI, OpNo, ExtraCode, OS);
   }
-  return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS);
+
+  const MachineOperand &Reg = MI->getOperand(OpNo);
+
+  // All memory operands should be a register.
+  if (!Reg.isReg())
+    return true;
+
+  OS << CDMInstPrinter::getRegisterName(Reg.getReg());
+  return false;
 }
