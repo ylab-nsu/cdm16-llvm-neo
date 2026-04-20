@@ -4,6 +4,8 @@
 
 #include "CDMIselDAGToDAG.h"
 
+#include "CDMRegisterInfo.h"
+#include "CDMSubtarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -11,6 +13,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -117,6 +120,20 @@ bool CDMDagToDagIsel::selectAddrFrameIndex(SDValue N, SDValue &Base) {
     Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
     return true;
   }
+  return false;
+}
+
+bool CDMDagToDagIsel::SelectInlineAsmMemoryOperand(
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintCode,
+    std::vector<SDValue> &OutOps) {
+  switch (ConstraintCode) {
+  case InlineAsm::ConstraintCode::m:
+  case InlineAsm::ConstraintCode::o:
+    break;
+  default:
+    return true;
+  }
+  OutOps.push_back(Op);
   return false;
 }
 
