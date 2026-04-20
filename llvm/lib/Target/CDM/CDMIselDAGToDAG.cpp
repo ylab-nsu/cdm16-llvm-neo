@@ -4,8 +4,6 @@
 
 #include "CDMIselDAGToDAG.h"
 
-#include "CDMRegisterInfo.h"
-#include "CDMSubtarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
