@@ -16,6 +16,16 @@ GLOBAL(__udivmoddi4)
     ssw r2, -12
     ssw r3, -14
 
+    lsw r4, 12
+    lsw r5, 14
+    or r4, r5, r4
+    lsw r5, 16
+    or r4, r5, r4
+    lsw r5, 18
+    or r4, r5, r4
+    bnz __udivmoddi4_nonzero
+    ZERO
+__udivmoddi4_nonzero:
     ldi r0, 0
     ldi r1, 0
     ldi r2, 0
@@ -193,20 +203,20 @@ GLOBAL(__divdi3)
     ldi r5, 1
     ssw r5, -24
     neg r0
-    bz __divdi3_na_c0
+    bcs __divdi3_na_c0
     not r1
     not r2
     not r3
     br __divdi3_a_pos
 __divdi3_na_c0:
     neg r1
-    bz __divdi3_na_c1
+    bcs __divdi3_na_c1
     not r2
     not r3
     br __divdi3_a_pos
 __divdi3_na_c1:
     neg r2
-    bz __divdi3_na_c2
+    bcs __divdi3_na_c2
     not r3
     br __divdi3_a_pos
 __divdi3_na_c2:
@@ -222,7 +232,7 @@ __divdi3_a_pos:
     lsw r5, 12
     neg r5
     ssw r5, 12
-    bz __divdi3_nb_c0
+    bcs __divdi3_nb_c0
     lsw r6, 14
     not r6
     ssw r6, 14
@@ -237,7 +247,7 @@ __divdi3_nb_c0:
     lsw r5, 14
     neg r5
     ssw r5, 14
-    bz __divdi3_nb_c1
+    bcs __divdi3_nb_c1
     lsw r6, 16
     not r6
     ssw r6, 16
@@ -249,7 +259,7 @@ __divdi3_nb_c1:
     lsw r5, 16
     neg r5
     ssw r5, 16
-    bz __divdi3_nb_c2
+    bcs __divdi3_nb_c2
     lsw r6, 18
     not r6
     ssw r6, 18
@@ -278,20 +288,20 @@ __divdi3_b_pos:
     tst r5
     bz __divdi3_done
     neg r0
-    bz __divdi3_nr_c0
+    bcs __divdi3_nr_c0
     not r1
     not r2
     not r3
     br __divdi3_done
 __divdi3_nr_c0:
     neg r1
-    bz __divdi3_nr_c1
+    bcs __divdi3_nr_c1
     not r2
     not r3
     br __divdi3_done
 __divdi3_nr_c1:
     neg r2
-    bz __divdi3_nr_c2
+    bcs __divdi3_nr_c2
     not r3
     br __divdi3_done
 __divdi3_nr_c2:
@@ -326,20 +336,20 @@ GLOBAL(__moddi3)
     ldi r5, 1
     ssw r5, -24
     neg r0
-    bz __moddi3_na_c0
+    bcs __moddi3_na_c0
     not r1
     not r2
     not r3
     br __moddi3_a_pos
 __moddi3_na_c0:
     neg r1
-    bz __moddi3_na_c1
+    bcs __moddi3_na_c1
     not r2
     not r3
     br __moddi3_a_pos
 __moddi3_na_c1:
     neg r2
-    bz __moddi3_na_c2
+    bcs __moddi3_na_c2
     not r3
     br __moddi3_a_pos
 __moddi3_na_c2:
@@ -351,7 +361,7 @@ __moddi3_a_pos:
     lsw r5, 12
     neg r5
     ssw r5, 12
-    bz __moddi3_nb_c0
+    bcs __moddi3_nb_c0
     lsw r6, 14
     not r6
     ssw r6, 14
@@ -366,7 +376,7 @@ __moddi3_nb_c0:
     lsw r5, 14
     neg r5
     ssw r5, 14
-    bz __moddi3_nb_c1
+    bcs __moddi3_nb_c1
     lsw r6, 16
     not r6
     ssw r6, 16
@@ -378,7 +388,7 @@ __moddi3_nb_c1:
     lsw r5, 16
     neg r5
     ssw r5, 16
-    bz __moddi3_nb_c2
+    bcs __moddi3_nb_c2
     lsw r6, 18
     not r6
     ssw r6, 18
@@ -413,20 +423,20 @@ __moddi3_b_pos:
     tst r5
     bz __moddi3_done
     neg r0
-    bz __moddi3_nr_c0
+    bcs __moddi3_nr_c0
     not r1
     not r2
     not r3
     br __moddi3_done
 __moddi3_nr_c0:
     neg r1
-    bz __moddi3_nr_c1
+    bcs __moddi3_nr_c1
     not r2
     not r3
     br __moddi3_done
 __moddi3_nr_c1:
     neg r2
-    bz __moddi3_nr_c2
+    bcs __moddi3_nr_c2
     not r3
     br __moddi3_done
 __moddi3_nr_c2:
