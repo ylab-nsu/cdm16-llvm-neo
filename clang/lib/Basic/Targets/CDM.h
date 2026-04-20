@@ -58,28 +58,28 @@ public:
   std::string_view getClobbers() const override { return ""; }
 
   ArrayRef<const char *> getGCCRegNames() const override {
-    static const char *const GCCRegNames[] = {// TOOD: should sp be there?
-                                              "r0", "r1", "r2", "r3", "r4",
-                                              "r5", "r6", "r7", "SP"};
+    static const char *const GCCRegNames[] = {"r0", "r1", "r2", "r3",
+                                              "r4", "r5", "r6", "r7"};
     return llvm::ArrayRef(GCCRegNames);
   }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return {};
+    static const TargetInfo::GCCRegAlias GCCRegAliases[] = {
+        {{"fp"}, "r7"},
+    };
+    return GCCRegAliases;
   }
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override {
-    // There aren't any multi-character AVR specific constraints.
-    if (StringRef(Name).size() > 1)
-      return false;
-
-    // TODO: no asm fo you :(
+    // No target-specific asm constraints.
     return false;
   }
+
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;
   }
+
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
     switch (CC) {
     default:
