@@ -3,6 +3,7 @@
 //
 
 #include "CDMAsmPrinter.h"
+#include "InstPrinter/CDMInstPrinter.h"
 #include "MCTargetDesc/CDMTargetStreamer.h"
 #include "TargetInfo/CDMTargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
@@ -162,4 +163,45 @@ void CDMAsmPrinter::emitEndOfAsmFile(Module &Module) {
   auto *TS = getTargetStreamer();
   TS->emitExtList();
   TS->emitEnd();
+}
+
+void CDMAsmPrinter::printOperand(const MachineInstr *MI, int OpNum, raw_ostream &OS) {
+  const MachineOperand &MO = MI->getOperand(OpNum);
+  switch (MO.getType()) {
+  case MachineOperand::MO_Register:
+    OS << CDMInstPrinter::getRegisterName(MO.getReg());
+    break;
+  case MachineOperand::MO_Immediate:
+    OS << MO.getImm();
+    break;
+  case MachineOperand::MO_MachineBasicBlock:
+    MO.getMBB()->getSymbol()->print(OS, MAI);
+    break;
+  case MachineOperand::MO_GlobalAddress:
+    PrintSymbolOperand(MO, OS);
+    break;
+  case MachineOperand::MO_ExternalSymbol:
+    OS << *GetExternalSymbolSymbol(MO.getSymbolName());
+    break;
+  case MachineOperand::MO_BlockAddress:
+    GetBlockAddressSymbol(MO.getBlockAddress())->print(OS, MAI);
+    break;
+  case MachineOperand::MO_ConstantPoolIndex: {
+    const DataLayout &DL = getDataLayout();
+    OS << DL.getPrivateGlobalPrefix() << "CPI" << getFunctionNumber() << '_'
+       << MO.getIndex();
+    break;
+  }
+  default:
+    llvm_unreachable("not implemented");
+  }
+}
+
+bool CDMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                                    const char *ExtraCode, raw_ostream &OS) {
+  if (!ExtraCode || !ExtraCode[0]) {
+    printOperand(MI, OpNo, OS);
+    return false;
+  }
+  return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS);
 }

@@ -22,6 +22,7 @@ class CDMAsmPrinter : public AsmPrinter {
 
   std::optional<int> getSourceFileIndex(StringRef Checksum);
   void collectAndEmitSourceFiles(Module &Module);
+  void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &OS);
 
 public:
   explicit CDMAsmPrinter(TargetMachine &TM,
@@ -33,6 +34,9 @@ public:
   void emitInstruction(const MachineInstr *Instr) override;
   void emitStartOfAsmFile(Module &Module) override;
   void emitEndOfAsmFile(Module &Module) override;
+
+  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
+                       const char *ExtraCode, raw_ostream &O) override;
 
   CDMTargetStreamer *getTargetStreamer() const {
     return static_cast<CDMTargetStreamer *>(OutStreamer->getTargetStreamer());

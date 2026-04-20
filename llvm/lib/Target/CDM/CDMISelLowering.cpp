@@ -969,3 +969,45 @@ CDMISelLowering::emitShiftLoop(MachineInstr &MI, MachineBasicBlock *MBB) const {
 
   return RemBB;
 }
+
+std::pair<unsigned, const TargetRegisterClass *>
+CDMISelLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
+                                                  StringRef Constraint,
+                                                  MVT VT) const {
+  if (Constraint.size() == 1) {
+    switch (Constraint[0]) {
+    case 'r':
+      switch (VT.SimpleTy) {
+      case MVT::i8:
+      case MVT::i16:
+        return std::make_pair(0U, &CDM::CPURegsRegClass);
+      default:
+        break;
+      }
+      break;
+    default:
+      break;
+    }
+  }
+
+  return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+}
+
+#define GET_REGISTER_MATCHER
+#include "CDMGenAsmMatcher.inc"
+
+Register
+CDMISelLowering::getRegisterByName(const char *RegName, LLT VT,
+                                       const MachineFunction &MF) const {
+  Register Reg = MatchRegisterAltName(RegName);
+  if (!Reg)
+    Reg = MatchRegisterName(RegName);
+  if (!Reg)
+    return Reg;
+
+  BitVector ReservedRegs = Subtarget.getRegisterInfo()->getReservedRegs(MF);
+  if (!ReservedRegs.test(Reg) && !Subtarget.isRegisterReservedByUser(Reg))
+    report_fatal_error(Twine("Trying to obtain non-reserved register \"" +
+                             StringRef(RegName) + "\"."));
+  return Reg;
+}
