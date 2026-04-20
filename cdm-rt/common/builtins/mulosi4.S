@@ -2,6 +2,9 @@
 
 RSECT(__mulosi4)
 
+EXTERN(__mulsi3)
+EXTERN(__divsi3)
+
 GLOBAL(__mulosi4)
 
     push fp
@@ -9,146 +12,72 @@ GLOBAL(__mulosi4)
     addsp -16
     ssw r4, -2
     ssw r5, -4
-    ssw r6, -6
 
-    ldi r6, 0
-    ssw r6, -8
+    ssw r0, -6
+    ssw r1, -8
+    ssw r2, -10
+    ssw r3, -12
 
-    tst r1
-    bpl __mulosi4_a_pos
-    ldi r6, 1
-    ssw r6, -8
-    neg r1
-    neg r0
+    jsr __mulsi3
 
-    bz __mulosi4_a_pos
-    dec r1
+    ssw r0, -14
+    ssw r1, -16
 
-__mulosi4_a_pos:
-    tst r3
-    bpl __mulosi4_b_pos
-    lsw r6, -8
-    ldi r4, 1
-    xor r6, r4, r6
-    ssw r6, -8
-    neg r3
-    neg r2
-
-    bz __mulosi4_b_pos
-    dec r3
-
-__mulosi4_b_pos:
-    ldi r6, 0
-    ssw r6, -10
-    ssw r6, -12
-
-    ldi r4, 0
-    ldi r5, 0
-    ssw r6, -14
-    ssw r6, -16
-
-    or r2, r3, r6
-    bz __mulosi4_mul_done
-
-__mulosi4_loop:
-    shr r3
-    rcr r2
-    bcc __mulosi4_skip_add
-
-    add r0, r4, r4
-    addc r1, r5, r5
-
-    push r4
     lsw r4, -10
-    lsw r6, -14
-    addc r4, r6
-    ssw r6, -14
-    lsw r4, -12
-    lsw r6, -16
-    addc r4, r6
-    ssw r6, -16
-    pop r4
+    lsw r5, -12
+    or r4, r5, r4
+    bz __mulosi4_no_overflow
 
-__mulosi4_skip_add:
-    shl r0
-    rcl r1
-    lsw r6, -10
-    rcl r6
-    ssw r6, -10
-    lsw r6, -12
-    rcl r6
-    ssw r6, -12
-
-    or r2, r3, r6
-    bnz __mulosi4_loop
-
-__mulosi4_mul_done:
-    lsw r6, -8
-    tst r6
-    bz __mulosi4_check_overflow
-
-    not r4
-    not r5
-    lsw r0, -14
-    not r0
-    ssw r0, -14
-    lsw r0, -16
-    not r0
-    ssw r0, -16
-
-    ldi r6, 0
+    lsw r4, -10
     inc r4
-    addc r6, r5
+    bnz __mulosi4_div_check
+    lsw r4, -12
+    inc r4
+    bnz __mulosi4_div_check
+
+    lsw r4, -6
+    tst r4
+    bnz __mulosi4_no_overflow
+    lsw r4, -8
+    tst r4
+    bpl __mulosi4_no_overflow
+    shl r4
+    tst r4
+    bnz __mulosi4_no_overflow
+    br __mulosi4_set_overflow
+
+__mulosi4_div_check:
     lsw r0, -14
-    addc r6, r0
-    ssw r0, -14
-    lsw r0, -16
-    addc r6, r0
-    ssw r0, -16
+    lsw r1, -16
+    lsw r2, -10
+    lsw r3, -12
+    jsr __divsi3
 
-__mulosi4_check_overflow:
-    tst r5
-    bmi __mulosi4_neg_result
-
-    lsw r6, -14
-    tst r6
+    lsw r4, -6
+    cmp r0, r4
     bnz __mulosi4_set_overflow
-
-    lsw r6, -16
-    tst r6
+    lsw r4, -8
+    cmp r1, r4
     bnz __mulosi4_set_overflow
-    br __mulosi4_no_overflow
-
-__mulosi4_neg_result:
-    lsw r6, -14
-    inc r6
-    bnz __mulosi4_set_overflow
-    lsw r6, -16
-    inc r6
-    bnz __mulosi4_set_overflow
-    br __mulosi4_no_overflow
-    
-__mulosi4_set_overflow:
-    ldi r6, 1
-    lsw r0, 12
-    stw r0, r6
-    br __mulosi4_done
 
 __mulosi4_no_overflow:
-    ldi r6, 0
-    lsw r0, 12
-    stw r0, r6
+    ldi r4, 0
+    lsw r5, 12
+    stw r5, r4
     br __mulosi4_done
 
+__mulosi4_set_overflow:
+    ldi r4, 1
+    lsw r5, 12
+    stw r5, r4
+
 __mulosi4_done:
-    move r4, r0
-    move r5, r1
+    lsw r0, -14
+    lsw r1, -16
     lsw r4, -2
     lsw r5, -4
-    lsw r6, -6
     stsp fp
     pop fp
     rts
-
 
 END

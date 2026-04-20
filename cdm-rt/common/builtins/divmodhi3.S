@@ -4,6 +4,10 @@ RSECT(__udivmodhi3)
 
 GLOBAL(__udivmodhi3)
 
+    tst r1
+    bnz __udivmodhi3_nonzero
+    ZERO
+__udivmodhi3_nonzero:
     ldi r2, 0
     ldi r3, 16
 __udivmodhi3_loop:
@@ -83,7 +87,6 @@ GLOBAL(__modhi3)
 __modhi3_r0_pos:
     tst r1
     bpl __modhi3_r1_pos
-    dec r4
     neg r1
 __modhi3_r1_pos:
     jsr __udivmodhi3

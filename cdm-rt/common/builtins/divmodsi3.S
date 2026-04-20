@@ -8,6 +8,10 @@ GLOBAL(__udivmodsi3)
     push r5
     push r6
 
+    or r2, r3, r4
+    bnz __udivmodsi3_nonzero
+    ZERO
+__udivmodsi3_nonzero:
     ldi r4, 0
     ldi r5, 0
     ldi r6, 32
@@ -71,26 +75,26 @@ GLOBAL(__divsi3)
     tst r1
     bpl __divsi3_a_pos
     inc r4
-    neg r1
+    not r1
     neg r0
-    bz __divsi3_a_pos
-    dec r1
+    bcc __divsi3_a_pos
+    inc r1
 __divsi3_a_pos:
     tst r3
     bpl __divsi3_b_pos
     dec r4
-    neg r3
+    not r3
     neg r2
-    bz __divsi3_b_pos
-    dec r3
+    bcc __divsi3_b_pos
+    inc r3
 __divsi3_b_pos:
     jsr __udivmodsi3
     tst r4
     bz __divsi3_done
-    neg r1
+    not r1
     neg r0
-    bz __divsi3_done
-    dec r1
+    bcc __divsi3_done
+    inc r1
 __divsi3_done:
     pop r4
     rts
@@ -106,27 +110,27 @@ GLOBAL(__modsi3)
     tst r1
     bpl __modsi3_a_pos
     inc r4
-    neg r1
+    not r1
     neg r0
-    bz __modsi3_a_pos
-    dec r1
+    bcc __modsi3_a_pos
+    inc r1
 __modsi3_a_pos:
     tst r3
     bpl __modsi3_b_pos
-    neg r3
+    not r3
     neg r2
-    bz __modsi3_b_pos
-    dec r3
+    bcc __modsi3_b_pos
+    inc r3
 __modsi3_b_pos:
     jsr __udivmodsi3
     move r2, r0
     move r3, r1
     tst r4
     bz __modsi3_done
-    neg r1
+    not r1
     neg r0
-    bz __modsi3_done
-    dec r1
+    bcc __modsi3_done
+    inc r1
 __modsi3_done:
     pop r4
     rts
