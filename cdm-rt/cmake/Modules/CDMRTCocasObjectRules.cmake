@@ -12,7 +12,7 @@ function(create_object_library target output)
 
   add_custom_command(OUTPUT ${output}
                      COMMAND ${CMAKE_COMMAND} -E env COCAS="${COCAS_EXECUTABLE}"
-                     ${CMAKE_ASM_COMPILER} -target cdm-cocas -r -o ${output} ${CREATE_OBJECT_LIBRARY_SRCS})
+                     ${CMAKE_ASM_COMPILER} -target cdm-cocas -v -r -o ${output} ${CREATE_OBJECT_LIBRARY_SRCS})
   add_custom_target(${target} ALL DEPENDS ${output})
 
 endfunction(create_object_library)

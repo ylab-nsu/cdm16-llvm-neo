@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.20.0)
 set(LLVM_SUBPROJECT_TITLE "cdm-rt")
 
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules)
+
 include(GetClangResourceDir)
 
 get_clang_resource_dir(COMPILER_RESOURCE_DIR)
