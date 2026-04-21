@@ -223,10 +223,8 @@ rts
 GLOBAL(strcspn)
 push r4
 push r0
+br strcspn_test
 strcspn_beg:
-ldb r0, r2
-tst r2
-bz strcspn_end
 move r1, r3
 strcspn_cmp_beg:
 ldb r3, r4
@@ -236,7 +234,10 @@ inc r3
 tst r4
 bnz strcspn_cmp_beg
 inc r0
-br strcspn_beg
+strcspn_test:
+ldb r0, r2
+tst r2
+bnz strcspn_beg
 strcspn_end:
 pop r1
 pop r4
@@ -274,26 +275,43 @@ rts
 GLOBAL(strspn)
 push r4
 push r0
+br strspn_test
 strspn_beg:
-ldb r0, r2
-tst r2
-bz strspn_end
 move r1, r3
 strspn_cmp_beg:
 ldb r3, r4
-cmp r2, r4
-beq strspn_cmp_end
-inc r3
 tst r4
-bnz strspn_cmp_beg
-br strspn_end
-strspn_cmp_end:
+bz strspn_end
+inc r3
+cmp r2, r4
+bne strspn_cmp_beg
 inc r0
-br strspn_beg
+strspn_test:
+ldb r0, r2
+tst r2
+bnz strspn_beg
 strspn_end:
 pop r1
 pop r4
 sub r0, r1, r0
+rts
+
+GLOBAL(strstr)
+strstr_beg:
+push r0
+push r1
+jsr strcmp
+move r0, r2
+pop r1
+pop r0
+tst r2
+bz strstr_end
+inc r0
+ldb r0, r2
+tst r2
+bnz strstr_beg
+clr r0
+strstr_end:
 rts
 
 GLOBAL(memset_explicit)
