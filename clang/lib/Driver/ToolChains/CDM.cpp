@@ -49,6 +49,21 @@ void CDM::LldLinker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--oformat=binary");
   }
 
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs, options::OPT_r)){
+      // Add object files from standard lib
+      for (const char *obj : getCDMToolChain().getStdLibObjs()) {
+        CmdArgs.push_back(
+            Args.MakeArgString(getCDMToolChain().GetFilePath(obj)));
+      }
+  }
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs, options::OPT_r)){
+      // Add builtins
+      for (const char *obj : getCDMToolChain().getBuiltinNames()) {
+        CmdArgs.push_back(getCDMToolChain().getCompilerRTArgString(
+            Args, obj, ToolChain::FT_Object));
+      }
+  }
+
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
