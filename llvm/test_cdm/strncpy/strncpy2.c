@@ -1,0 +1,15 @@
+// CHECK reg(r0) 0x48
+// CHECK sym(dst) 48 45 6C 01 01 01
+
+#include <string.h>
+
+extern char dst[];
+
+int main() {
+    for (int i = 0; i < 6; i++) {
+        dst[i] = 1;
+    }
+    char *p = strncpy(dst, "HEllo", 3);
+
+    return *p;
+}
