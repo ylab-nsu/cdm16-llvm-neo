@@ -32,6 +32,10 @@ public:
   // always generate non-PIC code
   bool isPICDefaultForced() const override { return true; }
 
+  void
+  AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                            llvm::opt::ArgStringList &CC1Args) const override;
+
   bool SupportsProfiling() const override { return false; }
 
 protected:

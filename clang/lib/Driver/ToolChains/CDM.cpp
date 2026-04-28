@@ -11,6 +11,19 @@ Tool *CDMToolChain::buildLinker() const {
   return new tools::CDM::LldLinker(*this);
 }
 
+void CDMToolChain::AddClangSystemIncludeArgs(
+    const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &CC1Args) const {
+
+  if (DriverArgs.hasArg(options::OPT_nostdinc) ||
+      DriverArgs.hasArg(options::OPT_nostdlibinc)){
+    return;
+  }
+  if (getStdlibIncludePath()){
+    addSystemInclude(DriverArgs, CC1Args, *getStdlibIncludePath());
+  }
+}
+
 void CDM::LldLinker::ConstructJob(Compilation &C, const JobAction &JA,
                                const InputInfo &Output,
                                const InputInfoList &Inputs,
