@@ -961,6 +961,12 @@ let Defs = [SP], Uses = [SP] in {
                   [(callseq_end timm:$amt1, timm:$amt2)]>;
 }
 
+// Atomics
+let usesCustomInserter = true in {
+  def PseudoAtomicFence
+      : CDMPseudo<(outs), (ins), "", [(atomic_fence timm, timm)]>;
+}
+
 //===----------------------------------------------------------------------===//
 // Non-Instruction Patterns
 //===----------------------------------------------------------------------===//

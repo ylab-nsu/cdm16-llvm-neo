@@ -700,6 +700,10 @@ CDMISelLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case CDM::SHR_EXT64_LOOP:
   case CDM::SHRA_EXT64_LOOP:
     return emitShiftLoop(MI, MBB);
+  case CDM::PseudoAtomicFence:
+    // Fences are no-op, since CDM-16 is single-core.
+    MI.eraseFromParent();
+    return MBB;
   }
 }
 
