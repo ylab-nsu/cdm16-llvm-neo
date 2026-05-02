@@ -77,12 +77,27 @@ void CDMInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     BuildMI(MBB, MI, DL, get(CDM::LDSP), DestReg);
     return;
   }
-
   if (DestReg == CDM::SP) {
     assert(CDM::CPURegsRegClass.contains(SrcReg) &&
            "Cannot copy a special register to SP");
 
     BuildMI(MBB, MI, DL, get(CDM::STSP))
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  if (SrcReg == CDM::PSR) {
+    assert(CDM::CPURegsRegClass.contains(DestReg) &&
+           "Cannot copy PSR to special register");
+
+    BuildMI(MBB, MI, DL, get(CDM::LDPS), DestReg);
+    return;
+  }
+  if (DestReg == CDM::PSR) {
+    assert(CDM::CPURegsRegClass.contains(SrcReg) &&
+           "Cannot copy a special register to PSR");
+
+    BuildMI(MBB, MI, DL, get(CDM::STPS))
         .addReg(SrcReg, getKillRegState(KillSrc));
     return;
   }
