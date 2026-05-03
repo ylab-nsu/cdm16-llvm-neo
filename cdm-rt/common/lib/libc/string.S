@@ -300,18 +300,30 @@ GLOBAL(strstr)
 strstr_beg:
 push r0
 push r1
-jsr strcmp
-move r0, r2
+
+strstr_cmp_beg:
+ldb r0, r2
+ldb r1, r3
+inc r0
+inc r1
+tst r3
+bz strstr_found_end
+sub r2, r3, r2
+bz strstr_cmp_beg
+strstr_cmp_end:
+
 pop r1
 pop r0
-tst r2
-bz strstr_end
 inc r0
 ldb r0, r2
 tst r2
 bnz strstr_beg
 clr r0
-strstr_end:
+rts
+
+strstr_found_end:
+pop r1
+pop r0
 rts
 
 GLOBAL(memset_explicit)
