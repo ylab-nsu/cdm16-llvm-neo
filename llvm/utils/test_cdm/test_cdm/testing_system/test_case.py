@@ -92,19 +92,27 @@ class CocasEndToEndTestCase(TestCase):
 class ElfEndToEndTestCase(TestCase):
   common_linker_script: Path
 
-  @staticmethod
-  def generate_linker_script(absolute_sections: list[SymbolAssertion]) -> Path:
+  @classmethod
+  def generate_linker_script(cls, absolute_sections: list[SymbolAssertion]) -> Path:
     with tempfile.NamedTemporaryFile(suffix = '.ld', delete=False, mode='wt') as temp:
+      absolute_sections_size = 0
       temp.write("SECTIONS {\n")
       for sec in absolute_sections:
         temp.write(f"""
-                    .{sec.symbol}_{sec.address} {sec.address} : {{
-                        {sec.symbol} = {sec.address};
-                    }}
+                    {sec.symbol} = {sec.address};
 
                     """)
+        absolute_sections_size += len(sec.content)
 
       temp.write("}")
+
+      temp.write(f"""
+                 MEMORY {{
+                    IVT : ORIGIN = 0x0, LENGTH = 0x80
+                    ASECTS : ORIGIN = {cls._START_OF_ABSOLUTE_SECTIONS}, LENGTH = {absolute_sections_size}
+                    RAM : ORIGIN = {cls._START_OF_ABSOLUTE_SECTIONS + absolute_sections_size}, LENGTH = 64K - {cls._START_OF_ABSOLUTE_SECTIONS + absolute_sections_size}
+                 }}
+                 """)
 
       return Path(temp.name)
 
