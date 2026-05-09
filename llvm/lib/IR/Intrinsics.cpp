@@ -31,7 +31,6 @@
 #include "llvm/IR/IntrinsicsVE.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/IntrinsicsXCore.h"
-#include "llvm/IR/IntrinsicsCDM.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 
