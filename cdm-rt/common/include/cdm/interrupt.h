@@ -3,7 +3,7 @@
 
 // Enable hardware interrupts.
 __attribute__((always_inline))
-static inline void int_enable() {
+static inline void int_enable(void) {
   // Memory constraint is to prevent the compiler
   // from reordering loads/stores with the asm block.
   // Basically, this is a compiler fence.
@@ -12,14 +12,14 @@ static inline void int_enable() {
 
 // Disable hardware interrupts.
 __attribute__((always_inline))
-static inline void int_disable() {
+static inline void int_disable(void) {
   // Same as "ei"
   __asm__ __volatile__("di" : : : "memory", "cc");
 }
 
 // Wait for a hardware interrupt.
 __attribute__((always_inline))
-static inline void int_wait() {
+static inline void int_wait(void) {
   // Memory constraint is to make sure that no writes
   // are moved past the wait instruction.
   __asm__ __volatile__("wait" : : : "memory");
