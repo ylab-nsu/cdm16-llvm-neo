@@ -88,42 +88,40 @@ void CDMAsmPrinter::collectAndEmitSourceFiles(Module &Module) {
   }
 }
 
-void CDMAsmPrinter::emitInstruction(const MachineInstr *Instr) {
-  static unsigned PrevLineNumber = 0;
-  static int PrevFileIndex = -1;
+void CDMAsmPrinter::emitDebugLoc(DILocation &DebugLoc) {
+  StringRef Checksum = DebugLoc.getFile()->getChecksum().value().Value;
 
+  std::optional<int> NewFileIndex = getSourceFileIndex(Checksum);
+  if (!NewFileIndex) {
+    return;
+  }
+
+  unsigned NewLineNumber = DebugLoc.getLine();
+  unsigned NewColumnNumber = DebugLoc.getColumn();
+
+  if (SourceFileIndex != NewFileIndex || LineNumber != NewLineNumber ||
+      ColumnNumber != NewColumnNumber) {
+    SourceFileIndex = NewFileIndex;
+    LineNumber = NewLineNumber;
+    ColumnNumber = NewColumnNumber;
+
+    getTargetStreamer()->emitDbgLoc(*SourceFileIndex, *LineNumber,
+                                    *ColumnNumber, DebugLoc.getFilename());
+  }
+}
+
+void CDMAsmPrinter::emitInstruction(const MachineInstr *Instr) {
   if (Instr->isDebugValue()) {
     // TODO: implement
     return;
   }
-  if (Instr->isDebugLabel())
+  if (Instr->isDebugLabel()) {
     return;
+  }
 
   DILocation *DebugLoc = Instr->getDebugLoc().get();
-
   if (DebugLoc) {
-    StringRef Checksum = DebugLoc->getFile()->getChecksum().value().Value;
-
-    std::optional<int> SourceFileIndex = getSourceFileIndex(Checksum);
-
-    if (SourceFileIndex) {
-      unsigned CurrLineNumber = DebugLoc->getLine(),
-               CurrColumnNumber = DebugLoc->getColumn();
-
-      if (PrevLineNumber != CurrLineNumber ||
-          PrevFileIndex != SourceFileIndex) {
-
-        OutStreamer->getCommentOS()
-            << formatv("{0}:{1}:{2}", DebugLoc->getFilename(), CurrLineNumber,
-                       CurrColumnNumber)
-            << "\n";
-
-        getTargetStreamer()->emitDbgLoc(*SourceFileIndex, CurrLineNumber,
-                                        CurrColumnNumber);
-        PrevLineNumber = CurrLineNumber;
-        PrevFileIndex = *SourceFileIndex;
-      }
-    }
+    emitDebugLoc(*DebugLoc);
   }
 
   CDMMCInstLower MCInstLower(OutContext, *this);

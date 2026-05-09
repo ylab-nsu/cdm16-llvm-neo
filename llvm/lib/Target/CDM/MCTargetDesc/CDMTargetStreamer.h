@@ -15,7 +15,8 @@ public:
 
   virtual void emitRsect(const Twine &Name) {}
   virtual void emitDbgSource(unsigned FileIndex, const Twine &FileName) {}
-  virtual void emitDbgLoc(unsigned Index, unsigned Line, unsigned Column) {}
+  virtual void emitDbgLoc(unsigned FileIndex, unsigned Line, unsigned Column,
+                          const Twine &FileName) {}
   virtual void emitExtList() {}
   virtual void emitEnd() {}
 };
@@ -36,8 +37,9 @@ public:
     getAsmStreamer()->emitDbgSource(FileIndex, FileName);
   }
 
-  void emitDbgLoc(unsigned Index, unsigned Line, unsigned Column) override {
-    getAsmStreamer()->emitDbgLoc(Index, Line, Column);
+  void emitDbgLoc(unsigned FileIndex, unsigned Line, unsigned Column,
+                  const Twine &FileName) override {
+    getAsmStreamer()->emitDbgLoc(FileIndex, Line, Column, FileName);
   }
 
   void emitExtList() override { getAsmStreamer()->emitExtList(); }

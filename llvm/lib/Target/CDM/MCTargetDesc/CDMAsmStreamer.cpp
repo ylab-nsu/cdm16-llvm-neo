@@ -11,6 +11,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -373,9 +374,10 @@ void CDMAsmStreamer::emitDbgSource(unsigned FileIndex, const Twine &FileName) {
   emitEOL();
 }
 
-void CDMAsmStreamer::emitDbgLoc(unsigned Index, unsigned Line,
-                                unsigned Column) {
+void CDMAsmStreamer::emitDbgLoc(unsigned Index, unsigned Line, unsigned Column,
+                                const Twine &FileName) {
   OS << "\tdbg_loc " << Index << ", " << Line << ", " << Column;
+  AddComment(formatv("{0}:{1}:{2}", FileName, Line, Column));
   emitEOL();
 }
 
