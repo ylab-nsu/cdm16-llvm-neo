@@ -17,8 +17,6 @@ public:
   virtual void emitDbgSource(unsigned FileIndex, const Twine &FileName) {}
   virtual void emitDbgLoc(unsigned FileIndex, unsigned Line, unsigned Column,
                           const Twine &FileName) {}
-  virtual void emitExtList() {}
-  virtual void emitEnd() {}
 };
 
 class CDMTargetAsmStreamer : public CDMTargetStreamer {
@@ -41,10 +39,6 @@ public:
                   const Twine &FileName) override {
     getAsmStreamer()->emitDbgLoc(FileIndex, Line, Column, FileName);
   }
-
-  void emitExtList() override { getAsmStreamer()->emitExtList(); }
-
-  void emitEnd() override { getAsmStreamer()->emitEnd(); }
 
   CDMAsmStreamer *getAsmStreamer() const {
     return static_cast<CDMAsmStreamer *>(&Streamer);

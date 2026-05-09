@@ -36,7 +36,6 @@ public:
 
   void emitInstruction(const MachineInstr *Instr) override;
   void emitStartOfAsmFile(Module &Module) override;
-  void emitEndOfAsmFile(Module &Module) override;
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
                        const char *ExtraCode, raw_ostream &O) override;

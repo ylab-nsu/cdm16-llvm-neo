@@ -28,6 +28,8 @@ class CDMAsmStreamer : public MCStreamer {
 
   bool EmittedSectionDirective = false;
 
+  void emitExtList();
+
 protected:
   void emitRawTextImpl(StringRef String) override;
 
@@ -46,8 +48,6 @@ public:
   void emitDbgSource(unsigned FileIndex, const Twine &FileName);
   void emitDbgLoc(unsigned Index, unsigned Line, unsigned Column,
                   const Twine &FileName);
-  void emitExtList();
-  void emitEnd();
 
   MCInstPrinter *getInstPrinter() { return InstPrinter.get(); }
   MCAssembler *getAssemblerPtr() override { return nullptr; }
@@ -108,6 +108,8 @@ public:
                 SMLoc Loc = SMLoc()) override;
 
   void reset() override;
+
+  void finishImpl() override;
 
   static bool classof(const MCStreamer *S) { return S->hasRawTextSupport(); }
 };

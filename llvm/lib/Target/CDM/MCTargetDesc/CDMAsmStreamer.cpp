@@ -390,4 +390,9 @@ void CDMAsmStreamer::emitExtList() {
   }
 }
 
-void CDMAsmStreamer::emitEnd() { OS << "end."; }
+void CDMAsmStreamer::finishImpl() {
+  emitExtList();
+
+  OS << "end.";
+  emitEOL();
+}
