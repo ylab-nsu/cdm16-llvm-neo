@@ -44,7 +44,8 @@ public:
   // CDM-specific functions
   void emitRsect(const Twine &Name);
   void emitDbgSource(unsigned FileIndex, const Twine &FileName);
-  void emitDbgLoc(unsigned Index, unsigned Line, unsigned Column);
+  void emitDbgLoc(unsigned Index, unsigned Line, unsigned Column,
+                  const Twine &FileName);
   void emitExtList();
   void emitEnd();
 

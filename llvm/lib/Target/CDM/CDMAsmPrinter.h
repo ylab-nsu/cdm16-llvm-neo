@@ -19,9 +19,13 @@ namespace llvm {
 
 class CDMAsmPrinter : public AsmPrinter {
   llvm::StringMap<int> SourceFiles;
+  std::optional<unsigned> SourceFileIndex;
+  std::optional<unsigned> LineNumber;
+  std::optional<unsigned> ColumnNumber;
 
   std::optional<int> getSourceFileIndex(StringRef Checksum);
   void collectAndEmitSourceFiles(Module &Module);
+  void emitDebugLoc(DILocation &DebugLoc);
 
 public:
   explicit CDMAsmPrinter(TargetMachine &TM,
