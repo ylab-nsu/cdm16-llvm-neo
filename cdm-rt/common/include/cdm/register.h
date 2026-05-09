@@ -19,7 +19,7 @@ typedef enum : unsigned int {
 
 // Read from the status register.
 __attribute__((always_inline))
-static inline psr_t ldps() {
+static inline psr_t ldps(void) {
   psr_t value;
   __asm__ __volatile__("ldps %[val]" : [val] "=r"(value));
   return value;
@@ -35,7 +35,7 @@ static inline void stps(psr_t value) {
 
 // Read from the program counter register.
 __attribute__((always_inline))
-static inline void *ldpc() {
+static inline void *ldpc(void) {
   void *value;
   __asm__ __volatile__("ldpc %[val]" : [val] "=r"(value));
   return value;
@@ -43,7 +43,7 @@ static inline void *ldpc() {
 
 // Read from the stack pointer register.
 __attribute__((always_inline))
-static inline void *ldsp() {
+static inline void *ldsp(void) {
   void *value;
   __asm__ __volatile__("ldsp %[val]" : [val] "=r"(value));
   return value;
@@ -51,7 +51,7 @@ static inline void *ldsp() {
 
 // Read from the frame pointer register.
 __attribute__((always_inline))
-static inline void *ldfp() {
+static inline void *ldfp(void) {
   void *value;
   __asm__ __volatile__("move fp, %[val]" : [val] "=r"(value) : : "cc");
   return value;
