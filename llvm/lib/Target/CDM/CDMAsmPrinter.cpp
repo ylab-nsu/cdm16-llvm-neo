@@ -157,12 +157,6 @@ void CDMAsmPrinter::emitStartOfAsmFile(Module &Module) {
   getTargetStreamer()->emitRsect(llvm::formatv("_{0}_{1}", FN, rand()));
 }
 
-void CDMAsmPrinter::emitEndOfAsmFile(Module &Module) {
-  auto *TS = getTargetStreamer();
-  TS->emitExtList();
-  TS->emitEnd();
-}
-
 bool CDMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                                     const char *ExtraCode, raw_ostream &OS) {
   if (ExtraCode && ExtraCode[0]) {
