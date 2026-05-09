@@ -17,36 +17,40 @@ typedef enum : unsigned int {
   PS_INTERRUPT = 0x8000,
 } psr_t;
 
-// Reads from the status register.
+// Read from the status register.
+__attribute__((always_inline))
 static inline psr_t ldps() {
   psr_t value;
   __asm__ __volatile__("ldps %[val]" : [val] "=r"(value));
   return value;
 }
 
-// Writes to the status register.
+// Write to the status register.
+__attribute__((always_inline))
 static inline void stps(psr_t value) {
   // Memory constraint is to prevent the compiler
   // from reordering loads/stores with the asm block.
-  // Basically, this is a compiler fence.
   __asm__ __volatile__("stps %[val]" : : [val] "r"(value) : "memory");
 }
 
-// Reads from the program counter register.
+// Read from the program counter register.
+__attribute__((always_inline))
 static inline void *ldpc() {
   void *value;
   __asm__ __volatile__("ldpc %[val]" : [val] "=r"(value));
   return value;
 }
 
-// Reads from the stack pointer register.
+// Read from the stack pointer register.
+__attribute__((always_inline))
 static inline void *ldsp() {
   void *value;
   __asm__ __volatile__("ldsp %[val]" : [val] "=r"(value));
   return value;
 }
 
-// Reads from the frame pointer register.
+// Read from the frame pointer register.
+__attribute__((always_inline))
 static inline void *ldfp() {
   void *value;
   __asm__ __volatile__("move fp, %[val]" : [val] "=r"(value) : : "cc");
