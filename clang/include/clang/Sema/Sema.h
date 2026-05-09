@@ -158,7 +158,6 @@ class SemaAMDGPU;
 class SemaARM;
 class SemaAVR;
 class SemaBPF;
-class SemaCDM;
 class SemaCodeCompletion;
 class SemaCUDA;
 class SemaDirectX;
@@ -1422,11 +1421,6 @@ public:
     return *BPFPtr;
   }
 
-  SemaCDM &CDM() {
-    assert(CDMPtr);
-    return *CDMPtr;
-  }
-
   SemaCodeCompletion &CodeCompletion() {
     assert(CodeCompletionPtr);
     return *CodeCompletionPtr;
@@ -1578,7 +1572,6 @@ private:
   std::unique_ptr<SemaARM> ARMPtr;
   std::unique_ptr<SemaAVR> AVRPtr;
   std::unique_ptr<SemaBPF> BPFPtr;
-  std::unique_ptr<SemaCDM> CDMPtr;
   std::unique_ptr<SemaCodeCompletion> CodeCompletionPtr;
   std::unique_ptr<SemaCUDA> CUDAPtr;
   std::unique_ptr<SemaDirectX> DirectXPtr;

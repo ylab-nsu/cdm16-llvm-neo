@@ -286,20 +286,20 @@ def ZERO: Inst0Op<0b0000, (outs), (ins), "zero", [(trap)]>;
 
 // Halt processor
 // Stops processor clock, changes processor status to HALTED.
-def HALT: Inst0Op<0b0100, (outs), (ins), "halt", [(int_cdm_halt)]>;
+def HALT: Inst0Op<0b0100, (outs), (ins), "halt", []>;
 
 // Wait for interrupt
 // Stops processor clock until an interrupt or an exception
 // occurs, changes processor status to WAITING.
-def WAIT: Inst0Op<0b0101, (outs), (ins), "wait", [(int_cdm_wait)]>;
+def WAIT: Inst0Op<0b0101, (outs), (ins), "wait", []>;
 
 // Enable interrupts
 // Sets I bit (bit 15) in PS thus enabling interrupts.
-def EI: Inst0Op<0b0110, (outs), (ins), "ei", [(int_cdm_ei)]>;
+def EI: Inst0Op<0b0110, (outs), (ins), "ei", []>;
 
 // Disable interrupts
 // Clears I bit (bit 15) in PS thus disabling interrupts.
-def DI: Inst0Op<0b0111, (outs), (ins), "di", [(int_cdm_di)]>;
+def DI: Inst0Op<0b0111, (outs), (ins), "di", []>;
 
 // Jump to subroutine (imm16 absolute address)
 // Pushes PC to stack and then does unconditional
@@ -409,13 +409,13 @@ def STSP : Inst1Op<0b0101, (outs), (ins CPURegs:$rd), "stsp\t$rd", []> {
 
 // Load PS
 // Copies value from PS to rd.
-def LDPS : Inst1Op<0b0110, (outs CPURegs:$rd), (ins), "ldps\t$rd", [(set CPURegs:$rd, (int_cdm_ldps))]> {
+def LDPS : Inst1Op<0b0110, (outs CPURegs:$rd), (ins), "ldps\t$rd", []> {
   let Uses = [PSR];
 }
 
 // Store PS
 // Copies value from rd to PS.
-def STPS : Inst1Op<0b0111, (outs), (ins CPURegs:$rd), "stps\t$rd", [(int_cdm_stps CPURegs:$rd)]> {
+def STPS : Inst1Op<0b0111, (outs), (ins CPURegs:$rd), "stps\t$rd", []> {
   let Defs = [PSR];
 }
 
@@ -598,13 +598,11 @@ def TST : InstAlias<"tst\t$rd", (CMPImm6 CPURegs:$rd, 0)>;
 
 // Software interrupt
 // Triggers an interrupt with vector with number imm9.
-def INT : InstImm9<0b0000, (outs), (ins interruptVec:$imm), "int\t$imm",
-                   [(int_cdm_int timm:$imm)]>;
+def INT : InstImm9<0b0000, (outs), (ins interruptVec:$imm), "int\t$imm", []>;
 
 // Reset processor
 // Fetches reset vector thus performing soft reset.
-def RESET : InstImm9<0b0001, (outs), (ins interruptVec:$imm), "reset\t$imm",
-                     [(int_cdm_reset timm:$imm)]>;
+def RESET : InstImm9<0b0001, (outs), (ins interruptVec:$imm), "reset\t$imm", []>;
 
 // Reset vector can be omitted
 def : InstAlias<"reset", (RESET 0), 0>;
