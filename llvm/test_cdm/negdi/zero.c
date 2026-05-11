@@ -9,6 +9,6 @@ long long neg64(long long a) {
 }
 
 long long main() {
-    volatile long long a = 0x000000000;
+    volatile long long a = 0;
     return neg64(a);
 }
