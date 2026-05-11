@@ -93,6 +93,7 @@ private:
   SDValue lowerVAARG(SDValue Op, SelectionDAG &DAG);
 
   SDValue lowerShifts(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerArith64(SDValue Op, SelectionDAG &DAG) const;
 
   MachineBasicBlock *emitPseudoSelectCC(MachineInstr &MI,
                                         MachineBasicBlock *MBB) const;

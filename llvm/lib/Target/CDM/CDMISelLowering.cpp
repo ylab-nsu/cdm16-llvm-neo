@@ -97,6 +97,9 @@ CDMISelLowering::CDMISelLowering(const CDMTargetMachine &TM,
   setOperationAction(ISD::SREM, MVT::i16, LibCall);
   setOperationAction(ISD::UREM, MVT::i16, LibCall);
 
+  setOperationAction(ISD::ADD, MVT::i64, Custom);
+  setOperationAction(ISD::SUB, MVT::i64, Custom);
+
   // Expand other ops
   setOperationAction(ISD::BSWAP, MVT::i16, Expand);
   setOperationAction(ISD::CTLZ, MVT::i16, Expand);
@@ -498,6 +501,14 @@ void CDMISelLowering::ReplaceNodeResults(SDNode *N,
                                          SmallVectorImpl<SDValue> &Results,
                                          SelectionDAG &DAG) const {
   switch (N->getOpcode()) {
+  case ISD::ADD:
+  case ISD::SUB:
+    if (N->getValueType(0) == MVT::i64){
+      SDValue Res = lowerArith64(SDValue(N, 0), DAG);
+      Results.push_back(Res);
+      return;
+    }
+    break;
   case ISD::SHL:
   case ISD::SRL:
   case ISD::SRA:
@@ -530,6 +541,11 @@ SDValue CDMISelLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerConstantPool(Op, DAG);
   case ISD::VASTART:
     return lowerVASTART(Op, DAG);
+  case ISD::ADD:
+  case ISD::SUB:
+    if (Op.getValueType() == MVT::i64)
+      return lowerArith64(Op, DAG);
+    [[fallthrough]];
   case ISD::SHL:
   case ISD::SRL:
   case ISD::SRA:
@@ -671,6 +687,43 @@ SDValue CDMISelLowering::lowerShifts(SDValue Op, SelectionDAG &DAG) const {
   }
   return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i32, Result.getValue(0),
                      Result.getValue(1));
+}
+
+SDValue CDMISelLowering::lowerArith64(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+
+  Type *RetTy = Type::getInt64Ty(*DAG.getContext());
+
+  TargetLowering::ArgListTy Args;
+  TargetLowering::ArgListEntry Entry;
+
+  const char *FuncName;
+
+  if (Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0))) {
+    FuncName = "__negdi2";
+    Entry.Node = Op.getOperand(1);
+    Entry.Ty = RetTy;
+    Args.push_back(Entry);
+  } else {
+    FuncName = Op.getOpcode() == ISD::ADD ? "__adddi3" : "__subdi3";
+    Entry.Node = Op.getOperand(0);
+    Entry.Ty = RetTy;
+    Args.push_back(Entry);
+
+    Entry.Node = Op.getOperand(1);
+    Entry.Ty = RetTy;
+    Args.push_back(Entry);
+  }
+
+  SDValue Callee =
+      DAG.getExternalSymbol(FuncName, getPointerTy(DAG.getDataLayout()));
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  CLI.setDebugLoc(DL)
+      .setChain(DAG.getEntryNode())
+      .setLibCallee(CallingConv::C, RetTy, Callee, std::move(Args));
+
+  std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
+  return CallResult.first;
 }
 
 MachineBasicBlock *
