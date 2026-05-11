@@ -501,14 +501,6 @@ void CDMISelLowering::ReplaceNodeResults(SDNode *N,
                                          SmallVectorImpl<SDValue> &Results,
                                          SelectionDAG &DAG) const {
   switch (N->getOpcode()) {
-  case ISD::ADD:
-  case ISD::SUB:
-    if (N->getValueType(0) == MVT::i64){
-      SDValue Res = lowerArith64(SDValue(N, 0), DAG);
-      Results.push_back(Res);
-      return;
-    }
-    break;
   case ISD::SHL:
   case ISD::SRL:
   case ISD::SRA:
@@ -545,7 +537,7 @@ SDValue CDMISelLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SUB:
     if (Op.getValueType() == MVT::i64)
       return lowerArith64(Op, DAG);
-    [[fallthrough]];
+    break;
   case ISD::SHL:
   case ISD::SRL:
   case ISD::SRA:
@@ -695,24 +687,26 @@ SDValue CDMISelLowering::lowerArith64(SDValue Op, SelectionDAG &DAG) const {
   Type *RetTy = Type::getInt64Ty(*DAG.getContext());
 
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
 
   const char *FuncName;
 
   if (Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0))) {
     FuncName = "__negdi2";
-    Entry.Node = Op.getOperand(1);
-    Entry.Ty = RetTy;
-    Args.push_back(Entry);
+    TargetLowering::ArgListEntry Arg;
+    Arg.Node = Op.getOperand(1);
+    Arg.Ty = RetTy;
+    Args.push_back(Arg);
   } else {
     FuncName = Op.getOpcode() == ISD::ADD ? "__adddi3" : "__subdi3";
-    Entry.Node = Op.getOperand(0);
-    Entry.Ty = RetTy;
-    Args.push_back(Entry);
+    TargetLowering::ArgListEntry LHS;
+    LHS.Node = Op.getOperand(0);
+    LHS.Ty = RetTy;
+    Args.push_back(LHS);
 
-    Entry.Node = Op.getOperand(1);
-    Entry.Ty = RetTy;
-    Args.push_back(Entry);
+    TargetLowering::ArgListEntry RHS;
+    RHS.Node = Op.getOperand(1);
+    RHS.Ty = RetTy;
+    Args.push_back(RHS);
   }
 
   SDValue Callee =
