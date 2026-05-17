@@ -4,6 +4,7 @@
 #define __need_size_t
 #include <stddef.h>
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #define __STDC_VERSION_STDBIT_H__	202311L
@@ -12,33 +13,61 @@
 #define __STDC_ENDIAN_BIG__ 4321
 #define __STDC_ENDIAN_NATIVE__ __STDC_ENDIAN_LITTLE__
 
-#define stdc_leading_zeros_uc(x) ((unsigned int) (__builtin_clzg(x, (int) (8 * sizeof(x)))))
-#define stdc_leading_zeros_us(x) ((unsigned int) (__builtin_clzg(x, (int) (8 * sizeof(x)))))
-#define stdc_leading_zeros_ui(x) ((unsigned int) (__builtin_clzg(x, (int) (8 * sizeof(x)))))
-#define stdc_leading_zeros_ul(x) ((unsigned int) (__builtin_clzg(x, (int) (8 * sizeof(x)))))
-#define stdc_leading_zeros_ull(x) ((unsigned int) (__builtin_clzg(x, (int) (8 * sizeof(x)))))
-#define stdc_leading_zeros(x) ((unsigned int) (__builtin_clzg(x, (int) (8 * sizeof(x)))))
+unsigned int stdc_leading_zeros_uc(unsigned char value) [[unsequenced]];
+unsigned int stdc_leading_zeros_us(unsigned short value) [[unsequenced]];
+unsigned int stdc_leading_zeros_ui(unsigned int value) [[unsequenced]];
+unsigned int stdc_leading_zeros_ul(unsigned long int value) [[unsequenced]];
+unsigned int stdc_leading_zeros_ull(unsigned long long int value) [[unsequenced]];
 
-#define stdc_leading_ones_uc(x) ((unsigned int) (__builtin_clzg(~(x), (int) (8 * sizeof(x)))))
-#define stdc_leading_ones_us(x) ((unsigned int) (__builtin_clzg(~(x), (int) (8 * sizeof(x)))))
-#define stdc_leading_ones_ui(x) ((unsigned int) (__builtin_clzg(~(x), (int) (8 * sizeof(x)))))
-#define stdc_leading_ones_ul(x) ((unsigned int) (__builtin_clzg(~(x), (int) (8 * sizeof(x)))))
-#define stdc_leading_ones_ull(x) ((unsigned int) (__builtin_clzg(~(x), (int) (8 * sizeof(x)))))
-#define stdc_leading_ones(x) ((unsigned int) (__builtin_clzg(~(x), (int) (8 * sizeof(x)))))
+#define stdc_leading_zeros(x) _Generic((x), \
+        unsigned char: stdc_leading_zeros_uc, \
+        unsigned short: stdc_leading_zeros_us, \
+        unsigned int: stdc_leading_zeros_ui, \
+        unsigned long int: stdc_leading_zeros_ul, \
+        unsigned long long int: stdc_leading_zeros_ul, \
+)(x)
 
-#define stdc_trailing_zeros_uc(x) ((unsigned int) (__builtin_ctzg(x, (int) (8 * sizeof(x)))))
-#define stdc_trailing_zeros_us(x) ((unsigned int) (__builtin_ctzg(x, (int) (8 * sizeof(x)))))
-#define stdc_trailing_zeros_ui(x) ((unsigned int) (__builtin_ctzg(x, (int) (8 * sizeof(x)))))
-#define stdc_trailing_zeros_ul(x) ((unsigned int) (__builtin_ctzg(x, (int) (8 * sizeof(x)))))
-#define stdc_trailing_zeros_ull(x) ((unsigned int) (__builtin_ctzg(x, (int) (8 * sizeof(x)))))
-#define stdc_trailing_zeros(x) ((unsigned int) (__builtin_ctzg(x, (int) (8 * sizeof(x)))))
+unsigned int stdc_leading_ones_uc(unsigned char value) [[unsequenced]];
+unsigned int stdc_leading_ones_us(unsigned short value) [[unsequenced]];
+unsigned int stdc_leading_ones_ui(unsigned int value) [[unsequenced]];
+unsigned int stdc_leading_ones_ul(unsigned long int value) [[unsequenced]];
+unsigned int stdc_leading_ones_ull(unsigned long long int value) [[unsequenced]];
 
-#define stdc_trailing_ones_uc(x) ((unsigned int) (__builtin_ctzg(~(x), (int) (8 * sizeof(x)))))
-#define stdc_trailing_ones_us(x) ((unsigned int) (__builtin_ctzg(~(x), (int) (8 * sizeof(x)))))
-#define stdc_trailing_ones_ui(x) ((unsigned int) (__builtin_ctzg(~(x), (int) (8 * sizeof(x)))))
-#define stdc_trailing_ones_ul(x) ((unsigned int) (__builtin_ctzg(~(x), (int) (8 * sizeof(x)))))
-#define stdc_trailing_ones_ull(x) ((unsigned int) (__builtin_ctzg(~(x), (int) (8 * sizeof(x)))))
-#define stdc_trailing_ones(x) ((unsigned int) (__builtin_ctzg(~(x), (int) (8 * sizeof(x)))))
+#define stdc_leading_ones(x) _Generic((x), \
+        unsigned char: stdc_leading_ones_uc, \
+        unsigned short: stdc_leading_ones_us, \
+        unsigned int: stdc_leading_ones_ui, \
+        unsigned long int: stdc_leading_ones_ul, \
+        unsigned long long int: stdc_leading_ones_ul, \
+)(x)
+
+unsigned int stdc_trailing_zeros_uc(unsigned char value) [[unsequenced]];
+unsigned int stdc_trailing_zeros_us(unsigned short value) [[unsequenced]];
+unsigned int stdc_trailing_zeros_ui(unsigned int value) [[unsequenced]];
+unsigned int stdc_trailing_zeros_ul(unsigned long int value) [[unsequenced]];
+unsigned int stdc_trailing_zeros_ull(unsigned long long int value) [[unsequenced]];
+
+#define stdc_trailing_zeros(x) _Generic((x), \
+        unsigned char: stdc_trailing_zeros_uc, \
+        unsigned short: stdc_trailing_zeros_us, \
+        unsigned int: stdc_trailing_zeros_ui, \
+        unsigned long int: stdc_trailing_zeros_ul, \
+        unsigned long long int: stdc_trailing_zeros_ul, \
+)(x)
+
+unsigned int stdc_trailing_ones_uc(unsigned char value) [[unsequenced]];
+unsigned int stdc_trailing_ones_us(unsigned short value) [[unsequenced]];
+unsigned int stdc_trailing_ones_ui(unsigned int value) [[unsequenced]];
+unsigned int stdc_trailing_ones_ul(unsigned long int value) [[unsequenced]];
+unsigned int stdc_trailing_ones_ull(unsigned long long int value) [[unsequenced]];
+
+#define stdc_trailing_ones(x) _Generic((x), \
+        unsigned char: stdc_trailing_ones_uc, \
+        unsigned short: stdc_trailing_ones_us, \
+        unsigned int: stdc_trailing_ones_ui, \
+        unsigned long int: stdc_trailing_ones_ul, \
+        unsigned long long int: stdc_trailing_ones_ul, \
+)(x)
 
 unsigned int stdc_first_leading_zero_uc(unsigned char value) [[unsequenced]];
 unsigned int stdc_first_leading_zero_us(unsigned short value) [[unsequenced]];
