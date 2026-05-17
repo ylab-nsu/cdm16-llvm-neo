@@ -1,4 +1,3 @@
-include(CDMRTCocasObjectRules)
 find_package(Cocas REQUIRED)
 
 if (NOT COCAS_FOUND)
