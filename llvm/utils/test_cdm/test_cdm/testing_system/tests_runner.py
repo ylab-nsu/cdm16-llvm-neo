@@ -48,6 +48,7 @@ def run_tests(connection: CocoemuConnection, config: Configuration, test_cases: 
           if config.log:
             print(errors_stream.getvalue(), end="")
             errors_stream.truncate(0)
+            errors_stream.seek(0)
           else:
             print('\033[31mF\033[0m', end="", flush=True)
     finally:
