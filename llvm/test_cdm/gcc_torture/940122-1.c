@@ -1,22 +1,26 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-std=gnu89" } */
 
+void abort (void);
+void exit (int);
+
 char *a = 0;
 char *b = 0;
 
-g (x)
-     int x;
+void
+g (int x)
 {
   if ((!!a) != (!!b))
     abort ();
 }
 
-f (x)
-     int x;
+void
+f (int x)
 {
   g (x * x);
 }
 
+int
 main ()
 {
   f (100);

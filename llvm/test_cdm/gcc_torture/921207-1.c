@@ -1,5 +1,10 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-std=gnu89" } */
+
+void abort (void);
+void exit (int);
+
+unsigned
 f()
 {
   unsigned b = 0;
@@ -9,6 +14,8 @@ f()
 
   return b;
 }
+
+int
 main()
 {
   if (f()!=0)

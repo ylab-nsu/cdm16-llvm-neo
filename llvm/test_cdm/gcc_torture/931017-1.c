@@ -3,17 +3,13 @@
 
 int v;
 
-main ()
-{
-  f ();
-  exit (0);
-}
-
+int
 h1 ()
 {
   return 0;
 }
 
+int
 h2 (e)
      int *e;
 {
@@ -22,6 +18,7 @@ h2 (e)
   return 0;
 }
 
+int
 g (c)
      char *c;
 {
@@ -50,8 +47,16 @@ g (c)
 }
 
 
+void
 f ()
 {
   char c;
   g (&c);
+}
+
+int
+main ()
+{
+  f ();
+  exit (0);
 }

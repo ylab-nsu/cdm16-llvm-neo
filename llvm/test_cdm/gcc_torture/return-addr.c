@@ -120,4 +120,6 @@ int main ()
   A (0 != test_min_3 ());
 
   A (0 != test_min_3_phi (0));
+
+  return 0;
 }

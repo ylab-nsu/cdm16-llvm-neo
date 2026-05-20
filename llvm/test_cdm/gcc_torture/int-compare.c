@@ -3,40 +3,45 @@
 
 #include <limits.h>
 
-gt (a, b)
+int
+gt (int a, int b)
 {
   return a > b;
 }
 
-ge (a, b)
+int
+ge (int a, int b)
 {
   return a >= b;
 }
 
-lt (a, b)
+int
+lt (int a, int b)
 {
   return a < b;
 }
 
-le (a, b)
+int
+le (int a, int b)
 {
   return a <= b;
 }
 
 void
-true (c)
+true (int c)
 {
   if (!c)
     abort();
 }
 
 void
-false (c)
+false (int c)
 {
   if (c)
     abort();
 }
 
+void
 f ()
 {
   true (gt (2, 1));
@@ -104,6 +109,7 @@ f ()
   true (le (INT_MIN, INT_MAX));
 }
 
+int
 main ()
 {
   f ();

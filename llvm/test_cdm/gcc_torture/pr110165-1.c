@@ -26,4 +26,5 @@ int main(void)
                 if (exp != r)
                  __builtin_abort();
         }
+        return 0;
 }

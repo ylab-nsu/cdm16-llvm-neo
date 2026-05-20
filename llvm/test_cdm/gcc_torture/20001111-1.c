@@ -1,5 +1,8 @@
 // CHECK reg(r0) 0
 
+void abort (void);
+void exit (int);
+
 static int next_buffer = 0;
 void bar (void);
 
@@ -38,5 +41,5 @@ main ()
   next_buffer = 1;
   if (foo (2) != 0xce2f + 2)
     __builtin_abort ();
-  __builtin_exit (0);
+  exit (0);
 }

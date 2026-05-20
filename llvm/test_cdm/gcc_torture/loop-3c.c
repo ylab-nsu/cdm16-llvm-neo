@@ -1,10 +1,13 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-std=gnu89" } */
-
 #include <limits.h>
+
+void abort (void);
+void exit (int);
 
 void * a[255];
 
+void
 f (m)
 {
   int i;
@@ -18,6 +21,7 @@ f (m)
   while (i < INT_MAX/2 + 1 + 4 * 4);
 }
 
+int
 main ()
 {
   a[0x10] = 0;

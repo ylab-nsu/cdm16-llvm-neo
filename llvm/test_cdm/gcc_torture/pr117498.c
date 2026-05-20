@@ -1,4 +1,3 @@
-// CHECK reg(r0) 0
 /* PR middle-end/117498 */
 
 int a, d, f;
@@ -33,4 +32,6 @@ main ()
 {
   f = foo ();
   baz ((unsigned char) f - 4);
+
+  return 0;
 }

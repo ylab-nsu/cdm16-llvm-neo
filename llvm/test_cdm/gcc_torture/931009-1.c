@@ -1,14 +1,11 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-std=gnu89" } */
-main ()
-{
-  f ();
-  exit (0);
-}
 
-static
-g (out, size, lo, hi)
-     int *out, size, lo, hi;
+void abort (void);
+void exit (int);
+
+static void
+g (int *out, int size, int lo, int hi)
 {
   int j;
 
@@ -17,6 +14,7 @@ g (out, size, lo, hi)
 }
 
 
+void
 f ()
 {
   int a[2];
@@ -25,4 +23,11 @@ f ()
 
   if (a[0] != 0 || a[1] != 1)
     abort ();
+}
+
+int
+main ()
+{
+  f ();
+  exit (0);
 }

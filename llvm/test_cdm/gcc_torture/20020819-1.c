@@ -1,11 +1,16 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-fpermissive" } */
 
+void abort (void);
+void exit (int);
+
+int
 foo ()
 {
   return 0;
 }
 
+int
 main()
 {
   int i, j, k, ccp_bad = 0;
@@ -15,7 +20,7 @@ main()
       for (j = 0; j < 10; j++)
 	if (foo ())
 	  ccp_bad = 1;
-    
+
       k = ccp_bad != 0;
       if (k)
 	abort ();

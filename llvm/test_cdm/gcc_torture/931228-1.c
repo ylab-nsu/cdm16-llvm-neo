@@ -1,6 +1,11 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-std=gnu89" } */
-f (x)
+
+void abort (void);
+void exit (int);
+
+int
+f (int x)
 {
   x &= 010000;
   x &= 007777;
@@ -9,6 +14,7 @@ f (x)
   return x;
 }
 
+int
 main ()
 {
   if (f (-1) != 017770)

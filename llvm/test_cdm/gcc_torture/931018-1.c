@@ -1,16 +1,14 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-fpermissive" } */
 
+void abort (void);
+void exit (int);
+
 unsigned int a[0x1000];
 extern const unsigned long v;
+const unsigned long v = 0xdeadbeefL;
 
-main ()
-{
-  f (v);
-  f (v);
-  exit (0);
-}
-
+void
 f (a)
      unsigned long a;
 {
@@ -18,4 +16,10 @@ f (a)
     abort();
 }
 
-const unsigned long v = 0xdeadbeefL;
+int
+main ()
+{
+  f (v);
+  f (v);
+  exit (0);
+}

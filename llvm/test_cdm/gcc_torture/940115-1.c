@@ -1,12 +1,16 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-std=gnu89" } */
-f (cp, end)
-     char *cp;
-     char *end;
+
+void abort (void);
+void exit (int);
+
+int
+f (char *cp, char *end)
 {
   return (cp < end);
 }
 
+int
 main ()
 {
   if (! f ((char *) 0, (char *) 1))

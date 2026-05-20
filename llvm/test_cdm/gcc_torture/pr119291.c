@@ -31,4 +31,6 @@ lab:
       foo (e);
       goto lab;
     }
+
+  return 0;
 }

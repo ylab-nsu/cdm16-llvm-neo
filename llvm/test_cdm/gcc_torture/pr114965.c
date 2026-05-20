@@ -28,4 +28,6 @@ int
 main ()
 {
   foo ("_");
+
+  return 0;
 }

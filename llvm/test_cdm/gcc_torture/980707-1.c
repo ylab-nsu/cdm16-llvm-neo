@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+void abort (void);
+void exit (int);
+
 char **
 buildargv (char *input)
 {
@@ -41,6 +44,6 @@ int main()
     abort ();
   if (args[2] != NULL)
     abort ();
-  
+
   exit (0);
 }

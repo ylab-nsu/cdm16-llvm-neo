@@ -1,9 +1,13 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-std=gnu89" } */
 
+void abort (void);
+void exit (int);
+
 int a[2];
 
-f (b)
+void
+f (int b)
 {
   unsigned int i;
   int *p;
@@ -11,6 +15,7 @@ f (b)
     *--p = i * 3 + (int)a;
 }
 
+int
 main ()
 {
   a[0] = a[1] = 0;

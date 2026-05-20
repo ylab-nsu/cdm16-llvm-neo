@@ -4,9 +4,11 @@
 #define F 140
 #define T 13
 
-feq (x, y)
-     long long int x;
-     long long int y;
+void abort (void);
+void exit (int);
+
+int
+feq (long long int x, long long int y)
 {
   if (x == y)
     return T;
@@ -14,9 +16,8 @@ feq (x, y)
     return F;
 }
 
-fne (x, y)
-     long long int x;
-     long long int y;
+int
+fne (long long int x, long long int y)
 {
   if (x != y)
     return T;
@@ -24,9 +25,8 @@ fne (x, y)
     return F;
 }
 
-flt (x, y)
-     long long int x;
-     long long int y;
+int
+flt (long long int x, long long int y)
 {
   if (x < y)
     return T;
@@ -34,9 +34,8 @@ flt (x, y)
     return F;
 }
 
-fge (x, y)
-     long long int x;
-     long long int y;
+int
+fge (long long int x, long long int y)
 {
   if (x >= y)
     return T;
@@ -44,9 +43,8 @@ fge (x, y)
     return F;
 }
 
-fgt (x, y)
-     long long int x;
-     long long int y;
+int
+fgt (long long int x, long long int y)
 {
   if (x > y)
     return T;
@@ -54,9 +52,8 @@ fgt (x, y)
     return F;
 }
 
-fle (x, y)
-     long long int x;
-     long long int y;
+int
+fle (long long int x, long long int y)
 {
   if (x <= y)
     return T;
@@ -64,9 +61,8 @@ fle (x, y)
     return F;
 }
 
-fltu (x, y)
-     unsigned long long int x;
-     unsigned long long int y;
+int
+fltu (unsigned long long int x, unsigned long long int y)
 {
   if (x < y)
     return T;
@@ -74,9 +70,8 @@ fltu (x, y)
     return F;
 }
 
-fgeu (x, y)
-     unsigned long long int x;
-     unsigned long long int y;
+int
+fgeu (unsigned long long int x, unsigned long long int y)
 {
   if (x >= y)
     return T;
@@ -84,9 +79,8 @@ fgeu (x, y)
     return F;
 }
 
-fgtu (x, y)
-     unsigned long long int x;
-     unsigned long long int y;
+int
+fgtu (unsigned long long int x, unsigned long long int y)
 {
   if (x > y)
     return T;
@@ -94,9 +88,8 @@ fgtu (x, y)
     return F;
 }
 
-fleu (x, y)
-     unsigned long long int x;
-     unsigned long long int y;
+int
+fleu (unsigned long long int x, unsigned long long int y)
 {
   if (x <= y)
     return T;
@@ -184,6 +177,7 @@ int correct_results[] =
   T, F, F, T, F, T, F, T, F, T
 };
 
+int
 main ()
 {
   int i, j, *res = correct_results;

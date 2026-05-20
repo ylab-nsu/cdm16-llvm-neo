@@ -45,4 +45,6 @@ main ()
   asm volatile ("" : : : "memory");
   if (i.b != j.b || i.c != j.c || i.d != j.d || i.e != j.e || i.f != j.f)
     __builtin_abort ();
+
+  return 0;
 }

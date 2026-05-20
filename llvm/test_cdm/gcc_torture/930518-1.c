@@ -1,10 +1,13 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-std=gnu89" } */
 
+void abort (void);
+void exit (int);
+
 int bar = 0;
 
-f (p)
-     int *p;
+void
+f (int *p)
 {
   int foo = 2;
 
@@ -16,6 +19,7 @@ f (p)
     }
 }
 
+int
 main ()
 {
   int tab[2];

@@ -3,14 +3,19 @@
 
 #include <limits.h>
 
+void abort (void);
+void exit (int);
+
 int n = 0;
 
-g (i)
+void
+g (int i)
 {
   n++;
 }
 
-f (m)
+void
+f (int m)
 {
   int i;
   i = m;
@@ -22,6 +27,7 @@ f (m)
   while (i > 0);
 }
 
+int
 main ()
 {
   f (INT_MAX/8*4);

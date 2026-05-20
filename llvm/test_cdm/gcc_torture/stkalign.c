@@ -3,8 +3,6 @@
 /* Check that stack alignment is not affected by variables not placed
    on the stack.  */
 
-#include <assert.h>
-
 #define ALIGNMENT 64
 
 unsigned test(unsigned n, unsigned p)
@@ -12,7 +10,9 @@ unsigned test(unsigned n, unsigned p)
   static struct { char __attribute__((__aligned__(ALIGNMENT))) c; } s;
   unsigned x;
 
-  assert(__alignof__(s) == ALIGNMENT);
+  if (__alignof__(s) != ALIGNMENT) {
+      abort ();
+  }
   asm ("" : "=g" (x), "+m" (s) : "0" (&x));
 
   return n ? test(n - 1, x) : (x ^ p);
@@ -23,7 +23,9 @@ unsigned test2(unsigned n, unsigned p)
   static struct { char c; } s;
   unsigned x;
 
-  assert(__alignof__(s) != ALIGNMENT);
+  if (__alignof__(s) == ALIGNMENT) {
+      abort ();
+  }
   asm ("" : "=g" (x), "+m" (s) : "0" (&x));
 
   return n ? test2(n - 1, x) : (x ^ p);

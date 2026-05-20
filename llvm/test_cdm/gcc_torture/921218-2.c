@@ -1,6 +1,10 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-std=gnu89" } */
 
+void abort (void);
+void exit (int);
+
+unsigned long
 f()
 {
   long l2;
@@ -12,6 +16,7 @@ f()
   return ul;
 }
 
+int
 main()
 {
   if (f()!=(unsigned short)-1)

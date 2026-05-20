@@ -1,8 +1,11 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-std=gnu89" } */
 
-f1 (a)
-     long a;
+void abort (void);
+void exit (int);
+
+int
+f1 (long a)
 {
   int i;
   for (i = 0; i < 10; i++)
@@ -13,8 +16,8 @@ f1 (a)
   return -1;
 }
 
-f2 (a)
-     long a;
+int
+f2 (long a)
 {
   int i;
   for (i = 0; i < 10; i++)
@@ -25,8 +28,8 @@ f2 (a)
   return -1;
 }
 
-f3 (a)
-     long a;
+int
+f3 (long a)
 {
   int i;
   for (i = 0; i < 10; i++)
@@ -37,8 +40,8 @@ f3 (a)
   return -1;
 }
 
-f4 (a)
-     long a;
+int
+f4 (long a)
 {
   int i;
   for (i = 0; i < 10; i++)
@@ -49,8 +52,8 @@ f4 (a)
   return -1;
 }
 
-f5 (a)
-     long a;
+int
+f5 (long a)
 {
   int i;
   for (i = 0; i < 10; i++)
@@ -61,8 +64,8 @@ f5 (a)
   return -1;
 }
 
-f6 (a)
-     long a;
+int
+f6 (long a)
 {
   int i;
   for (i = 0; i < 10; i++)
@@ -73,7 +76,7 @@ f6 (a)
   return -1;
 }
 
-
+int
 main()
 {
   if (f1 (5L) != 5)

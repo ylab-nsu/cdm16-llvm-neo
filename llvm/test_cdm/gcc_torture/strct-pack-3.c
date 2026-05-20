@@ -7,8 +7,8 @@ typedef struct
   int f[2] __attribute__ ((aligned (2),packed));
 } A;
 
-f (ap)
-  A *ap;
+short
+f (A *ap)
 {
   short i, j = 1;
 
@@ -20,6 +20,7 @@ f (ap)
   return i;
 }
 
+int
 main ()
 {
   A a;

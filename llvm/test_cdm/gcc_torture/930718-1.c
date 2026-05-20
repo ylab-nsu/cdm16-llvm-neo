@@ -1,6 +1,9 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-std=gnu89" } */
 
+void abort (void);
+void exit (int);
+
 typedef struct rtx_def
 {
   int f1 :1;
@@ -8,8 +11,7 @@ typedef struct rtx_def
 } *rtx;
 
 static rtx
-f (orig)
-     register rtx orig;
+f (register rtx orig)
 {
   if (orig->f1 || orig->f2)
     return orig;
@@ -23,6 +25,7 @@ f2 ()
   abort ();
 }
 
+int
 main ()
 {
   struct rtx_def foo;

@@ -1,5 +1,7 @@
 // CHECK reg(r0) 0
-#include <stdlib.h>
+
+void abort (void);
+void exit (int);
 
 static int a[40] = {7, 5, 3, 3, 0, 0, 3};
 short b;

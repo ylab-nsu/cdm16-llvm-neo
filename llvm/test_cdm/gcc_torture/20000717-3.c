@@ -1,10 +1,13 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-std=gnu89" } */
 
+void abort (void);
+void exit (int);
+
 int c = -1;
 
-foo (p)
-     int *p;
+int
+foo (int *p)
 {
   int x;
   int a;

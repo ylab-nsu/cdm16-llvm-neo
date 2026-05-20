@@ -12,4 +12,6 @@ int main() {
   }
   if (a[0] != 0)
     __builtin_abort();
+
+  return 0;
 }

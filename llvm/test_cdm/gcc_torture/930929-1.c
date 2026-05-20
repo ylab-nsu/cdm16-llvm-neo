@@ -1,30 +1,34 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-std=gnu89" } */
 
-sub1 (i)
-     int i;
+void abort (void);
+void exit (int);
+
+int
+sub1 (int i)
 {
   return i - (5 - i);
 }
 
-sub2 (i)
-     int i;
+int
+sub2 (int i)
 {
   return i + (5 + i);
 }
 
-sub3 (i)
-     int i;
+int
+sub3 (int i)
 {
   return i - (5 + i);
 }
 
-sub4 (i)
-     int i;
+int
+sub4 (int i)
 {
   return i + (5 - i);
 }
 
+int
 main()
 {
   if (sub1 (20) != 35)

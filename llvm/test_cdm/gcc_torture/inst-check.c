@@ -3,7 +3,10 @@
 
 #include <stdarg.h>
 
-f(m)
+void exit (int);
+
+int
+f(int m)
 {
   int i,s=0;
   for(i=0;i<m;i++)
@@ -11,6 +14,7 @@ f(m)
   return s;
 }
 
+int
 main()
 {
   exit (0);

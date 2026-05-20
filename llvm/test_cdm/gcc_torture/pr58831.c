@@ -1,5 +1,6 @@
 // CHECK reg(r0) 0
-#include <assert.h>
+
+void abort (void);
 
 int a, *b, c, d, f, **i, p, q, *r;
 short o, j;
@@ -12,7 +13,9 @@ fn1 (int *p1, int **p2)
     *p1 = 1;
   *e = *p2 = &d;
 
-  assert (r);
+  if (!r) {
+      abort ();
+  }
 
   return c;
 }

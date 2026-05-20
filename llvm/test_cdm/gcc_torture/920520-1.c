@@ -1,11 +1,16 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-std=gnu89" } */
 
+void abort (void);
+void exit (int);
+
+void
 foo(int *bar)
 {
   *bar = 8;
 }
 
+int
 bugger()
 {
   int oldDepth, newDepth;
@@ -31,6 +36,7 @@ bugger()
   return newDepth - oldDepth;
 }
 
+int
 main()
 {
   if (bugger() != 0)

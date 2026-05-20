@@ -1,12 +1,8 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-fpermissive" } */
 
-main()
-{
-  if (wwrite((long long) 0) != 123)
-    abort();
-  exit(0);
-}
+void abort (void);
+void exit (int);
 
 int
 wwrite(long long i)
@@ -23,3 +19,12 @@ wwrite(long long i)
       return 123;
     }
 }
+
+int
+main()
+{
+  if (wwrite((long long) 0) != 123)
+    abort();
+  exit(0);
+}
+

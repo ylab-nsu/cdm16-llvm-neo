@@ -24,4 +24,6 @@ main ()
   bar (d + 4);
   if (c != 1)
     __builtin_abort ();
+
+  return 0;
 }

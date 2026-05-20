@@ -1,13 +1,18 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-std=gnu89" } */
 
-f (x)
+void abort (void);
+void exit (int);
+
+int
+f (int x)
 {
   if (x != 0 || x == 0)
     return 0;
   return 1;
 }
 
+int
 main ()
 {
   if (f (3))

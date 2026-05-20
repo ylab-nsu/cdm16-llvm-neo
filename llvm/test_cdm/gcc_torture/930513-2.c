@@ -1,12 +1,16 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-std=gnu89" } */
 
-sub3 (i)
-     const int *i;
+void abort (void);
+void exit (int);
+
+void
+sub3 (const int *i)
 {
 }
 
-eq (a, b)
+void
+eq (int a, int b)
 {
   static int i = 0;
   if (a != i)
@@ -14,6 +18,7 @@ eq (a, b)
   i++;
 }
 
+int
 main ()
 {
   int i;

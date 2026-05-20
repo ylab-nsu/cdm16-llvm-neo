@@ -1,8 +1,10 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-std=gnu89" } */
 
+void exit (int);
+
 int
-f (foo, bar, com)
+f (int foo, int bar, int com)
 {
   unsigned align;
   if (foo)
@@ -19,6 +21,7 @@ f (foo, bar, com)
     }
 }
 
+int
 main ()
 {
   f (0, 1, 1);

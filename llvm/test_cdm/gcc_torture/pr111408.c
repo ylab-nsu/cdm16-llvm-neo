@@ -24,4 +24,6 @@ main ()
       for (;;)
 	__builtin_abort ();
     }
+
+  return 0;
 }

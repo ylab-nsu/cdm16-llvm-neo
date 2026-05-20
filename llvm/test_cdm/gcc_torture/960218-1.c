@@ -1,21 +1,27 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-fpermissive" } */
 
+void abort (void);
+void exit (int);
+
 int gl;
 
-g (x)
+int
+g (int x)
 {
   gl = x;
   return 0;
 }
 
-f (x)
+int
+f (int x)
 {
   int a = ~x;
   while (a)
     a = g (a);
 }
 
+int
 main ()
 {
   f (3);

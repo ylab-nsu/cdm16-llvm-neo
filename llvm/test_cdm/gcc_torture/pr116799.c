@@ -39,4 +39,6 @@ main ()
   char v[2] = { 0 };
   l = "**";
   bar (l, v);
+
+  return 0;
 }

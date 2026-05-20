@@ -1,5 +1,4 @@
 // CHECK reg(r0) 0
-#include <stdio.h>
 #include <stdint.h>
 
 struct S {

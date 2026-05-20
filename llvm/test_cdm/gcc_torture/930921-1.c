@@ -1,15 +1,18 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-std=gnu89" } */
 
-f (x)
-     unsigned x;
+void abort (void);
+void exit (int);
+
+unsigned
+f (unsigned x)
 {
   return (unsigned) (((unsigned long long) x * 0xAAAAAAAB) >> 32) >> 1;
 }
 
-main ()
+int
+main (unsigned i)
 {
-  unsigned i;
 
   for (i = 0; i < 10000; i++)
     if (f (i) != i / 3)

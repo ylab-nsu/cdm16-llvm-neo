@@ -1,16 +1,18 @@
 // CHECK reg(r0) 0
-/* { dg-additional-options "-std=gnu89" } */
+
+void abort (void);
+void exit (int);
 
 int a[2];
 
-f (b)
+void f (b)
 {
   unsigned int i;
   for (i = 0; i < b; i++)
     a[i] = i - 2;
 }
 
-main ()
+int main ()
 {
   a[0] = a[1] = 0;
   f (2);

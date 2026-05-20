@@ -17,4 +17,6 @@ main ()
   for (int i = 0; i < 1; i++)
     for (int j = 0; j < 4; j++)
       foo (*(*(p + i) + j));
+
+  return 0;
 }

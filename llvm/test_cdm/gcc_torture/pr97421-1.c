@@ -21,4 +21,6 @@ int main(void)
   f();
   if (b != 3)
     __builtin_abort();
+
+  return 0;
 }

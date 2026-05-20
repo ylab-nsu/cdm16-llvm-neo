@@ -4,7 +4,7 @@
 char u[] = { 46, 97, 99, 104, 52, 0 };
 char *v[] = { u, 0 };
 struct S { char a[10]; struct S *b[31]; };
-struct S r[7], *r2 = r;
+struct S r[7], *r2r = r;
 static struct S *w = 0;
 
 __attribute__((noinline, noclone)) int
@@ -38,7 +38,7 @@ bar (char **x)
   int z, l, h, i;
   struct S *s;
 
-  w = r2++;
+  w = r2r++;
   for (b = x; *b; b++)
     {
       __builtin_strcpy (e, *b);
@@ -62,8 +62,8 @@ bar (char **x)
 		  i = foo (c);
 		  if (!s->b[i])
 		    {
-		      s->b[i] = r2++;
-		      if (r2 == &r[7])
+		      s->b[i] = r2r++;
+		      if (r2r == &r[7])
 			__builtin_abort ();
 		    }
 		  s = s->b[i];

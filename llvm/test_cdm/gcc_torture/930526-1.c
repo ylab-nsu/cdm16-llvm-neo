@@ -3,7 +3,7 @@
 
 extern void exit (int);
 
-inline void
+void
 f (int x)
 {
   int *(p[25]);

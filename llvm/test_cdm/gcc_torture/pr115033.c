@@ -1,5 +1,8 @@
 // CHECK reg(r0) 0
 
+void abort (void);
+void exit (int);
+
 typedef struct func
 {
   int *a;
@@ -32,5 +35,5 @@ int main() {
 
   if (resultIsStatic)
     __builtin_trap();
-  __builtin_exit(0);
+  exit(0);
 }

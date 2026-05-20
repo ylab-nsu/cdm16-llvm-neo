@@ -1,25 +1,34 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-std=gnu89" } */
-static inline fu (unsigned short data)
+
+void abort (void);
+void exit (int);
+
+static inline unsigned short fu (unsigned short data)
 {
   return data;
 }
-ru(i)
+
+void
+ru(unsigned short i)
 {
    if(fu(i++)!=5)abort();
    if(fu(++i)!=7)abort();
 }
-static inline fs (signed short data)
+
+static inline signed short fs (signed short data)
 {
   return data;
 }
-rs(i)
+
+void
+rs(signed short i)
 {
    if(fs(i++)!=5)abort();
    if(fs(++i)!=7)abort();
 }
 
-
+int
 main()
 {
   ru(5);

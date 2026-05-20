@@ -1,6 +1,9 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-fpermissive" } */
 
+void abort (void);
+void exit (int);
+
 typedef struct {
   char y;
   char x[32];
@@ -15,15 +18,6 @@ int z (void)
   return f (xxx, xxx);
 }
 
-int main (void)
-{
-  int val;
-
-  val = z ();
-  if (val != 0x60)
-    abort ();
-  exit (0);
-}
 
 int f(X x, X y)
 {
@@ -33,3 +27,12 @@ int f(X x, X y)
   return x.x[0] + y.x[0];
 }
 
+int main (void)
+{
+  int val;
+
+  val = z ();
+  if (val != 0x60)
+    abort ();
+  exit (0);
+}

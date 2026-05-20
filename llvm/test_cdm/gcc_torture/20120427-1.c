@@ -1,12 +1,16 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-fpermissive" } */
 
+void abort (void);
+void exit (int);
+
 typedef struct sreal
 {
   unsigned sig;		/* Significant.  */
   int exp;		/* Exponent.  */
 } sreal;
 
+int
 sreal_compare (sreal *a, sreal *b)
 {
   if (a->exp > b->exp)

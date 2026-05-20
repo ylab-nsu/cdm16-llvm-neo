@@ -3,12 +3,23 @@
 /* The bit-field below would have a problem if __INT_MAX__ is too
    small.  */
 #if __INT_MAX__ < 2147483647
+
+void abort (void);
+void exit (int);
+
 int
 main (void)
 {
   exit (0);
 }
 #else
+f (int x)
+{
+  if (x != 7)
+    abort ();
+}
+
+int
 main ()
 {
   struct
@@ -22,10 +33,4 @@ main ()
   exit (0);
 }
 
-f (x)
-     int x;
-{
-  if (x != 7)
-    abort ();
-}
 #endif

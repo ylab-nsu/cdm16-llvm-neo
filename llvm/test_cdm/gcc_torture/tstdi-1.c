@@ -4,8 +4,11 @@
 #define FALSE 140
 #define TRUE 13
 
-feq (x)
-     long long int x;
+void abort (void);
+void exit (int);
+
+int
+feq (long long int x)
 {
   if (x == 0)
     return TRUE;
@@ -13,8 +16,8 @@ feq (x)
     return FALSE;
 }
 
-fne (x)
-     long long int x;
+int
+fne (long long int x)
 {
   if (x != 0)
     return TRUE;
@@ -22,8 +25,8 @@ fne (x)
     return FALSE;
 }
 
-flt (x)
-     long long int x;
+int
+flt (long long int x)
 {
   if (x < 0)
     return TRUE;
@@ -31,8 +34,8 @@ flt (x)
     return FALSE;
 }
 
-fge (x)
-     long long int x;
+int
+fge (long long int x)
 {
   if (x >= 0)
     return TRUE;
@@ -40,8 +43,8 @@ fge (x)
     return FALSE;
 }
 
-fgt (x)
-     long long int x;
+int
+fgt (long long int x)
 {
   if (x > 0)
     return TRUE;
@@ -49,8 +52,8 @@ fgt (x)
     return FALSE;
 }
 
-fle (x)
-     long long int x;
+int
+fle (long long int x)
 {
   if (x <= 0)
     return TRUE;
@@ -58,6 +61,7 @@ fle (x)
     return FALSE;
 }
 
+int
 main ()
 {
   if (feq (0LL) != TRUE)

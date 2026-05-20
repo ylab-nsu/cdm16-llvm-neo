@@ -1,6 +1,9 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-fpermissive" } */
 
+void abort (void);
+void exit (int);
+
 struct tag {
   int m1;
   char *m2[5];
@@ -8,6 +11,11 @@ struct tag {
 
 int i;
 
+func1(int *p) { return(*p); }
+
+foo (char *s) {}
+
+int
 main()
 {
   s1.m1 = -1;
@@ -28,7 +36,3 @@ main()
 
   exit (0);
 }
-
-func1(int *p) { return(*p); }
-
-foo (char *s) {}

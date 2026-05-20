@@ -5,6 +5,9 @@
 #include <string.h>
 #include <stdlib.h>
 
+void abort (void);
+void exit (int);
+
 void f883b (int8_t * result,
     int16_t * __restrict arg1,
     uint32_t * __restrict arg2,
@@ -26,7 +29,7 @@ uint32_t arg2[96];
 uint64_t arg3[96];
 uint8_t arg4[96];
 
-int main (void) 
+int main (void)
 {
   int i;
   int correct[] = {0x0,0x1,0x2,0x3,0x0,0x1,0x2,0x3,0x8,0x9,0xa,0xb,0x8,0x9,

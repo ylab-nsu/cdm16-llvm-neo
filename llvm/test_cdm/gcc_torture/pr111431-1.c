@@ -36,5 +36,6 @@ int main(void)
    {
      funcs(test)
    }
+   return 0;
 }
 

@@ -1,9 +1,11 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-std=gnu89" } */
 
-f (b, c)
-     unsigned char *b;
-     int c;
+void abort (void);
+void exit (int);
+
+unsigned long
+f (unsigned char *b, int c)
 {
   unsigned long v = 0;
   switch (c)
@@ -23,6 +25,8 @@ f (b, c)
 
   return v;
 }
+
+int
 main ()
 {
   char buf[4];

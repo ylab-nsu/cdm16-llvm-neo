@@ -1,8 +1,10 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-std=gnu89" } */
 
-long f (w)
-     char *w;
+void abort (void);
+void exit (int);
+
+long f (char *w)
 {
   long k, i, c = 0, x;
   char *p = (char*) &x;

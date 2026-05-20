@@ -6,7 +6,7 @@ extern void exit (int);
 
 int a[2];
 
-__inline__ void f (int b, int o)
+void f (int b, int o)
 {
   unsigned int i;
   int *p;
