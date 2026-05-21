@@ -72,6 +72,10 @@ public:
   Register getRegisterByName(const char *RegName, LLT VT,
                              const MachineFunction &MF) const override;
 
+  MVT::SimpleValueType getCmpLibcallReturnType() const override {
+      return MVT::i16;
+  }
+
 private:
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const;
