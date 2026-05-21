@@ -65,7 +65,11 @@ jobs:
       - name: Run end-to-end tests
         run: |
           TEST_CDM=${{ runner.os == 'Windows' && 'test-cdm.py' || 'test-cdm' }}
-          ./llvm/build/bin/$TEST_CDM ./llvm/test_cdm
+          ./llvm/build/bin/$TEST_CDM ./llvm/test_cdm/tests
+      - name: Run gcc torture tests
+        run: |
+          TEST_CDM=${{ runner.os == 'Windows' && 'test-cdm.py' || 'test-cdm' }}
+          ./llvm/build/bin/$TEST_CDM ./llvm/test_cdm/gcc_torture || true
       - name: Run lit tests
         run: |
           LLVM_LIT=${{ runner.os == 'Windows' && 'llvm-lit.py' || 'llvm-lit' }}
