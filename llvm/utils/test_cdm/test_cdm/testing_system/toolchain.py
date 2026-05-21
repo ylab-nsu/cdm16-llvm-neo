@@ -23,6 +23,7 @@ class CocasError(Exception):
 class Clang:
   config: Configuration
   target: str
+  _TIMEOUT: int = 60 * 5 # 5 min
 
   def compile(self, filepath: Path, include_paths: list[Path], opt_level: str, output_path: Path | None = None) -> Path:
     try:
@@ -31,13 +32,16 @@ class Clang:
         output_path = Path(output_file.name)
         output_file.close()
 
-      clang_args = [str(self.config.clang_path), '-target', self.target, '-ffreestanding', '-S', f'-O{opt_level}', '-o', str(output_path)]
+      clang_args = [str(self.config.clang_path), '-target', self.target, '-nostartfiles', '-ffreestanding', '-S', f'-O{opt_level}', '-o', str(output_path)]
       for i in include_paths:
           clang_args.append('-I')
           clang_args.append(str(i))
 
       clang_args.append(str(filepath))
-      clang_proc = subprocess.run(clang_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+      try:
+        clang_proc = subprocess.run(clang_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout = self._TIMEOUT)
+      except subprocess.TimeoutExpired:
+        raise TimeoutError()
 
       if not clang_proc.returncode == 0:
         clang_invokation = ' '.join(clang_args)
@@ -56,13 +60,16 @@ class Clang:
         output_path = Path(output_file.name)
         output_file.close()
 
-      clang_args = [str(self.config.clang_path), '-target', self.target, '-ffreestanding', '-c', f'-O{opt_level}', '-o', str(output_path)]
+      clang_args = [str(self.config.clang_path), '-target', self.target, '-nostartfiles', '-ffreestanding', '-c', f'-O{opt_level}', '-o', str(output_path)]
       for i in include_paths:
           clang_args.append('-I')
           clang_args.append(str(i))
 
       clang_args.append(str(filepath))
-      clang_proc = subprocess.run(clang_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env = {'COCAS':str(self.config.cocas_path)})
+      try:
+        clang_proc = subprocess.run(clang_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env = {'COCAS':str(self.config.cocas_path)}, timeout = self._TIMEOUT)
+      except subprocess.TimeoutExpired:
+        raise TimeoutError()
 
       if not clang_proc.returncode == 0:
         clang_invokation = ' '.join(clang_args)
@@ -81,7 +88,7 @@ class Clang:
         output_path = Path(output_file.name)
         output_file.close()
 
-      clang_args = [str(self.config.clang_path), '-target', self.target, '-ffreestanding', f'-O{opt_level}', '-o', str(output_path)]
+      clang_args = [str(self.config.clang_path), '-target', self.target, '-nostartfiles', '-ffreestanding', f'-O{opt_level}', '-o', str(output_path)]
       for i in include_paths:
         clang_args.append('-I')
         clang_args.append(str(i))
@@ -93,7 +100,11 @@ class Clang:
         clang_args.append(str(i))
 
       # print(' '.join(clang_args), end = "\n\n")
-      clang_proc = subprocess.run(clang_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env = {'COCAS':str(self.config.cocas_path)})
+      try:
+        clang_proc = subprocess.run(clang_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env = {'COCAS':str(self.config.cocas_path)}, timeout = self._TIMEOUT)
+      except subprocess.TimeoutExpired:
+        raise TimeoutError()
+
 
       if not clang_proc.returncode == 0:
         clang_invokation = ' '.join(clang_args)

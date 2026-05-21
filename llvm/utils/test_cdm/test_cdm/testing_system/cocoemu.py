@@ -1,3 +1,4 @@
+import asyncio
 import subprocess
 import os
 import signal
@@ -23,6 +24,7 @@ class CocoemuConnection:
   processor_info: ProcessorInfo
   ws: ClientConnection
   server_proc: subprocess.Popen
+  _TIMEOUT: int = 10 * 60 # 10 min
 
   def __init__(self, config: Configuration) -> None:
     cocoemu_args = [str(config.cocoemu_path), "-p", str(config.cocoemu_port)]
@@ -75,7 +77,7 @@ class CocoemuConnection:
     self.close()
 
   def check_server_response(self) -> Any:
-    resp = self.ws.recv()
+    resp = self.ws.recv(timeout = self._TIMEOUT)
     resp_dict = json.loads(resp)
     try:
       if not resp_dict["status"] == "OK":

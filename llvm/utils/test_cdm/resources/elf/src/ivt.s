@@ -24,6 +24,8 @@ _cdm_default_handlers_end:
   halt
 
 _start:
+  ldi fp, 0
+  stps fp
   jsr main
   halt
 

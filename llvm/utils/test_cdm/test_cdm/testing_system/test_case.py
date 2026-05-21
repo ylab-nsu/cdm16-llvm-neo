@@ -45,7 +45,7 @@ class TestCase(ABC):
       for ass in self.assertions:
         ass.check(connection.get_processor_state())
 
-    except (CompilationError, CocasError, AssertionError) as e:
+    except (CompilationError, CocasError, AssertionError, TimeoutError) as e:
       print_error_big(f'Error in {self.name}:\n{str(e)}', file = errors_stream)
     else:
       ret = True
