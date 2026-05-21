@@ -1,7 +1,6 @@
 #include "cdm_asm.inc"
 
-RSECT(string)
-
+RSECT(memcpy)
 GLOBAL(memcpy)
 tst r2
 bz memcpy_end
@@ -17,6 +16,7 @@ pop r0
 memcpy_end:
 rts
 
+RSECT(memccpy)
 GLOBAL(memccpy)
 tst r3
 bnz memccpy_beg
@@ -40,6 +40,7 @@ pop r4
 memccpy_end:
 rts
 
+RSECT(memmove)
 GLOBAL(memmove)
 tst r2
 bz memmove_end
@@ -77,6 +78,7 @@ bnz memmove_bwd_beg
 pop r0
 rts
 
+RSECT(strcpy)
 GLOBAL(strcpy)
 move r0, r3
 strcpy_beg:
@@ -89,6 +91,7 @@ bnz strcpy_beg
 strcpy_end:
 rts
 
+RSECT(strncpy)
 GLOBAL(strncpy)
 push r0
 tst r2
@@ -112,6 +115,7 @@ strncpy_end:
 pop r0
 rts
 
+RSECT(strcat)
 GLOBAL(strcat)
 push r0
 strcat_beg:
@@ -124,6 +128,7 @@ jsr strcpy
 pop r0
 rts
 
+RSECT(strncat)
 GLOBAL(strncat)
 push r0
 tst r2
@@ -148,6 +153,7 @@ strncat_end:
 pop r0
 rts
 
+RSECT(memcmp)
 GLOBAL(memcmp)
 push r4
 move r0, r3
@@ -167,6 +173,7 @@ memcmp_end:
 pop r4
 rts
 
+RSECT(strcmp)
 GLOBAL(strcmp)
 move r0, r2
 strcmp_beg:
@@ -181,6 +188,7 @@ bnz strcmp_beg
 strcmp_end:
 rts
 
+RSECT(strncmp)
 GLOBAL(strncmp)
 push r4
 move r0, r3
@@ -202,6 +210,7 @@ strncmp_end:
 pop r4
 rts
 
+RSECT(memchr)
 GLOBAL(memchr)
 tst r2
 bz memchr_null_end
@@ -218,6 +227,7 @@ clr r0
 memchr_end:
 rts
 
+RSECT(strchr)
 GLOBAL(strchr)
 scl r1, r1
 strchr_beg:
@@ -231,6 +241,7 @@ clr r0
 strchr_end:
 rts
 
+RSECT(strcspn)
 GLOBAL(strcspn)
 push r4
 push r0
@@ -255,6 +266,7 @@ pop r4
 sub r0, r1, r0
 rts
 
+RSECT(strpbrk)
 GLOBAL(strpbrk)
 push r0
 jsr strcspn
@@ -267,6 +279,7 @@ clr r0
 strpbrk_end:
 rts
 
+RSECT(strrchr)
 GLOBAL(strrchr)
 move r0, r2
 clr r0
@@ -283,6 +296,7 @@ bnz strrchr_beg
 strrchr_end:
 rts
 
+RSECT(strspn)
 GLOBAL(strspn)
 push r4
 push r0
@@ -307,6 +321,7 @@ pop r4
 sub r0, r1, r0
 rts
 
+RSECT(strstr)
 GLOBAL(strstr)
 strstr_beg:
 push r0
@@ -337,6 +352,7 @@ pop r1
 pop r0
 rts
 
+RSECT(memset)
 GLOBAL(memset_explicit)
 GLOBAL(memset)
 move r0, r3
@@ -350,6 +366,7 @@ bnz memset_beg
 memset_end:
 rts
 
+RSECT(strlen)
 GLOBAL(strlen)
 move r0, r1
 strlen_beg:
