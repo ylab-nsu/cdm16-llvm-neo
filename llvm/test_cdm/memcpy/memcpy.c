@@ -1,11 +1,10 @@
 // CHECK sym(dst) 48 45 6C 6C 6F
+// CHECK reg(r0) 1
 
 #include <string.h>
 
 extern char dst[];
 
 int main() {
-    memcpy(dst, "HEllo", 5);
-
-    return 0;
+    return memcpy(dst, "HEllo", 5) == dst ? 1 : 0;
 }

@@ -5,6 +5,7 @@ RSECT(string)
 GLOBAL(memcpy)
 tst r2
 bz memcpy_end
+push r0
 memcpy_beg:
 ldb r1, r3
 stb r0, r3
@@ -12,25 +13,31 @@ inc r0
 inc r1
 dec r2
 bnz memcpy_beg
+pop r0
 memcpy_end:
 rts
 
 GLOBAL(memccpy)
-push r4
 tst r3
-bz memccpy_end
-scl r2, r2
+bnz memccpy_beg
+clr r0
+rts
 memccpy_beg:
+push r4
+scl r2, r2
+memccpy_loop_beg:
 ldb r1, r4
 stb r0, r4
-cmp r2, r4
-beq memccpy_end
 inc r0
 inc r1
+cmp r2, r4
+beq memccpy_loop_end
 dec r3
-bnz memccpy_beg
-memccpy_end:
+bnz memccpy_loop_beg
+clr r0
+memccpy_loop_end:
 pop r4
+memccpy_end:
 rts
 
 GLOBAL(memmove)
@@ -43,6 +50,7 @@ memmove_end:
 rts
 
 memmove_fwd:
+push r0
 memmove_fwd_beg:
 ldb r1, r3
 stb r0, r3
@@ -50,9 +58,11 @@ inc r0
 inc r1
 dec r2
 bnz memmove_fwd_beg
+pop r0
 rts
 
 memmove_bwd:
+push r0
 add r0, r2, r0
 add r1, r2, r1
 dec r0
@@ -64,6 +74,7 @@ dec r0
 dec r1
 dec r2
 bnz memmove_bwd_beg
+pop r0
 rts
 
 GLOBAL(strcpy)
