@@ -10,13 +10,20 @@ function(create_elf_library target output_dir name)
     ${ARGN}
   )
 
-  add_library(${target} STATIC ${CREATE_ELF_LIBRARY_SRCS})
-  target_compile_options(${target}
+  add_library(${target}_objects OBJECT ${CREATE_ELF_LIBRARY_SRCS})
+  target_compile_options(${target}_objects
                          PRIVATE -g0
                          PRIVATE --target=cdm)
-  set_target_properties(${target} PROPERTIES
-                        ARCHIVE_OUTPUT_DIRECTORY ${output_dir}
-                        OUTPUT_NAME ${name})
+
+  add_custom_command(
+      OUTPUT ${output_dir}/lib${name}.a
+      COMMAND ${LLVM_BINARY_DIR}/bin/llvm-ar -rcs ${output_dir}/lib${name}.a $<TARGET_OBJECTS:${target}_objects>
+      DEPENDS ${target}_objects
+      COMMAND_EXPAND_LISTS
+      VERBATIM
+  )
+
+  add_custom_target(${target} ALL DEPENDS ${output_dir}/lib${name}.a)
 
 endfunction(create_elf_library)
 
