@@ -1,4 +1,4 @@
-// CHECK reg(r0) 0x48
+// CHECK reg(r0) 1
 // CHECK sym(dst) 48 45 6C 00 00 00
 
 #include <string.h>
@@ -10,7 +10,5 @@ int main() {
         dst[i] = 1;
     }
 
-    char *p = strncpy(dst, "HEl", 6);
-
-    return *p;
+    return strncpy(dst, "HEl", 6) == dst ? 1 : 0;
 }

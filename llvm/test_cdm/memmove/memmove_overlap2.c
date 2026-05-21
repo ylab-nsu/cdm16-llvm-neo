@@ -1,4 +1,5 @@
 // CHECK sym(dst) 48 45 48 45 6C
+// CHECK reg(r0) 1
 
 #include <string.h>
 
@@ -11,7 +12,5 @@ int main() {
     dst[3] = 'l';
     dst[4] = 'o';
 
-    memmove(dst + 2, dst, 3);
-
-    return 0;
+    return memmove(dst + 2, dst, 3) == dst + 2 ? 1 : 0;
 }

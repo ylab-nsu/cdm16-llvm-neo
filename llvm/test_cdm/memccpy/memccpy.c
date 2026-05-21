@@ -1,4 +1,5 @@
 // CHECK sym(dst) 48 45 6C 6C 6F
+// CHECK reg(r0) 0
 
 #include <string.h>
 
@@ -9,7 +10,5 @@ int main() {
         dst[i] = '\0';
     }
 
-    memccpy(dst, "HEllo", '1', 5);
-
-    return 0;
+    return (int) memccpy(dst, "HEllo", '1', 5);
 }
