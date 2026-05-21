@@ -63,9 +63,9 @@ class TestsParser:
 
       return self.producer.produce(filepath.stem, files, assertions)
     except TestParsingError as e:
-      raise TestParsingError(str(file) + ':' + str(e))
+      raise TestParsingError(str(filepath) + ':' + str(e))
     except TestProducingError as e:
-      raise TestProducingError(str(file) + ':' + str(e))
+      raise TestProducingError(str(filepath) + ':' + str(e))
 
   def collect_tests(self, search_point: Path) -> list[TestCase]:
     if not search_point.exists():
