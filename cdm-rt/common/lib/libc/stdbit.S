@@ -1,7 +1,6 @@
 #include "cdm_asm.inc"
 
-RSECT(stdbit)
-
+RSCET(stdc_leading_zeros_uc)
 GLOBAL(stdc_leading_zeros_uc)
 move r0, r1
 bnz stdc_leading_zeros_uc_beg
@@ -27,6 +26,7 @@ add r0, 1
 stdc_leading_zeros_uc_end:
 rts
 
+RSECT(stdc_leading_zeros_ui)
 GLOBAL(stdc_leading_zeros_ui)
 GLOBAL(stdc_leading_zeros_us)
 move r0, r1
@@ -60,6 +60,7 @@ add r0, 1
 stdc_leading_zeros_us_end:
 rts
 
+RSECT(stdc_leading_zeros_ul)
 GLOBAL(stdc_leading_zeros_ul)
 cmp r1, 0
 bne stdc_leading_zeros_ul_high_test
@@ -71,6 +72,7 @@ move r1, r0
 jsr stdc_leading_zeros_us
 rts
 
+RSECT(stdc_leading_zeros_ull)
 GLOBAL(stdc_leading_zeros_ull)
 cmp r3, 0
 bne stdc_leading_zeros_ull_4_test
@@ -97,6 +99,7 @@ move r3, r0
 jsr stdc_leading_zeros_us
 rts
 
+RSECT(stdc_trailing_zeros_uc)
 GLOBAL(stdc_trailing_zeros_uc)
 move r0, r1
 bnz stdc_trailing_zeros_uc_beg
@@ -123,6 +126,7 @@ add r0, 1
 stdc_trailing_zeros_uc_end:
 rts
 
+RSECT(stdc_trailing_zeros_ui)
 GLOBAL(stdc_trailing_zeros_us)
 GLOBAL(stdc_trailing_zeros_ui)
 move r0, r1
@@ -156,6 +160,7 @@ add r0, 1
 stdc_trailing_zeros_us_end:
 rts
 
+RSECT(stdc_trailing_zeros_ul)
 GLOBAL(stdc_trailing_zeros_ul)
 cmp r0, 0
 bne stdc_trailing_zeros_ul_low_test
@@ -167,6 +172,7 @@ stdc_trailing_zeros_ul_low_test:
 jsr stdc_trailing_zeros_us
 rts
 
+RSECT(stdc_trailing_zeros_ull)
 GLOBAL(stdc_trailing_zeros_ull)
 cmp r0, 0
 bne stdc_trailing_zeros_ull_0_test
@@ -193,24 +199,28 @@ stdc_trailing_zeros_ull_0_test:
 jsr stdc_trailing_zeros_us
 rts
 
+RSECT(stdc_leading_ones_uc)
 GLOBAL(stdc_leading_ones_uc)
 not r0
 scl r0, r0
 jsr stdc_leading_zeros_uc
 rts
 
+RSECT(stdc_leading_ones_ui)
 GLOBAL(stdc_leading_ones_us)
 GLOBAL(stdc_leading_ones_ui)
 not r0
 jsr stdc_leading_zeros_us
 rts
 
+RSECT(stdc_leading_ones_ul)
 GLOBAL(stdc_leading_ones_ul)
 not r0
 not r1
 jsr stdc_leading_zeros_ul
 rts
 
+RSECT(stdc_leading_ones_ull)
 GLOBAL(stdc_leading_ones_ull)
 not r0
 not r1
@@ -219,24 +229,28 @@ not r3
 jsr stdc_leading_zeros_ull
 rts
 
+RSECT(stdc_trailing_ones_uc)
 GLOBAL(stdc_trailing_ones_uc)
 not r0
 scl r0, r0
 jsr stdc_trailing_zeros_uc
 rts
 
+RSECT(stdc_trailing_ones_ui)
 GLOBAL(stdc_trailing_ones_us)
 GLOBAL(stdc_trailing_ones_ui)
 not r0
 jsr stdc_trailing_zeros_us
 rts
 
+RSECT(stdc_trailing_ones_ul)
 GLOBAL(stdc_trailing_ones_ul)
 not r0
 not r1
 jsr stdc_trailing_zeros_ul
 rts
 
+RSECT(stdc_trailing_ones_ull)
 GLOBAL(stdc_trailing_ones_ull)
 not r0
 not r1
@@ -245,6 +259,7 @@ not r3
 jsr stdc_trailing_zeros_ull
 rts
 
+RSECT(stdc_first_leading_one_uc)
 GLOBAL(stdc_first_leading_one_uc)
 move r0, r1
 bnz stdc_first_leading_one_uc_beg
@@ -271,6 +286,7 @@ stdc_first_leading_one_uc_end:
 inc r0
 rts
 
+RSECT(stdc_first_leading_one_ui)
 GLOBAL(stdc_first_leading_one_us)
 GLOBAL(stdc_first_leading_one_ui)
 move r0, r1
@@ -305,6 +321,7 @@ stdc_first_leading_one_us_end:
 inc r0
 rts
 
+RSECT(stdc_first_leading_one_ul)
 GLOBAL(stdc_first_leading_one_ul)
 cmp r1, 0
 bne stdc_first_leading_one_ul_high_test
@@ -319,6 +336,7 @@ jsr stdc_first_leading_one_us
 stdc_first_leading_one_ul_end:
 rts
 
+RSECT(stdc_first_leading_one_ull)
 GLOBAL(stdc_first_leading_one_ull)
 cmp r3, 0
 bne stdc_first_leading_one_ull_4_test
@@ -348,6 +366,7 @@ jsr stdc_first_leading_one_us
 stdc_first_leading_one_ull_end:
 rts
 
+RSECT(stdc_first_trailing_one_uc)
 GLOBAL(stdc_first_trailing_one_uc)
 move r0, r1
 bnz stdc_first_trailing_one_uc_beg
@@ -375,6 +394,7 @@ stdc_first_trailing_one_uc_end:
 inc r0
 rts
 
+RSECT(stdc_first_trailing_one_ui)
 GLOBAL(stdc_first_trailing_one_us)
 GLOBAL(stdc_first_trailing_one_ui)
 move r0, r1
@@ -409,6 +429,7 @@ stdc_first_trailing_one_us_end:
 inc r0
 rts
 
+RSECT(stdc_first_trailing_one_ul)
 GLOBAL(stdc_first_trailing_one_ul)
 cmp r0, 0
 bne stdc_first_trailing_one_ul_low_test
@@ -423,6 +444,7 @@ jsr stdc_first_trailing_one_us
 stdc_first_trailing_one_ul_end:
 rts
 
+RSECT(stdc_first_trailing_one_ull)
 GLOBAL(stdc_first_trailing_one_ull)
 cmp r0, 0
 bne stdc_first_trailing_one_ull_0_test
@@ -452,24 +474,28 @@ jsr stdc_first_trailing_one_us
 stdc_first_trailing_one_ull_end:
 rts
 
+RSECT(stdc_first_leading_zero_uc)
 GLOBAL(stdc_first_leading_zero_uc)
 not r0
 scl r0, r0
 jsr stdc_first_leading_one_uc
 rts
 
+RSECT(stdc_first_leading_zero_ui)
 GLOBAL(stdc_first_leading_zero_us)
 GLOBAL(stdc_first_leading_zero_ui)
 not r0
 jsr stdc_first_leading_one_us
 rts
 
+RSECT(stdc_first_leading_zero_ul)
 GLOBAL(stdc_first_leading_zero_ul)
 not r0
 not r1
 jsr stdc_first_leading_one_ul
 rts
 
+RSECT(stdc_first_leading_zero_ull)
 GLOBAL(stdc_first_leading_zero_ull)
 not r0
 not r1
@@ -479,24 +505,28 @@ jsr stdc_first_leading_one_ull
 rts
 
 
+RSECT(stdc_first_trailing_zero_uc)
 GLOBAL(stdc_first_trailing_zero_uc)
 not r0
 scl r0, r0
 jsr stdc_first_trailing_one_uc
 rts
 
+RSECT(stdc_first_trailing_zero_ui)
 GLOBAL(stdc_first_trailing_zero_us)
 GLOBAL(stdc_first_trailing_zero_ui)
 not r0
 jsr stdc_first_trailing_one_us
 rts
 
+RSECT(stdc_first_trailing_zero_ul)
 GLOBAL(stdc_first_trailing_zero_ul)
 not r0
 not r1
 jsr stdc_first_trailing_one_ul
 rts
 
+RSECT(stdc_first_trailing_zero_ull)
 GLOBAL(stdc_first_trailing_zero_ull)
 not r0
 not r1
@@ -505,6 +535,7 @@ not r3
 jsr stdc_first_trailing_one_ull
 rts
 
+RSECT(stdc_count_ones_uc)
 GLOBAL(stdc_count_ones_uc)
 move r0, r1
 shr r1, r1, 1
@@ -527,6 +558,7 @@ and r1, r2, r1
 add r0, r1, r0
 rts
 
+RSECT(stdc_count_ones_ui)
 GLOBAL(stdc_count_ones_us)
 GLOBAL(stdc_count_ones_ui)
 move r0, r1
@@ -557,6 +589,7 @@ and r1, r2, r1
 add r0, r1, r0
 rts
 
+RSECT(stdc_count_ones_ul)
 GLOBAL(stdc_count_ones_ul)
 push r1
 jsr stdc_count_ones_us
@@ -568,6 +601,7 @@ pop r1
 add r1, r0, r0
 rts
 
+RSECT(stdc_count_ones_ull)
 GLOBAL(stdc_count_ones_ull)
 push r3
 push r2
@@ -591,24 +625,28 @@ pop r1
 add r0, r1, r0
 rts
 
+RSECT(stdc_count_zeros_uc)
 GLOBAL(stdc_count_zeros_uc)
 not r0
 scl r0, r0
 jsr stdc_count_ones_uc
 rts
 
+RSECT(stdc_count_zeros_ui)
 GLOBAL(stdc_count_zeros_us)
 GLOBAL(stdc_count_zeros_ui)
 not r0
 jsr stdc_count_ones_us
 rts
 
+RSECT(stdc_count_zeros_ul)
 GLOBAL(stdc_count_zeros_ul)
 not r0
 not r1
 jsr stdc_count_ones_ul
 rts
 
+RSECT(stdc_count_zeros_ull)
 GLOBAL(stdc_count_zeros_ull)
 not r0
 not r1
@@ -617,6 +655,7 @@ not r3
 jsr stdc_count_ones_ull
 rts
 
+RSECT(stdc_has_single_bit_ui)
 GLOBAL(stdc_has_single_bit_ui)
 GLOBAL(stdc_has_single_bit_us)
 GLOBAL(stdc_has_single_bit_uc)
@@ -634,6 +673,7 @@ ldi r0, 1
 rts
 
 
+RSECT(stdc_has_single_bit_ul)
 GLOBAL(stdc_has_single_bit_ul)
 cmp r0, 0
 bne stdc_has_single_bit_ul_test_lo
@@ -653,6 +693,7 @@ clr r0
 rts
 
 
+RSECT(stdc_has_single_bit_ull)
 GLOBAL(stdc_has_single_bit_ull)
 cmp r0, 0
 bne stdc_has_single_bit_ull_test_0
@@ -682,12 +723,14 @@ clr r0
 rts
 
 
+RSECT(stdc_bit_width_uc)
 GLOBAL(stdc_bit_width_uc)
 jsr stdc_leading_zeros_uc
 sub r0, 8
 neg r0
 rts
 
+RSECT(stdc_bit_width_ui)
 GLOBAL(stdc_bit_width_us)
 GLOBAL(stdc_bit_width_ui)
 jsr stdc_leading_zeros_us
@@ -695,18 +738,21 @@ sub r0, 16
 neg r0
 rts
 
+RSECT(stdc_bit_width_ul)
 GLOBAL(stdc_bit_width_ul)
 jsr stdc_leading_zeros_ul
 sub r0, 32
 neg r0
 rts
 
+RSECT(stdc_bit_width_ull)
 GLOBAL(stdc_bit_width_ull)
 jsr stdc_leading_zeros_ull
 sub r0, 64
 neg r0
 rts
 
+RSECT(stdc_bit_floor_uc)
 GLOBAL(stdc_bit_floor_uc)
 move r0, r1
 shr r1, r1, 1
@@ -726,6 +772,7 @@ sub r0, r1, r0
 rts
 
 
+RSECT(stdc_bit_floor_ui)
 GLOBAL(stdc_bit_floor_us)
 GLOBAL(stdc_bit_floor_ui)
 move r0, r1
@@ -749,6 +796,7 @@ shr r1, r1, 1
 sub r0, r1, r0
 rts
 
+RSECT(stdc_bit_floor_ul)
 GLOBAL(stdc_bit_floor_ul)
 cmp r1, 0
 bne stdc_bit_floor_ul_high
@@ -763,6 +811,7 @@ move r0, r1
 clr r0
 rts
 
+RSECT(stdc_bit_floor_ull)
 GLOBAL(stdc_bit_floor_ull)
 cmp r3, 0
 bne stdc_bit_floor_ull_3
@@ -804,6 +853,7 @@ clr r1
 clr r2
 rts
 
+RSECT(stdc_bit_ceil_uc)
 GLOBAL(stdc_bit_ceil_uc)
 cmp r0, 1
 bhi stdc_bit_ceil_uc_calc
@@ -816,6 +866,7 @@ shl r0, r0, 1
 scl r0, r0
 rts
 
+RSECT(stdc_bit_ceil_ui)
 GLOBAL(stdc_bit_ceil_us)
 GLOBAL(stdc_bit_ceil_ui)
 cmp r0, 1
@@ -828,6 +879,7 @@ jsr stdc_bit_floor_us
 shl r0, r0, 1
 rts
 
+RSECT(stdc_bit_ceil_ul)
 GLOBAL(stdc_bit_ceil_ul)
 cmp r1, 0
 bne stdc_bit_ceil_ul_calc
@@ -849,6 +901,7 @@ shl r0, r0, 1
 rcl r1, r1, 1
 rts
 
+RSECT(stdc_bit_ceil_ull)
 GLOBAL(stdc_bit_ceil_ull)
 cmp r3, 0
 bne stdc_bit_ceil_ull_calc
