@@ -1,6 +1,9 @@
 // CHECK reg(r0) 0
 /* { dg-additional-options "-fpermissive" } */
 
+void abort (void);
+void exit (int);
+
 int v;
 
 int
@@ -10,8 +13,7 @@ h1 ()
 }
 
 int
-h2 (e)
-     int *e;
+h2 (int *e)
 {
   if (e != &v)
     abort ();
@@ -19,8 +21,7 @@ h2 (e)
 }
 
 int
-g (c)
-     char *c;
+g (char *c)
 {
   int i;
   int b;

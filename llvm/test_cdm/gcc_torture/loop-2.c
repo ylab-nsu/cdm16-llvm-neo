@@ -5,7 +5,7 @@ void exit (int);
 
 int a[2];
 
-void f (b)
+void f (unsigned int b)
 {
   unsigned int i;
   for (i = 0; i < b; i++)

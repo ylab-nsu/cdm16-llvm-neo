@@ -3,6 +3,9 @@
 /* Check that stack alignment is not affected by variables not placed
    on the stack.  */
 
+void abort (void);
+void exit (int);
+
 #define ALIGNMENT 64
 
 unsigned test(unsigned n, unsigned p)

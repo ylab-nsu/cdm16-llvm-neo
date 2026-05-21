@@ -17,6 +17,7 @@ long f (char *w)
   return c;
 }
 
+int
 main ()
 {
   int i;

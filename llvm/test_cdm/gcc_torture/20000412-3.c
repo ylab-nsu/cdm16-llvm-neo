@@ -9,6 +9,14 @@ typedef struct {
   char x[32];
 } X;
 
+int f(X x, X y)
+{
+  if (x.y != y.y)
+    return 'F';
+
+  return x.x[0] + y.x[0];
+}
+
 int z (void)
 {
   X xxx;
@@ -16,15 +24,6 @@ int z (void)
   xxx.x[31] = '0';
   xxx.y = 0xf;
   return f (xxx, xxx);
-}
-
-
-int f(X x, X y)
-{
-  if (x.y != y.y)
-    return 'F';
-
-  return x.x[0] + y.x[0];
 }
 
 int main (void)
