@@ -36,7 +36,11 @@ def run_tests(connection: CocoemuConnection, config: Configuration, test_cases: 
   with io.StringIO() as errors_stream:
     try:
       for case in test_cases:
+        if config.log:
+          print(f'[Start Test] {case.name}')
+
         result = case.run(connection, errors_stream)
+
         if result:
           total_succ+=1
           if config.log:
@@ -54,4 +58,8 @@ def run_tests(connection: CocoemuConnection, config: Configuration, test_cases: 
     finally:
       print("\n", errors_stream.getvalue(), sep = "")
       print(f'Passed {total_succ} out of {total_succ + total_fails}')
+      if (config.log and (total_succ + total_fails < len(test_cases))):
+        print(f'Skipped {len(test_cases) - (total_fails + total_succ)}:')
+        for case in test_cases[(total_succ + total_fails):]:
+          print(case.name)
   return (total_succ, total_fails)
