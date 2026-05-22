@@ -116,6 +116,7 @@ pop r0
 rts
 
 RSECT(strcat)
+EXTERN(strcpy)
 GLOBAL(strcat)
 push r0
 strcat_beg:
@@ -267,6 +268,7 @@ sub r0, r1, r0
 rts
 
 RSECT(strpbrk)
+EXTERN(strcspn)
 GLOBAL(strpbrk)
 push r0
 jsr strcspn
