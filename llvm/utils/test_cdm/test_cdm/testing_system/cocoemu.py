@@ -1,4 +1,3 @@
-import asyncio
 import subprocess
 import os
 import signal
@@ -77,7 +76,7 @@ class CocoemuConnection:
     self.close()
 
   def check_server_response(self) -> Any:
-    resp = self.ws.recv(timeout = self._TIMEOUT)
+    resp = self.ws.recv()
     resp_dict = json.loads(resp)
     try:
       if not resp_dict["status"] == "OK":
@@ -142,3 +141,4 @@ class CocoemuConnection:
     self.reset_server()
     self.load_image_to_server(binary)
     self.run_server()
+
