@@ -7,6 +7,9 @@ include(CDMRTElfLibRules)
 
 include(GetClangResourceDir)
 
+# Remove any flags passed to assembler
+string(REGEX REPLACE "[/-]Wa,[/-][^;]*" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+
 get_clang_resource_dir(COMPILER_RESOURCE_DIR)
 set(COMPILER_RESOURCE_DIR ${LLVM_BINARY_DIR}/${COMPILER_RESOURCE_DIR})
 message(STATUS "Set COMPILER_RESOURCE_DIR to "
