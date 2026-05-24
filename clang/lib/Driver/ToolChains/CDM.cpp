@@ -60,7 +60,7 @@ void CDM::LldLinker::ConstructJob(Compilation &C, const JobAction &JA,
       // Add builtins
       for (const char *obj : getCDMToolChain().getBuiltinNames()) {
         CmdArgs.push_back(getCDMToolChain().getCompilerRTArgString(
-            Args, obj, ToolChain::FT_Object));
+            Args, obj, ToolChain::FT_Static));
       }
   }
 
