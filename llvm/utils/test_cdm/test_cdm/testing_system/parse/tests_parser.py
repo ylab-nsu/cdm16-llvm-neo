@@ -71,7 +71,11 @@ class TestsParser:
     if not search_point.exists():
       raise TestParsingError(f'Failed to collect tests from "{str(search_point)}": No such file or directory')
     elif search_point.is_file() or (search_point.is_dir() and (search_point / self._MULTISOURCE_DIRECTIVES_FILE).exists()):
-      return self.parse_test(search_point)
+      try:
+        return self.parse_test(search_point)
+      except Exception as e:
+        print(f"Skipping {str(search_point)} because of {str(e)}")
+        return []
     elif search_point.is_dir():
       return list(itertools.chain.from_iterable(map(lambda p: self.collect_tests(p), search_point.iterdir())))
     else:

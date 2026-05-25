@@ -33,9 +33,11 @@ class TestCaseProducer:
 
     common_resources = config.resources_path / "common"
     elf_resources = config.resources_path / "elf"
+    cocas_resources = config.resources_path / "cocas"
 
     common_src = common_resources / "src"
     elf_src = elf_resources / "src"
+    cocas_src = cocas_resources / "src"
 
     elf_build = config.resources_path / "build" / "elf"
     cocas_build = config.resources_path / "build" / "cocas"
@@ -73,6 +75,12 @@ class TestCaseProducer:
         if (not output_path.exists()) or (file.stat().st_mtime > output_path.stat().st_mtime):
           output_path = self.clang_elf.assemble(file, self.include_paths, '3', output_path)
         self.elf.append(output_path)
+
+      for file in filter(Path.is_file, cocas_src.iterdir()):
+        output_path = (cocas_build / file.name).with_suffix('.o')
+        if (not output_path.exists()) or (file.stat().st_mtime > output_path.stat().st_mtime):
+          output_path = self.clang_cocas.assemble(file, self.include_paths, '3', output_path)
+        self.cocas.append(output_path)
 
     except CompilationError as e:
       raise TestProducingError(str(e))

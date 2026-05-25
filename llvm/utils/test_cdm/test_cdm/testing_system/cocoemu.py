@@ -23,6 +23,7 @@ class CocoemuConnection:
   processor_info: ProcessorInfo
   ws: ClientConnection
   server_proc: subprocess.Popen
+  _TIMEOUT: int = 60 * 10 # 10 min
 
   def __init__(self, config: Configuration) -> None:
     cocoemu_args = [str(config.cocoemu_path), "-p", str(config.cocoemu_port)]
@@ -74,8 +75,12 @@ class CocoemuConnection:
   def __exit__(self, type: type[BaseException], value: BaseException | None, traceback: TracebackType | None) -> None:
     self.close()
 
-  def check_server_response(self) -> Any:
-    resp = self.ws.recv()
+  def check_server_response(self, timeout: int | None = None) -> Any:
+    if not timeout is None:
+      resp = self.ws.recv(timeout = timeout)
+    else:
+      resp = self.ws.recv()
+
     resp_dict = json.loads(resp)
     try:
       if not resp_dict["status"] == "OK":
@@ -106,8 +111,8 @@ class CocoemuConnection:
       "stopConditions": [],
     }
     self.ws.send(json.dumps(message))
+    self.check_server_response(self._TIMEOUT) # Stop message
     self.check_server_response() # Run confirmation
-    self.check_server_response() # Stop message
 
   def get_regs_from_server(self) -> dict[str, int]:
     message = {
@@ -136,7 +141,21 @@ class CocoemuConnection:
   def get_processor_state(self) -> ProcessorState:
     return ProcessorState(self.get_regs_from_server(), self.get_memory_from_server())
 
+  def pause_server(self) -> None:
+    message = {
+      "action": "pause"
+    }
+    self.ws.send(json.dumps(message))
+    self.check_server_response() # Pause confirmation (or maybe another stop message first)
+    self.check_server_response() # Stop
+    self.check_server_response() # Run confirmation
+
   def run_binary(self, binary: Path) -> None:
     self.reset_server()
     self.load_image_to_server(binary)
-    self.run_server()
+    try:
+      self.run_server()
+    except TimeoutError as e:
+      self.pause_server()
+      raise e
+
