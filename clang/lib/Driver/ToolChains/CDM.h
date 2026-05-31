@@ -37,14 +37,17 @@ public:
                             llvm::opt::ArgStringList &CC1Args) const override;
 
   bool SupportsProfiling() const override { return false; }
-  const std::vector<const char *> &getStdLibObjs() const { return StdLibObjs; }
+
+  const std::vector<const char *> &getStdLibs() const { return StdLibs; }
+  const std::vector<const char *> &getStartFiles() const { return StartFiles; }
   const std::vector<const char *> &getBuiltinNames() const { return BuiltinNames; }
 
 protected:
   Tool *buildLinker() const override;
 
 private:
-  const std::vector<const char *> StdLibObjs = {"libc.a"};
+  const std::vector<const char *> StdLibs = {"c"};
+  const std::vector<const char *> StartFiles = {"crt0.o"};
   const std::vector<const char *> BuiltinNames = {"cdm-builtins"};
 };
 
