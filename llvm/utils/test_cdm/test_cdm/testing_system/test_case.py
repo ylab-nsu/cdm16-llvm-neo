@@ -20,7 +20,7 @@ class TestCase(ABC):
   assertions: list[Assertion]
   opt_level: str
 
-  _START_OF_ABSOLUTE_SECTIONS = 0x80
+  _START_OF_ABSOLUTE_SECTIONS = 0x100
 
   @classmethod
   def place_all_absolute_sections(cls, absolute_sections: list[SymbolAssertion]) -> None:
@@ -90,28 +90,18 @@ class CocasEndToEndTestCase(TestCase):
 
 @dataclass
 class ElfEndToEndTestCase(TestCase):
-  common_linker_script: Path
-
   @classmethod
   def generate_linker_script(cls, absolute_sections: list[SymbolAssertion]) -> Path:
     with tempfile.NamedTemporaryFile(suffix = '.ld', delete=False, mode='wt') as temp:
       absolute_sections_size = 0
-      temp.write("SECTIONS {\n")
       for sec in absolute_sections:
         temp.write(f"""
                     {sec.symbol} = {sec.address};
-
                     """)
         absolute_sections_size += len(sec.content)
 
-      temp.write("}")
-
       temp.write(f"""
-                 MEMORY {{
-                    IVT : ORIGIN = 0x0, LENGTH = 0x80
-                    ASECTS : ORIGIN = {cls._START_OF_ABSOLUTE_SECTIONS}, LENGTH = {absolute_sections_size}
-                    RAM : ORIGIN = {cls._START_OF_ABSOLUTE_SECTIONS + absolute_sections_size}, LENGTH = 64K - {cls._START_OF_ABSOLUTE_SECTIONS + absolute_sections_size}
-                 }}
+                 RAM_ORIGIN = {cls._START_OF_ABSOLUTE_SECTIONS + absolute_sections_size};
                  """)
 
       return Path(temp.name)
@@ -131,7 +121,7 @@ class ElfEndToEndTestCase(TestCase):
     binary_file = None
     try:
       linker_script = self.generate_linker_script(absolute_sections)
-      binary_file = self.clang.link(self.files, self.include_paths, self.opt_level, None, [linker_script, self.common_linker_script])
+      binary_file = self.clang.link(self.files, self.include_paths, self.opt_level, None, [linker_script])
 
       return self.binary_to_image(binary_file)
     finally:
