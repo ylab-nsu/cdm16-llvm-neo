@@ -87,7 +87,6 @@ class Clang:
         clang_args.append(str(i))
       if not linker_script is None:
         for script in linker_script:
-          clang_args.append('-T')
           clang_args.append(str(script))
       for i in files:
         clang_args.append(str(i))

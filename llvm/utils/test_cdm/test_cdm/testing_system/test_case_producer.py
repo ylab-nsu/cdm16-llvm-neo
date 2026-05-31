@@ -22,7 +22,6 @@ class TestCaseProducer:
 
   cocas: list[Path] = []
   elf: list[Path] = []
-  common_linker_script: Path
   include_paths: list[Path] = []
 
   def __init__(self, config: Configuration):
@@ -32,26 +31,19 @@ class TestCaseProducer:
     self.clang_cocas = Clang(config, "cdm-cocas")
 
     common_resources = config.resources_path / "common"
-    elf_resources = config.resources_path / "elf"
 
     common_src = common_resources / "src"
-    elf_src = elf_resources / "src"
 
     elf_build = config.resources_path / "build" / "elf"
     cocas_build = config.resources_path / "build" / "cocas"
 
-    self.common_linker_script = elf_resources / "common.ld"
     common_include_dir = common_resources / "include"
     self.include_paths.append(common_include_dir)
 
-    if not self.common_linker_script.exists():
-      raise TestProducingError(f'Cannot find common linker script at {self.common_linker_script}')
     if not common_include_dir.exists():
       raise TestProducingError(f'Cannot find include directory at {common_include_dir}')
     if not common_resources.exists():
       raise TestProducingError(f'Cannot find resources directory at {common_resources}')
-    if not elf_resources.exists():
-      raise TestProducingError(f'Cannot find resources directory at {elf_resources}')
 
     elf_build.mkdir(exist_ok=True, parents=True)
     cocas_build.mkdir(exist_ok=True, parents=True)
@@ -63,12 +55,6 @@ class TestCaseProducer:
           output_path = self.clang_cocas.assemble(file, self.include_paths, '3', output_path)
         self.cocas.append(output_path)
 
-        output_path = (elf_build / file.name).with_suffix('.o')
-        if (not output_path.exists()) or (file.stat().st_mtime > output_path.stat().st_mtime):
-          output_path = self.clang_elf.assemble(file, self.include_paths, '3', output_path)
-        self.elf.append(output_path)
-
-      for file in filter(Path.is_file, elf_src.iterdir()):
         output_path = (elf_build / file.name).with_suffix('.o')
         if (not output_path.exists()) or (file.stat().st_mtime > output_path.stat().st_mtime):
           output_path = self.clang_elf.assemble(file, self.include_paths, '3', output_path)
@@ -91,7 +77,6 @@ class TestCaseProducer:
                                   self.include_paths,
                                   self.clang_elf,
                                   assertions,
-                                  opt_level,
-                                  self.common_linker_script))
+                                  opt_level))
 
     return ret
