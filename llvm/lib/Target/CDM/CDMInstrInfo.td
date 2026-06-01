@@ -17,6 +17,12 @@ def SDTIntShiftQuadOp : SDTypeProfile<4, 5, [
   SDTCisSameAs<6, 0>, SDTCisSameAs<7, 0>, SDTCisInt<8>
 ]>;
 
+def SDTInt32BinOp : SDTypeProfile<2, 4, [
+  SDTCisInt<0>, SDTCisSameAs<1, 0>,
+  SDTCisInt<2>, SDTCisSameAs<3, 2>,
+  SDTCisInt<4>, SDTCisSameAs<5, 4>
+]>;
+
 //===----------------------------------------------------------------------===//
 // CDM SDNode definitions
 //===----------------------------------------------------------------------===//
@@ -44,13 +50,17 @@ def callseq_end : SDNode<"ISD::CALLSEQ_END",
 // Transformed into LDI instructions.
 def load_sym : SDNode<"CDMISD::LOAD_SYM", SDTIntUnaryOp>;
 
-// Extended bit shift nodes,
+// Extended bit shift nodes.
 def shl_ext32 : SDNode<"CDMISD::SHL_EXT32", SDTIntShiftPairOp>;
 def srl_ext32 : SDNode<"CDMISD::SRL_EXT32", SDTIntShiftPairOp>;
 def sra_ext32 : SDNode<"CDMISD::SRA_EXT32", SDTIntShiftPairOp>;
 def shl_ext64 : SDNode<"CDMISD::SHL_EXT64", SDTIntShiftQuadOp>;
 def srl_ext64 : SDNode<"CDMISD::SRL_EXT64", SDTIntShiftQuadOp>;
 def sra_ext64 : SDNode<"CDMISD::SRA_EXT64", SDTIntShiftQuadOp>;
+
+// Extended arithmetic op nodes.
+def add_ext32 : SDNode<"CDMISD::ADD_EXT32", SDTInt32BinOp>;
+def sub_ext32 : SDNode<"CDMISD::SUB_EXT32", SDTInt32BinOp>;
 
 //===----------------------------------------------------------------------===//
 // CDM assembly operand classes
@@ -715,53 +725,6 @@ multiclass Shift<bits<3> op, string instr_asm, SDPatternOperator OpNode> {
   def : InstAlias<!strconcat(instr_asm, "\t$rd"), (!cast<Instruction>(NAME) CPURegs:$rd, CPURegs:$rd, 1), 0>;
 }
 
-// Class for 32-bit shift pseudos.
-multiclass ShiftExt32<SDPatternOperator OpNode> {
-  let Defs = [PSR] in {
-    // The shift amount is stored in a register.
-    // Expanded into an inline loop.
-    def "_LOOP" : CDMPseudo<(outs CPURegs:$rdlo, CPURegs:$rdhi), (ins CPURegs:$rslo, CPURegs:$rshi, CPURegs:$shamt), "",
-        [(set CPURegs:$rdlo, CPURegs:$rdhi, (OpNode CPURegs:$rslo, CPURegs:$rshi, CPURegs:$shamt))]> {
-      let usesCustomInserter = true;
-    }
-
-    // The shift amount is always 1.
-    // Expanded post-RA into a shift-rotate chain.
-    def "" : CDMPseudo<(outs CPURegs:$rdlo, CPURegs:$rdhi), (ins CPURegs:$rslo, CPURegs:$rshi), "",
-      [(set CPURegs:$rdlo, CPURegs:$rdhi, (OpNode CPURegs:$rslo, CPURegs:$rshi, 1))]> {
-      let Constraints = "$rdlo = $rslo,$rdhi = $rshi,@earlyclobber $rdlo,@earlyclobber $rdhi";
-    }
-  }
-}
-
-// Class for 64-bit shift pseudos.
-multiclass ShiftExt64<SDNode OpNode> {
-  let Defs = [PSR] in {
-    // The shift amount is stored in a register.
-    // Expanded into an inline loop.
-    def "_LOOP" : CDMPseudo<
-      (outs CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3),
-      (ins CPURegs:$rs0, CPURegs:$rs1, CPURegs:$rs2, CPURegs:$rs3, CPURegs:$shamt), "",
-      [(set CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3,
-        (OpNode CPURegs:$rs0, CPURegs:$rs1, CPURegs:$rs2, CPURegs:$rs3, CPURegs:$shamt))]> {
-      let usesCustomInserter = true;
-    }
-
-    // The shift amount is always 1.
-    // Expanded post-RA into a shift-rotate chain.
-    def "" : CDMPseudo<
-      (outs CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3),
-      (ins CPURegs:$rs0, CPURegs:$rs1, CPURegs:$rs2, CPURegs:$rs3), "",
-      [(set CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3,
-        (OpNode CPURegs:$rs0, CPURegs:$rs1, CPURegs:$rs2, CPURegs:$rs3, 1))]> {
-      let Constraints = "$rd0 = $rs0,$rd1 = $rs1,$rd2 = $rs2,$rd3 = $rs3,@earlyclobber $rd0,@earlyclobber $rd1,@earlyclobber $rd2,@earlyclobber $rd3";
-    }
-  }
-}
-
-// The outputs are tied to the corresponding inputs are prohibited from overlapping in 1-bit shifts,
-// so that codegen doesn't try to swap the values at the same time as shifting them.
-
 // Logic shift left
 // Shifts left and fills with zeros.
 defm SHL : Shift<0b000, "shl", shl>;
@@ -798,15 +761,6 @@ def : InstAlias<"rcl\t$rd, $shamt", (RCL CPURegs:$rd, CPURegs:$rd, shamt:$shamt)
 def : InstAlias<"rcr\t$rd, $shamt", (RCR CPURegs:$rd, CPURegs:$rd, shamt:$shamt), 0>;
 def : InstAlias<"rcl\t$rd", (RCL CPURegs:$rd, CPURegs:$rd, 1), 0>;
 def : InstAlias<"rcr\t$rd", (RCR CPURegs:$rd, CPURegs:$rd, 1), 0>;
-
-// 32-bit and 64-bit pseudos.
-// Expand to chains of 16-bit shifts and loops.
-defm SHL_EXT32 : ShiftExt32<shl_ext32>;
-defm SHR_EXT32 : ShiftExt32<srl_ext32>;
-defm SHRA_EXT32 : ShiftExt32<sra_ext32>;
-defm SHL_EXT64 : ShiftExt64<shl_ext64>;
-defm SHR_EXT64 : ShiftExt64<srl_ext64>;
-defm SHRA_EXT64 : ShiftExt64<sra_ext64>;
 
 //===----------------------------------------------------------------------===//
 // alu2 format
@@ -920,6 +874,76 @@ let Defs = [PSR] in {
 //===----------------------------------------------------------------------===//
 // Pseudo instructions
 //===----------------------------------------------------------------------===//
+
+// Class for 32-bit shift pseudos.
+multiclass ShiftExt32<SDPatternOperator OpNode> {
+  let Defs = [PSR] in {
+    // The shift amount is stored in a register.
+    // Expanded into an inline loop.
+    def "_LOOP" : CDMPseudo<(outs CPURegs:$rdlo, CPURegs:$rdhi), (ins CPURegs:$rslo, CPURegs:$rshi, CPURegs:$shamt), "",
+        [(set CPURegs:$rdlo, CPURegs:$rdhi, (OpNode CPURegs:$rslo, CPURegs:$rshi, CPURegs:$shamt))]> {
+      let usesCustomInserter = true;
+    }
+
+    // The shift amount is always 1.
+    // Expanded post-RA into a shift-rotate chain.
+    def "" : CDMPseudo<(outs CPURegs:$rdlo, CPURegs:$rdhi), (ins CPURegs:$rslo, CPURegs:$rshi), "",
+      [(set CPURegs:$rdlo, CPURegs:$rdhi, (OpNode CPURegs:$rslo, CPURegs:$rshi, 1))]> {
+      let Constraints = "$rdlo = $rslo,$rdhi = $rshi,@earlyclobber $rdlo,@earlyclobber $rdhi";
+    }
+  }
+}
+
+// Class for 64-bit shift pseudos.
+multiclass ShiftExt64<SDNode OpNode> {
+  let Defs = [PSR] in {
+    // The shift amount is stored in a register.
+    // Expanded into an inline loop.
+    def "_LOOP" : CDMPseudo<
+      (outs CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3),
+      (ins CPURegs:$rs0, CPURegs:$rs1, CPURegs:$rs2, CPURegs:$rs3, CPURegs:$shamt), "",
+      [(set CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3,
+        (OpNode CPURegs:$rs0, CPURegs:$rs1, CPURegs:$rs2, CPURegs:$rs3, CPURegs:$shamt))]> {
+      let usesCustomInserter = true;
+    }
+
+    // The shift amount is always 1.
+    // Expanded post-RA into a shift-rotate chain.
+    def "" : CDMPseudo<
+      (outs CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3),
+      (ins CPURegs:$rs0, CPURegs:$rs1, CPURegs:$rs2, CPURegs:$rs3), "",
+      [(set CPURegs:$rd0, CPURegs:$rd1, CPURegs:$rd2, CPURegs:$rd3,
+        (OpNode CPURegs:$rs0, CPURegs:$rs1, CPURegs:$rs2, CPURegs:$rs3, 1))]> {
+      let Constraints = "$rd0 = $rs0,$rd1 = $rs1,$rd2 = $rs2,$rd3 = $rs3,@earlyclobber $rd0,@earlyclobber $rd1,@earlyclobber $rd2,@earlyclobber $rd3";
+    }
+  }
+}
+
+// The outputs are tied to the corresponding inputs are prohibited from overlapping in 1-bit shifts,
+// so that codegen doesn't try to swap the values at the same time as shifting them.
+
+// 32-bit and 64-bit pseudos.
+// Expand to chains of 16-bit shifts and loops.
+defm SHL_EXT32 : ShiftExt32<shl_ext32>;
+defm SHR_EXT32 : ShiftExt32<srl_ext32>;
+defm SHRA_EXT32 : ShiftExt32<sra_ext32>;
+defm SHL_EXT64 : ShiftExt64<shl_ext64>;
+defm SHR_EXT64 : ShiftExt64<srl_ext64>;
+defm SHRA_EXT64 : ShiftExt64<sra_ext64>;
+
+// 32-bit addition and subtraction.
+// Expand to add + addc and sub + subc respectively.
+let Constraints = "@earlyclobber $rdlo,$rdlo = $rs2lo", Defs = [PSR] in {
+  def PseudoAddExt32 : CDMPseudo<
+    (outs CPURegs:$rdlo, CPURegs:$rdhi),
+    (ins CPURegs:$rs1lo, CPURegs:$rs1hi, CPURegs:$rs2lo, CPURegs:$rs2hi), "",
+    [(set CPURegs:$rdlo, CPURegs:$rdhi, (add_ext32 CPURegs:$rs1lo, CPURegs:$rs1hi, CPURegs:$rs2lo, CPURegs:$rs2hi))]>;
+
+  def PseudoSubExt32 : CDMPseudo<
+    (outs CPURegs:$rdlo, CPURegs:$rdhi),
+    (ins CPURegs:$rs1lo, CPURegs:$rs1hi, CPURegs:$rs2lo, CPURegs:$rs2hi), "",
+    [(set CPURegs:$rdlo, CPURegs:$rdhi, (sub_ext32 CPURegs:$rs1lo, CPURegs:$rs1hi, CPURegs:$rs2lo, CPURegs:$rs2hi))]>;
+}
 
 // Conditional branch
 def PseudoBCondRR

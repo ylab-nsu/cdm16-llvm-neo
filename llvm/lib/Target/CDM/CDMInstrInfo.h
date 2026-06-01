@@ -139,6 +139,7 @@ private:
 
   void expandBCond(MachineBasicBlock &MBB, MachineInstr &MI) const;
   void expandShiftExt(MachineBasicBlock &MBB, MachineInstr &MI) const;
+  void expandArithExt(MachineBasicBlock &MBB, MachineInstr &MI) const;
 };
 
 } // namespace llvm

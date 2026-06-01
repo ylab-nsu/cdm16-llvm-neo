@@ -97,6 +97,8 @@ CDMISelLowering::CDMISelLowering(const CDMTargetMachine &TM,
   setOperationAction(ISD::SREM, MVT::i16, LibCall);
   setOperationAction(ISD::UREM, MVT::i16, LibCall);
 
+  setOperationAction(ISD::ADD, MVT::i32, Custom);
+  setOperationAction(ISD::SUB, MVT::i32, Custom);
   setOperationAction(ISD::ADD, MVT::i64, Custom);
   setOperationAction(ISD::SUB, MVT::i64, Custom);
 
@@ -305,6 +307,8 @@ const char *CDMISelLowering::getTargetNodeName(unsigned int Opcode) const {
     NODE_NAME(SHL_EXT64);
     NODE_NAME(SRL_EXT64);
     NODE_NAME(SRA_EXT64);
+    NODE_NAME(ADD_EXT32);
+    NODE_NAME(SUB_EXT32);
   default:
     return NULL;
   }
@@ -535,8 +539,11 @@ SDValue CDMISelLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerVASTART(Op, DAG);
   case ISD::ADD:
   case ISD::SUB:
-    if (Op.getValueType() == MVT::i64)
+    if (Op.getValueType() == MVT::i64) {
       return lowerArith64(Op, DAG);
+    } else if (Op.getValueType() == MVT::i32) {
+      return lowerArith32(Op, DAG);
+    }
     break;
   case ISD::SHL:
   case ISD::SRL:
@@ -718,6 +725,39 @@ SDValue CDMISelLowering::lowerArith64(SDValue Op, SelectionDAG &DAG) const {
 
   std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
   return CallResult.first;
+}
+
+SDValue CDMISelLowering::lowerArith32(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+
+  unsigned Opc;
+  switch (Op.getOpcode()) {
+  default:
+    llvm_unreachable("Unknown shift operation");
+  case ISD::ADD:
+    Opc = CDMISD::ADD_EXT32;
+    break;
+  case ISD::SUB:
+    Opc = CDMISD::SUB_EXT32;
+    break;
+  }
+
+  auto [OutLo, OutHi] =
+      DAG.SplitScalar(Op.getOperand(0), DL, MVT::i16, MVT::i16);
+  auto [In1Lo, In1Hi] =
+      DAG.SplitScalar(Op.getOperand(1), DL, MVT::i16, MVT::i16);
+  auto [In2Lo, In2Hi] =
+      DAG.SplitScalar(Op.getOperand(1), DL, MVT::i16, MVT::i16);
+  SmallVector<SDValue, 5> Operands;
+  Operands.append({OutLo, OutHi, In1Lo, In1Hi, In2Lo, In2Hi});
+
+  SmallVector<EVT, 4> ResTypeElements;
+  ResTypeElements.append({MVT::i16, MVT::i16});
+  SDVTList ResTys = DAG.getVTList(ResTypeElements);
+
+  SDValue Result = DAG.getNode(Opc, DL, ResTys, Operands);
+  return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i32, Result.getValue(0),
+                     Result.getValue(1));
 }
 
 MachineBasicBlock *

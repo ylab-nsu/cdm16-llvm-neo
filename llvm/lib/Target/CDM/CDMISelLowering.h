@@ -34,6 +34,10 @@ enum NodeType {
   SHL_EXT64,
   SRL_EXT64,
   SRA_EXT64,
+
+  // Extended add/sub
+  ADD_EXT32,
+  SUB_EXT32,
 };
 } // namespace CDMISD
 
@@ -94,6 +98,7 @@ private:
 
   SDValue lowerShifts(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerArith64(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerArith32(SDValue Op, SelectionDAG &DAG) const;
 
   MachineBasicBlock *emitPseudoSelectCC(MachineInstr &MI,
                                         MachineBasicBlock *MBB) const;
