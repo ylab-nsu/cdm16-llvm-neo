@@ -96,6 +96,9 @@ bool CDMDagToDagIsel::selectAddr(SDValue N, SDValue &Base) {
   if (isa<FrameIndexSDNode>(N)) {
     return false;
   }
+  if (N.getOpcode() == ISD::ADD) {
+    return false;
+  }
   Base = N;
   return true;
 }
