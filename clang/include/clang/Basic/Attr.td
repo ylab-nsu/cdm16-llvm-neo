@@ -980,7 +980,7 @@ def AnalyzerNoReturn : InheritableAttr {
 }
 
 def InferredNoReturn : InheritableAttr {
-  let Spellings = []; 
+  let Spellings = [];
   let SemaHandler = 0;
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [InternalOnly];
@@ -5225,7 +5225,9 @@ def NonString : InheritableAttr {
   let Documentation = [NonStringDocs];
 }
 
-def CDM_ISR : DeclOrTypeAttr, TargetSpecificAttr<TargetCDM> {
-  let Spellings = [GCC<"CDM_ISR">];
+def CDMInterrupt : InheritableAttr, TargetSpecificAttr<TargetCDM> {
+  let Spellings = [GCC<"interrupt">];
+  let Subjects = SubjectList<[Function]>;
+  let ParseKind = "Interrupt";
   let Documentation = [Undocumented];
 }

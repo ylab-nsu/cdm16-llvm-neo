@@ -45,6 +45,7 @@
 #include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaAVR.h"
 #include "clang/Sema/SemaBPF.h"
+#include "clang/Sema/SemaCDM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaM68k.h"
@@ -5612,9 +5613,6 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
   case ParsedAttr::AT_PreserveNone:
     CC = CC_PreserveNone;
     break;
-  case ParsedAttr::AT_CDM_ISR:
-    CC = CC_CdmIsr;
-    break;
   case ParsedAttr::AT_RISCVVectorCC:
     CC = CC_RISCVVectorCall;
     break;
@@ -6244,6 +6242,9 @@ static void handleInterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     break;
   case llvm::Triple::avr:
     S.AVR().handleInterruptAttr(D, AL);
+    break;
+  case llvm::Triple::cdm:
+    S.CDM().handleInterruptAttr(D, AL);
     break;
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
