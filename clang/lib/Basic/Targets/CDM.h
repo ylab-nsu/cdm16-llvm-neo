@@ -87,7 +87,6 @@ public:
     default:
       return CCCR_Error;
     case CC_C:
-    case CC_CdmIsr:
       return CCCR_OK;
     }
   }

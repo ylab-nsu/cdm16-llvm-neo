@@ -3662,8 +3662,6 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
   CC_VLS_CASE(65536)
 #undef CC_VLS_CASE
     // clang-format on
-  case CC_CdmIsr: 
-    return "cdm_isr";
   }
 
   llvm_unreachable("Invalid calling convention.");

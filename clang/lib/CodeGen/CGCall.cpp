@@ -116,8 +116,6 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
     CC_VLS_CASE(32768)
     CC_VLS_CASE(65536)
 #undef CC_VLS_CASE
-  case CC_CdmIsr: 
-    return llvm::CallingConv::CdmIsr;
   }
 }
 
@@ -307,9 +305,6 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
 
   if (D->hasAttr<PreserveNoneAttr>())
     return CC_PreserveNone;
-
-  if (D->hasAttr<CDM_ISRAttr>())
-    return CC_CdmIsr;
 
   if (D->hasAttr<RISCVVectorCCAttr>())
     return CC_RISCVVectorCall;

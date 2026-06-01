@@ -1136,9 +1136,6 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_PreserveNone:
       OS << " __attribute__((preserve_none))";
       break;
-    case CC_CdmIsr:
-      OS << " __attribute__((CDM_ISR))";
-      break;
     case CC_RISCVVectorCall:
       OS << "__attribute__((riscv_vector_cc))";
       break;

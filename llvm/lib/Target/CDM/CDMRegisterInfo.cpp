@@ -60,7 +60,7 @@ CDMRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   case CallingConv::Fast:
   case CallingConv::Cold:
     return CSR_O16_SaveList;
-  case CallingConv::CdmIsr:
+  case CallingConv::CDM_INTR:
     return CSR_O16_ALL_SaveList;
   }
   llvm_unreachable("Unknown calling convention");
@@ -159,7 +159,7 @@ CDMRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   case CallingConv::Fast:
   case CallingConv::Cold:
     return CSR_O16_RegMask;
-  case CallingConv::CdmIsr:
+  case CallingConv::CDM_INTR:
     return CSR_O16_ALL_RegMask;
   }
   llvm_unreachable("Unknown calling convention");

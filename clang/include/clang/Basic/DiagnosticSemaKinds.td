@@ -417,7 +417,7 @@ def warn_arm_interrupt_save_fp_without_vfp_unit : Warning<
 def err_arm_interrupt_called : Error<
   "interrupt service routine cannot be called directly">;
 def warn_interrupt_signal_attribute_invalid : Warning<
-  "%select{MIPS|MSP430|RISC-V|AVR}0 '%select{interrupt|signal}1' "
+  "%select{MIPS|MSP430|RISC-V|AVR|CDM}0 '%select{interrupt|signal}1' "
   "attribute only applies to functions that have "
   "%select{no parameters|a 'void' return type}2">,
   InGroup<IgnoredAttributes>;
@@ -10642,7 +10642,7 @@ def warn_dangling_reference_captured_by_unknown : Warning<
    "the full-expression">, InGroup<DanglingCapture>;
 
 def warn_experimental_lifetime_safety_dummy_warning : Warning<
-   "todo: remove this warning after we have atleast one warning based on the lifetime analysis">, 
+   "todo: remove this warning after we have atleast one warning based on the lifetime analysis">,
    InGroup<LifetimeSafety>, DefaultIgnore;
 
 // For non-floating point, expressions of the form x == x or x != x
@@ -12540,7 +12540,7 @@ def warn_zero_as_null_pointer_constant : Warning<
   InGroup<DiagGroup<"zero-as-null-pointer-constant">>, DefaultIgnore;
 
 def warn_not_eliding_copy_on_return : Warning<
-  "not eliding copy on return">, 
+  "not eliding copy on return">,
   InGroup<DiagGroup<"nrvo">>, DefaultIgnore;
 
 def err_nullability_cs_multilevel : Error<

@@ -16,7 +16,7 @@ namespace llvm {
 class CDMFunctionInfo : public MachineFunctionInfo {
 public:
   CDMFunctionInfo(const Function &F, const TargetSubtargetInfo *STI) {
-    IsInterruptHandler = F.getCallingConv() == CallingConv::CdmIsr;
+    IsInterruptHandler = F.getCallingConv() == CallingConv::CDM_INTR;
   }
 
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
