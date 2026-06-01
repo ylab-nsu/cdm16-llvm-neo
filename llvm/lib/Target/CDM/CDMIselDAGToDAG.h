@@ -23,9 +23,11 @@ private:
   void Select(SDNode *N) override;
   bool trySelectPointerCall(SDNode *N);
 
-  bool selectAddrFrameIndex(SDValue N, SDValue &Addr);
-  bool selectAddr(SDValue N, SDValue &Addr);
-  bool selectAddr2Reg(SDValue N, SDValue &Base, SDValue &Offset);
+  bool selectAddrFrameIndex(SDNode *Op, SDValue N, SDValue &Addr);
+  bool selectAddr(SDNode *Op, SDValue N, SDValue &Addr);
+  bool selectAddr2Reg(SDNode *Op, SDValue N, SDValue &Base, SDValue &Offset);
+  bool selectConstAddr(SDNode *Op, SDValue N, SDValue &Addr);
+  bool selectConstAddr2Reg(SDNode *Op, SDValue N, SDValue &Base, SDValue &Offset);
 
   bool SelectInlineAsmMemoryOperand(const SDValue &Op,
                                     InlineAsm::ConstraintCode ConstraintID,

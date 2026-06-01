@@ -249,14 +249,22 @@ def mem2Reg : Operand<iPTR> {
 // CDM DAG patterns and transforms
 //===----------------------------------------------------------------------===//
 
-// Simple absolute address pattern.
-def addr : ComplexPattern<iPTR, 1, "selectAddr", [], []>;
+let WantsRoot = 1 in {
+  // Simple absolute data address pattern.
+  def addr : ComplexPattern<iPTR, 1, "selectAddr", [], []>;
 
-// reg+reg absolute address pattern.
-def addr2Reg : ComplexPattern<iPTR, 2, "selectAddr2Reg", [], []>;
+  // reg+reg absolute data address pattern.
+  def addr2Reg : ComplexPattern<iPTR, 2, "selectAddr2Reg", [], []>;
 
-// Frame-relative address pattern.
-def addrFrame : ComplexPattern<iPTR, 1, "selectAddrFrameIndex", [frameindex], []>;
+  // Frame-relative data address pattern.
+  def addrFrame : ComplexPattern<iPTR, 1, "selectAddrFrameIndex", [frameindex], []>;
+
+  // Simple absolute program memory address pattern.
+  def constAddr : ComplexPattern<iPTR, 1, "selectConstAddr", [], []>;
+
+  // reg+reg absolute program memory address pattern.
+  def constAddr2Reg : ComplexPattern<iPTR, 2, "selectConstAddr2Reg", [], []>;
+}
 
 // Immediate values with specific ranges (immM_N -> [M; N]).
 def imm1_8 : ImmLeaf<i16, [{return (Imm >= 1) && (Imm <= 8);}]>;
@@ -458,16 +466,16 @@ def MOVE : Inst2Op<0b0000, (outs CPURegs:$rd), (ins CPURegs:$rs), "move\t$rs, $r
 // mem2/mem3 format
 //===----------------------------------------------------------------------===//
 
-multiclass CDMLoad<bits<3> opcode, string mnem, SDPatternOperator OpNode> {
+multiclass CDMLoad<bits<3> opcode, string mnem, SDPatternOperator OpNode, bit progMem = 0> {
     // reg addressing mode
     def "" : InstMem2<{0, opcode}, (outs CPURegs:$rd), (ins CPURegs:$rs),
               !strconcat(mnem, "\t$rs, $rd"),
-              [(set CPURegs:$rd, (OpNode addr:$rs))]>;
+              [(set CPURegs:$rd, (OpNode !if(!eq(progMem, 1), constAddr, addr):$rs))]>;
 
     // reg+reg addressing mode
     def "2Reg" : InstMem3<opcode, (outs CPURegs:$rd), (ins (mem2Reg $rs0, $rs1):$regs),
               !strconcat(mnem, "\t$regs, $rd"),
-              [(set CPURegs:$rd, (OpNode addr2Reg:$regs))]>;
+              [(set CPURegs:$rd, (OpNode !if(!eq(progMem, 1), constAddr2Reg, addr2Reg):$regs))]>;
 }
 
 multiclass CDMStore<bits<3> opcode, string mnem, SDPatternOperator OpNode> {
@@ -496,15 +504,15 @@ defm LDSB : CDMLoad<0b010, "ldsb", sextloadi8>;
 
 // Load constant word
 // Loads 2 bytes from program memory pointed by rs to rd.
-defm LCW : CDMLoad<0b011, "lcw", null_frag>;
+defm LCW : CDMLoad<0b011, "lcw", load, 1>;
 
 // Load constant unsigned byte
 // Loads a byte from program memory pointed by rs to rd with zero extend.
-defm LCB : CDMLoad<0b100, "lcb", null_frag>;
+defm LCB : CDMLoad<0b100, "lcb", zextloadi8, 1>;
 
 // Load constant signed byte
 // Loads a byte from program memory pointed by rs to rd with sign extend.
-defm LCSB : CDMLoad<0b101, "lcsb", null_frag>;
+defm LCSB : CDMLoad<0b101, "lcsb", sextloadi8, 1>;
 
 // Store word
 // Stores 2 bytes from rd to data memory pointed by rs.

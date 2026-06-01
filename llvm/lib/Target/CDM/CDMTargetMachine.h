@@ -33,6 +33,10 @@ public:
   MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const override;
+
+  bool isNoopAddrSpaceCast(unsigned SrcAs, unsigned DestAs) const override {
+    return true;
+  }
 };
 
 } // namespace llvm
