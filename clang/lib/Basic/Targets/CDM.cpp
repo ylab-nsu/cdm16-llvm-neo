@@ -10,4 +10,5 @@ void CDMTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (getTriple().getEnvironment() == llvm::Triple::Cocas) {
     Builder.defineMacro("__COCAS__");
   }
+  Builder.defineMacro("__progmem", "__attribute__((__address_space__(1)))");
 }

@@ -3,6 +3,7 @@
 //
 
 #include "CDMIselDAGToDAG.h"
+#include "CDM.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
@@ -92,7 +93,25 @@ bool CDMDagToDagIsel::trySelectPointerCall(SDNode *N) {
   return true;
 }
 
-bool CDMDagToDagIsel::selectAddr(SDValue N, SDValue &Base) {
+bool CDMDagToDagIsel::selectAddrFrameIndex(SDNode *Op, SDValue N,
+                                           SDValue &Base) {
+  if (isProgramMemoryAccess(cast<MemSDNode>(Op))) {
+    return false;
+  }
+  EVT ValTy = N.getValueType();
+  SDLoc DL(N);
+
+  if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(N)) {
+    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
+    return true;
+  }
+  return false;
+}
+
+bool CDMDagToDagIsel::selectAddr(SDNode *Op, SDValue N, SDValue &Base) {
+  if (isProgramMemoryAccess(cast<MemSDNode>(Op))) {
+    return false;
+  }
   if (isa<FrameIndexSDNode>(N)) {
     return false;
   }
@@ -103,8 +122,12 @@ bool CDMDagToDagIsel::selectAddr(SDValue N, SDValue &Base) {
   return true;
 }
 
-bool CDMDagToDagIsel::selectAddr2Reg(SDValue N, SDValue &Base,
+bool CDMDagToDagIsel::selectAddr2Reg(SDNode *Op, SDValue N, SDValue &Base,
                                      SDValue &Offset) {
+  if (isProgramMemoryAccess(cast<MemSDNode>(Op))) {
+    return false;
+  }
+
   if (N.getOpcode() == ISD::ADD) {
     Base = N.getOperand(0);
     Offset = N.getOperand(1);
@@ -113,12 +136,29 @@ bool CDMDagToDagIsel::selectAddr2Reg(SDValue N, SDValue &Base,
   return false;
 }
 
-bool CDMDagToDagIsel::selectAddrFrameIndex(SDValue N, SDValue &Base) {
-  EVT ValTy = N.getValueType();
-  SDLoc DL(N);
+bool CDMDagToDagIsel::selectConstAddr(SDNode *Op, SDValue N, SDValue &Base) {
+  if (!isProgramMemoryAccess(cast<MemSDNode>(Op))) {
+    return false;
+  }
+  if (isa<FrameIndexSDNode>(N)) {
+    return false;
+  }
+  if (N.getOpcode() == ISD::ADD) {
+    return false;
+  }
+  Base = N;
+  return true;
+}
 
-  if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(N)) {
-    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
+bool CDMDagToDagIsel::selectConstAddr2Reg(SDNode *Op, SDValue N, SDValue &Base,
+                                     SDValue &Offset) {
+  if (!isProgramMemoryAccess(cast<MemSDNode>(Op))) {
+    return false;
+  }
+
+  if (N.getOpcode() == ISD::ADD) {
+    Base = N.getOperand(0);
+    Offset = N.getOperand(1);
     return true;
   }
   return false;
