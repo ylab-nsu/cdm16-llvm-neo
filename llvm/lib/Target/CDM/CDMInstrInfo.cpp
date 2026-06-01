@@ -140,6 +140,10 @@ bool CDMInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case CDM::SHRA_EXT64:
     expandShiftExt(MBB, MI);
     break;
+  case CDM::PseudoAddExt32:
+  case CDM::PseudoSubExt32:
+    expandArithExt(MBB, MI);
+    break;
   }
 
   MBB.erase(MI);
@@ -267,6 +271,48 @@ void CDMInstrInfo::expandShiftExt(MachineBasicBlock &MBB,
                        .addImm(1));
   }
 
+  finalizeBundle(MBB, Bundler.begin(), Bundler.end());
+}
+
+// Expands PseudoAddExt32 and PseudoSubExt32 pseudos into add+addc and sub+subc pairs.
+void CDMInstrInfo::expandArithExt(MachineBasicBlock &MBB,
+                                  MachineInstr &MI) const {
+  MachineFunction &MF = *MBB.getParent();
+  DebugLoc DL = MI.getDebugLoc();
+
+  unsigned HeadOpc;
+  unsigned TailOpc;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unknown arithmetic operation");
+  case CDM::PseudoAddExt32:
+    HeadOpc = CDM::ADD;
+    TailOpc = CDM::ADDC;
+    break;
+  case CDM::PseudoSubExt32:
+    HeadOpc = CDM::SUB;
+    TailOpc = CDM::SUBC;
+    break;
+  }
+
+  SmallVector<MachineOperand *, 2> DstRegs;
+  SmallVector<MachineOperand *, 4> SrcRegs;
+  for (int I = 0; I < 2; I++) {
+    DstRegs.push_back(&MI.getOperand(I));
+  }
+  for (int I = 2; I < 6; I++) {
+    SrcRegs.push_back(&MI.getOperand(I));
+  }
+
+  // Bundle up the chain because a move inserted between its elements may break
+  // it.
+  MIBundleBuilder Bundler = MIBundleBuilder(MBB, MI);
+  Bundler.append(BuildMI(MF, DL, get(HeadOpc), DstRegs[0]->getReg())
+                     .addReg(SrcRegs[0]->getReg())
+                     .addReg(SrcRegs[2]->getReg()));
+  Bundler.append(BuildMI(MF, DL, get(TailOpc), DstRegs[1]->getReg())
+                     .addReg(SrcRegs[1]->getReg())
+                     .addReg(SrcRegs[3]->getReg()));
   finalizeBundle(MBB, Bundler.begin(), Bundler.end());
 }
 
