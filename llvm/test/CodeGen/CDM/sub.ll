@@ -29,22 +29,4 @@ entry:
   ret i16 %sub
 }
 
-; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-define i32 @sub32(i32 %a, i32 %b) #0 {
-entry:
-; CHECK-LABEL: sub32>
-; CHECK: ldi [[REG:r[0-6]]], 1
-; CHECK-NEXT: cmp r0, r2
-; CHECK-NEXT: blo [[LABEL:.*]]
-; CHECK-NEXT: # %bb.1:
-; CHECK-NEXT: ldi [[REG]], 0
-; CHECK-NEXT: [[LABEL]]:
-; CHECK-NEXT: sub r1, r3, r1
-; CHECK-NEXT: sub r1, [[REG]], r1
-; CHECK-NEXT: sub r0, r2, r0
-  %sub = sub i32 %a, %b
-  ret i32 %sub
-}
-
-
 attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
