@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from io import TextIOBase
 from test_cdm.testing_system.util.errors_printing import print_error_big
 from .configuration import Configuration
-from .toolchain import Clang, CompilationError, CocasError
+from .toolchain import Clang, Objcopy, CompilationError, CocasError, ObjcopyError
 from .cocoemu import CocoemuConnection
 from .assertions import Assertion, SymbolAssertion
 
@@ -45,7 +45,7 @@ class TestCase(ABC):
       for ass in self.assertions:
         ass.check(connection.get_processor_state())
 
-    except (CompilationError, CocasError, AssertionError) as e:
+    except (CompilationError, CocasError, ObjcopyError, AssertionError) as e:
       print_error_big(f'Error in {self.name}:\n{str(e)}', file = errors_stream)
     else:
       ret = True
@@ -90,6 +90,8 @@ class CocasEndToEndTestCase(TestCase):
 
 @dataclass
 class ElfEndToEndTestCase(TestCase):
+  objcopy: Objcopy
+
   @classmethod
   def generate_linker_script(cls, absolute_sections: list[SymbolAssertion]) -> Path:
     with tempfile.NamedTemporaryFile(suffix = '.ld', delete=False, mode='wt') as temp:
@@ -106,13 +108,6 @@ class ElfEndToEndTestCase(TestCase):
 
       return Path(temp.name)
 
-  @staticmethod
-  def binary_to_image(file: Path) -> Path:
-      with tempfile.NamedTemporaryFile(suffix = '.img', delete=False, mode='wt') as output_file, file.open(mode = 'rb') as binary:
-        output_file.write("v2.0 raw\n")
-        output_file.write(binary.read().hex(sep = '\n'))
-        return Path(output_file.name)
-
   def produce_image(self) -> Path:
     absolute_sections = cast(list[SymbolAssertion], list(filter(lambda a : isinstance(a, SymbolAssertion), self.assertions)))
     self.place_all_absolute_sections(absolute_sections)
@@ -123,7 +118,7 @@ class ElfEndToEndTestCase(TestCase):
       linker_script = self.generate_linker_script(absolute_sections)
       binary_file = self.clang.link(self.files, self.include_paths, self.opt_level, None, [linker_script])
 
-      return self.binary_to_image(binary_file)
+      return self.objcopy.to_logisim_image(binary_file)
     finally:
       if not linker_script is None:
         os.remove(str(linker_script))

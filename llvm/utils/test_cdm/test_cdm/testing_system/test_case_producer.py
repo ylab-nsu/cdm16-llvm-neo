@@ -5,7 +5,7 @@ from .configuration import Configuration
 from .processor import ProcessorInfo
 from .test_case import TestCase
 from .configuration import Configuration
-from .toolchain import Clang, CompilationError
+from .toolchain import Clang, Objcopy, CompilationError
 from .test_case import CocasEndToEndTestCase, ElfEndToEndTestCase
 from .assertions import Assertion
 
@@ -19,6 +19,7 @@ class TestCaseProducer:
   config: Configuration
   clang_cocas: Clang
   clang_elf: Clang
+  objcopy: Objcopy
 
   cocas: list[Path] = []
   elf: list[Path] = []
@@ -29,6 +30,7 @@ class TestCaseProducer:
 
     self.clang_elf = Clang(config, "cdm")
     self.clang_cocas = Clang(config, "cdm-cocas")
+    self.objcopy = Objcopy(config)
 
     common_resources = config.resources_path / "common"
 
@@ -77,6 +79,7 @@ class TestCaseProducer:
                                   self.include_paths,
                                   self.clang_elf,
                                   assertions,
-                                  opt_level))
+                                  opt_level,
+                                  self.objcopy))
 
     return ret

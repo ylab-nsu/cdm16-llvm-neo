@@ -20,6 +20,12 @@ class CocasError(Exception):
     return self.message
 
 @dataclass
+class ObjcopyError(Exception):
+  message: str
+  def __str__(self) -> str:
+    return self.message
+
+@dataclass
 class Clang:
   config: Configuration
   target: str
@@ -105,3 +111,16 @@ class Clang:
         os.remove(str(output_path))
       raise e
 
+@dataclass
+class Objcopy:
+  config: Configuration
+
+  def to_logisim_image(self, in_file: Path) -> Path:
+    fd, out_file = tempfile.mkstemp(suffix='.img')
+    os.close(fd)
+    objcopy_args = [str(self.config.objcopy_path), '-O', 'logisim', str(in_file), str(out_file)]
+    objcopy_proc = subprocess.run(objcopy_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if not objcopy_proc.returncode == 0:
+      objcopy_invokation = ' '.join(objcopy_args)
+      raise CompilationError(f"Failed to convert ELF to Logisim image with return code {objcopy_proc.returncode}\nInvokation: {objcopy_invokation}\nStdout:\n{objcopy_proc.stdout.decode()}\nStderr:\n{objcopy_proc.stderr.decode()}")
+    return Path(out_file)
