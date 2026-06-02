@@ -26,7 +26,7 @@
 namespace llvm {
 namespace objcopy {
 
-enum class FileFormat { Unspecified, ELF, Binary, IHex, SREC };
+enum class FileFormat { Unspecified, ELF, Binary, IHex, SREC, Logisim };
 
 // This type keeps track of the machine info for various architectures. This
 // lets us map architecture names to ELF types and the e_machine value of the

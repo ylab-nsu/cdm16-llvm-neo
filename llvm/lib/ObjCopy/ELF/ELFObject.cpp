@@ -3065,6 +3065,161 @@ Error SRECWriter::write() {
   return Error::success();
 }
 
+void LogisimSectionWriterBase::writeSection(const SectionBase &Sec,
+                                            ArrayRef<uint8_t> Data) {
+  if (Sec.Offset > LastSectionEnd) {
+    writeFill(Sec.Offset - LastSectionEnd);
+  }
+  LastSectionEnd = Sec.Offset + Sec.Size;
+  writeData(Data);
+}
+
+void LogisimSectionWriterBase::writeFill(size_t Count) {
+  if (Count == 0) {
+    return;
+  }
+  SmallString<16> PadString;
+  raw_svector_ostream OS(PadString);
+  if (Count > 1) {
+    OS << Count << "*";
+  }
+  OS << "00\n";
+  writeString(PadString);
+}
+
+void LogisimSectionWriterBase::writeData(ArrayRef<uint8_t> Data) {
+  Offset += 3 * Data.size();
+}
+
+void LogisimSectionWriterBase::writeString(StringRef String) {
+  Offset += String.size();
+}
+
+Error LogisimSectionWriterBase::visit(const Section &Sec) {
+  writeSection(Sec, Sec.Contents);
+  return Error::success();
+}
+
+Error LogisimSectionWriterBase::visit(const OwnedDataSection &Sec) {
+  writeSection(Sec, Sec.Data);
+  return Error::success();
+}
+
+Error LogisimSectionWriterBase::visit(const StringTableSection &Sec) {
+  assert(Sec.Size == Sec.StrTabBuilder.getSize());
+  writeSection(Sec, {nullptr, static_cast<size_t>(Sec.Size)});
+  return Error::success();
+}
+
+Error LogisimSectionWriterBase::visit(const DynamicRelocationSection &Sec) {
+  writeSection(Sec, Sec.Contents);
+  return Error::success();
+}
+
+void LogisimSectionWriter::writeData(ArrayRef<uint8_t> Data) {
+  SmallVector<char, 2> HexData = {'0', '0'};
+  for (uint8_t X : Data) {
+    auto *Iter = HexData.begin();
+    Iter = toHexStr(X, Iter, 2);
+    Out.getBufferStart()[Offset] = HexData[0];
+    Offset += 1;
+    Out.getBufferStart()[Offset] = HexData[1];
+    Offset += 1;
+    Out.getBufferStart()[Offset] = '\n';
+    Offset += 1;
+  }
+}
+
+void LogisimSectionWriter::writeString(StringRef String) {
+  memcpy(Out.getBufferStart() + Offset, String.data(), String.size());
+  Offset += String.size();
+}
+
+Error LogisimSectionWriter::visit(const StringTableSection &Sec) {
+  assert(Sec.Size == Sec.StrTabBuilder.getSize());
+  std::vector<uint8_t> Data(Sec.Size);
+  Sec.StrTabBuilder.write(Data.data());
+  writeSection(Sec, Data);
+  return Error::success();
+}
+
+size_t LogisimWriter::writeString(uint8_t *Buf, const char *Str) const {
+  size_t StrLen = strlen(Str);
+  if (Buf) {
+    memcpy(Buf, Str, StrLen);
+  }
+  return StrLen;
+}
+
+Error LogisimWriter::finalize() {
+  uint64_t MinAddr = UINT64_MAX;
+  for (SectionBase &Sec : Obj.allocSections()) {
+    if (Sec.ParentSegment != nullptr)
+      Sec.Addr =
+          Sec.Offset - Sec.ParentSegment->Offset + Sec.ParentSegment->PAddr;
+    if (Sec.Type != SHT_NOBITS && Sec.Size > 0)
+      MinAddr = std::min(MinAddr, Sec.Addr);
+  }
+
+  for (SectionBase &S : Obj.sections()) {
+    if ((S.Flags & ELF::SHF_ALLOC) && S.Type != ELF::SHT_NOBITS && S.Size > 0) {
+      S.Offset = S.Addr - MinAddr;
+      Sections.push_back(&S);
+    }
+  }
+
+  llvm::stable_sort(Sections,
+                    [](const SectionBase *LHS, const SectionBase *RHS) {
+                      return LHS->Offset < RHS->Offset;
+                    });
+
+  std::unique_ptr<WritableMemoryBuffer> EmptyBuffer =
+      WritableMemoryBuffer::getNewMemBuffer(0);
+  if (!EmptyBuffer)
+    return createStringError(errc::not_enough_memory,
+                             "failed to allocate memory buffer of 0 bytes");
+
+  Expected<size_t> ExpTotalSize = getTotalSize(*EmptyBuffer);
+  if (!ExpTotalSize)
+    return ExpTotalSize.takeError();
+  TotalSize = *ExpTotalSize;
+
+  Buf = WritableMemoryBuffer::getNewMemBuffer(TotalSize);
+  if (!Buf)
+    return createStringError(errc::not_enough_memory,
+                             "failed to allocate memory buffer of 0x" +
+                                 Twine::utohexstr(TotalSize) + " bytes");
+  return Error::success();
+}
+
+Expected<size_t>
+LogisimWriter::getTotalSize(WritableMemoryBuffer &EmptyBuffer) const {
+  LogisimSectionWriterBase LengthCalc(EmptyBuffer,
+                                      writeString(nullptr, "v2.0 raw\n"));
+  for (const SectionBase *Sec : Sections) {
+    if (Error Err = Sec->accept(LengthCalc)) {
+      return std::move(Err);
+    }
+  }
+
+  return LengthCalc.getBufferOffset();
+}
+
+Error LogisimWriter::write() {
+  uint32_t HeaderSize = writeString(
+      reinterpret_cast<uint8_t *>(Buf->getBufferStart()), "v2.0 raw\n");
+  LogisimSectionWriter Writer(*Buf, HeaderSize);
+  for (const SectionBase *Sec : Sections) {
+    if (Error E = Sec->accept(Writer)) {
+      return E;
+    }
+  }
+
+  assert(Writer.getBufferOffset() == TotalSize);
+  Out.write(Buf->getBufferStart(), Buf->getBufferSize());
+  return Error::success();
+}
+
 namespace llvm {
 namespace objcopy {
 namespace elf {

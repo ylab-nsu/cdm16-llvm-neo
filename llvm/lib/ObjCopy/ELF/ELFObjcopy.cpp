@@ -180,6 +180,8 @@ static std::unique_ptr<Writer> createWriter(const CommonConfig &Config,
     return std::make_unique<IHexWriter>(Obj, Out, Config.OutputFilename);
   case FileFormat::SREC:
     return std::make_unique<SRECWriter>(Obj, Out, Config.OutputFilename);
+  case FileFormat::Logisim:
+    return std::make_unique<LogisimWriter>(Obj, Out);
   default:
     return createELFWriter(Config, Obj, Out, OutputElfType);
   }
