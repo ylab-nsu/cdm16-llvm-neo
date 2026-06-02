@@ -15,6 +15,11 @@ namespace toolchains {
 
 class LLVM_LIBRARY_VISIBILITY CDMToolChain : public Generic_ELF {
 public:
+  enum class MemoryModel {
+    VonNeumann,
+    Harvard,
+  };
+
   CDMToolChain(const Driver &D, const llvm::Triple &Triple,
                const llvm::opt::ArgList &Args)
       : Generic_ELF(D, Triple, Args) {}
@@ -39,16 +44,43 @@ public:
   bool SupportsProfiling() const override { return false; }
 
   const std::vector<const char *> &getStdLibs() const { return StdLibs; }
-  const std::vector<const char *> &getStartFiles() const { return StartFiles; }
-  const std::vector<const char *> &getBuiltinNames() const { return BuiltinNames; }
+  const std::vector<const char *> &getBuiltinNames() const {
+    return BuiltinNames;
+  }
+  const std::vector<const char *> &getStartFiles(MemoryModel MemModel) const {
+    switch (MemModel) {
+    case MemoryModel::VonNeumann:
+      return StartFilesVonNeumann;
+    case MemoryModel::Harvard:
+      return StartFilesHarvard;
+    }
+  }
+  const std::vector<const char *> &
+  getLinkerScripts(MemoryModel MemModel) const {
+    switch (MemModel) {
+    case MemoryModel::VonNeumann:
+      return LinkerScriptsVonNeumann;
+    case MemoryModel::Harvard:
+      return LinkerScriptsHarvard;
+    }
+  }
+
+  static std::optional<MemoryModel>
+  getMemoryModel(const Driver &D, const llvm::opt::ArgList &Args);
 
 protected:
   Tool *buildLinker() const override;
 
 private:
   const std::vector<const char *> StdLibs = {"c"};
-  const std::vector<const char *> StartFiles = {"crt0.o"};
   const std::vector<const char *> BuiltinNames = {"cdm-builtins"};
+
+  const std::vector<const char *> StartFilesVonNeumann = {"crt0-vn.o"};
+  const std::vector<const char *> StartFilesHarvard = {"crt0-hv.o"};
+  const std::vector<const char *> LinkerScriptsVonNeumann = {
+      "ldscripts/cdm-vn.ld"};
+  const std::vector<const char *> LinkerScriptsHarvard = {
+      "ldscripts/cdm-hv.ld"};
 };
 
 } // end namespace toolchains

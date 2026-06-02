@@ -24,6 +24,27 @@ void CDMToolChain::AddClangSystemIncludeArgs(
   }
 }
 
+std::optional<CDMToolChain::MemoryModel>
+CDMToolChain::getMemoryModel(const Driver &D, const llvm::opt::ArgList &Args) {
+  if (!Args.hasArg(options::OPT_mmem_model_EQ)) {
+    return MemoryModel::VonNeumann;
+  }
+
+  StringRef ArgValue = Args.getLastArgValue(options::OPT_mmem_model_EQ);
+  std::optional<MemoryModel> Model =
+      llvm::StringSwitch<std::optional<MemoryModel>>(ArgValue)
+          .Case("vonNeumann", MemoryModel::VonNeumann)
+          .Case("harvard", MemoryModel::Harvard)
+          .Case("vn", MemoryModel::VonNeumann)
+          .Case("hv", MemoryModel::Harvard)
+          .Default(std::nullopt);
+
+  if (!Model) {
+    D.Diag(diag::err_drv_clang_unsupported) << ArgValue;
+  }
+  return Model;
+}
+
 void CDM::LldLinker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfo &Output,
                                   const InputInfoList &Inputs,
@@ -58,25 +79,33 @@ void CDM::LldLinker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
+  std::optional<CDMToolChain::MemoryModel> MemModel =
+      CDMToolChain::getMemoryModel(D, Args);
+  if (!MemModel) {
+    return;
+  }
   if (!Args.hasArg(options::OPT_r, options::OPT_T)) {
-    CmdArgs.push_back("-T");
-    CmdArgs.push_back(
-        Args.MakeArgString(getCDMToolChain().GetFilePath("ldscripts/cdm.ld")));
+    for (const char *Script :
+         getCDMToolChain().getLinkerScripts(MemModel.value())) {
+      CmdArgs.push_back("-T");
+      CmdArgs.push_back(
+          Args.MakeArgString(getCDMToolChain().GetFilePath(Script)));
+    }
   }
   Args.addAllArgs(CmdArgs, {options::OPT_T, options::OPT_t});
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
                    options::OPT_r)) {
-    for (const char *obj : getCDMToolChain().getStartFiles()) {
-      CmdArgs.push_back(Args.MakeArgString(getCDMToolChain().GetFilePath(obj)));
+    for (const char *Obj : getCDMToolChain().getStartFiles(MemModel.value())) {
+      CmdArgs.push_back(Args.MakeArgString(getCDMToolChain().GetFilePath(Obj)));
     }
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
                    options::OPT_r)) {
-    for (const char *lib : getCDMToolChain().getStdLibs()) {
+    for (const char *Lib : getCDMToolChain().getStdLibs()) {
       CmdArgs.push_back("-l");
-      CmdArgs.push_back(lib);
+      CmdArgs.push_back(Lib);
     }
   }
 

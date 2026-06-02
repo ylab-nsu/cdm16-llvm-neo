@@ -1018,6 +1018,8 @@ def : Pat<(i16 addrFrame:$addr), (ADD (LDIImm6 imm:$addr), FP)>;
 // Load byte from address with anyext
 def : Pat<(i16(extloadi8 addr:$addr)), (LDB addr:$addr)>;
 def : Pat<(i16(extloadi8 addr2Reg:$addr)), (LDB2Reg addr2Reg:$addr)>;
+def : Pat<(i16(extloadi8 constAddr:$addr)), (LCB constAddr:$addr)>;
+def : Pat<(i16(extloadi8 constAddr2Reg:$addr)), (LCB2Reg constAddr2Reg:$addr)>;
 def : Pat<(i16(extloadi8 addrFrame:$src)), (LSB addrFrame:$src)>;
 
 // Conditional branch

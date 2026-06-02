@@ -667,6 +667,10 @@ defvar std = !strconcat("LangStandard::getLangStandardForKind(", lang_std.KeyPat
 def cocas_debug_output : Separate<["--"], "cocas-debug-output">,
                          Group<m_cdm_Features_Group>,
                          HelpText<"Set the file to export CdM debug symbols to">;
+def mmem_model_EQ : Joined<["-"], "mmem-model=">,
+  Group<m_cdm_Features_Group>,
+  Values<"vonNeumann,harvard">,
+  HelpText<"Specify the memory model to use (CDM ELF target only)">;
 
 def internal_Group : OptionGroup<"<clang internal options>">,
   Flags<[HelpHidden]>;
@@ -4282,7 +4286,7 @@ def fno_trigraphs : Flag<["-"], "fno-trigraphs">, Group<f_Group>,
   HelpText<"Do not process trigraph sequences">,
   Visibility<[ClangOption, CC1Option]>;
 def funique_source_file_names: Flag<["-"], "funique-source-file-names">, Group<f_Group>,
-  HelpText<"Allow the compiler to assume that each translation unit has a unique "                       
+  HelpText<"Allow the compiler to assume that each translation unit has a unique "
            "source file identifier (see -funique-source-file-identifier) at link time">;
 def fno_unique_source_file_names: Flag<["-"], "fno-unique-source-file-names">;
 def unique_source_file_identifier_EQ: Joined<["-"], "funique-source-file-identifier=">, Group<f_Group>,
@@ -7082,7 +7086,7 @@ defm android_pad_segment : BooleanFFlag<"android-pad-segment">, Group<f_Group>;
 def shared_libflangrt : Flag<["-"], "shared-libflangrt">,
   HelpText<"Link the flang-rt shared library">, Group<Link_Group>,
   Visibility<[FlangOption]>, Flags<[NoArgumentUnused]>;
-def static_libflangrt : Flag<["-"], "static-libflangrt">, 
+def static_libflangrt : Flag<["-"], "static-libflangrt">,
   HelpText<"Link the flang-rt static library">, Group<Link_Group>,
   Visibility<[FlangOption]>, Flags<[NoArgumentUnused]>;
 
