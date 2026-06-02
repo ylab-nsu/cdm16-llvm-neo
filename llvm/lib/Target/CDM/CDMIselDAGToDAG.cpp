@@ -95,9 +95,6 @@ bool CDMDagToDagIsel::trySelectPointerCall(SDNode *N) {
 
 bool CDMDagToDagIsel::selectAddrFrameIndex(SDNode *Op, SDValue N,
                                            SDValue &Base) {
-  if (isProgramMemoryAccess(cast<MemSDNode>(Op))) {
-    return false;
-  }
   EVT ValTy = N.getValueType();
   SDLoc DL(N);
 
