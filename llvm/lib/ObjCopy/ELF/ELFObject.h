@@ -175,6 +175,8 @@ public:
   friend class SRECSectionWriter;                                              \
   friend class SRECSectionWriterBase;                                          \
   friend class SRECSizeCalculator;                                             \
+  friend class LogisimSectionWriterBase;                                       \
+  friend class LogisimSectionWriter;                                           \
   template <class ELFT> friend class ELFSectionWriter;                         \
   template <class ELFT> friend class ELFSectionSizer;
 
@@ -417,6 +419,22 @@ private:
   getTotalSize(WritableMemoryBuffer &EmptyBuffer) const override;
 };
 
+class LogisimWriter : public Writer {
+public:
+  LogisimWriter(Object &Obj, raw_ostream &OS)
+      : Writer(Obj, OS) {}
+  Error write() override;
+  Error finalize() override;
+
+private:
+  std::vector<const SectionBase *> Sections;
+  size_t TotalSize = 0;
+
+  size_t writeString(uint8_t *Buf, const char *Str) const;
+  Expected<size_t>
+  getTotalSize(WritableMemoryBuffer &EmptyBuffer) const;
+};
+
 using SRecLineData = SmallVector<char, 64>;
 struct SRecord {
   uint8_t Type;
@@ -504,6 +522,39 @@ public:
 
 protected:
   void writeRecord(SRecord &Record, uint64_t Off) override;
+};
+
+class LogisimSectionWriterBase : public BinarySectionWriter {
+protected:
+  uint64_t Offset = 0;
+  uint64_t LastSectionEnd = 0;
+
+  void writeSection(const SectionBase &Sec, ArrayRef<uint8_t> Data);
+  void writeFill(size_t Count);
+  virtual void writeData(ArrayRef<uint8_t> Data);
+  virtual void writeString(StringRef String);
+
+public:
+  explicit LogisimSectionWriterBase(WritableMemoryBuffer &Buf,
+                                    uint64_t StartOffset)
+      : BinarySectionWriter(Buf), Offset(StartOffset) {}
+
+  uint64_t getBufferOffset() const { return Offset; }
+  Error visit(const Section &Sec) override;
+  Error visit(const OwnedDataSection &Sec) override;
+  Error visit(const StringTableSection &Sec) override;
+  Error visit(const DynamicRelocationSection &Sec) override;
+  using BinarySectionWriter::visit;
+};
+
+class LogisimSectionWriter : public LogisimSectionWriterBase {
+public:
+  LogisimSectionWriter(WritableMemoryBuffer &Buf, uint64_t StartOffset)
+      : LogisimSectionWriterBase(Buf, StartOffset) {}
+
+  void writeData(ArrayRef<uint8_t> Data) override;
+  void writeString(StringRef String) override;
+  Error visit(const StringTableSection &Sec) override;
 };
 
 class SectionBase {
@@ -671,7 +722,7 @@ class CompressedSection : public SectionBase {
 
 public:
   CompressedSection(const SectionBase &Sec,
-    DebugCompressionType CompressionType, bool Is64Bits);
+                    DebugCompressionType CompressionType, bool Is64Bits);
   CompressedSection(ArrayRef<uint8_t> CompressedData, uint32_t ChType,
                     uint64_t DecompressedSize, uint64_t DecompressedAlign);
 
