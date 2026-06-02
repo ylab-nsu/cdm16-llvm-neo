@@ -1,5 +1,3 @@
-OUTPUT_FORMAT("binary")
-
 EXTERN(_default_handler);
 
 PROVIDE(_exception_handler = _default_handler);
@@ -35,6 +33,10 @@ SECTIONS
   .text : {
     *(.text._start);        /* Reset/startup code */
     *(.text*);              /* Program code */
+  } > RAM
+
+  .rodata : {
+    *(.progmem*);           /* Program memory constants (for compatibility with Harvard model) */
     *(.rodata*);            /* Read-only data */
   } > RAM
 

@@ -45,8 +45,9 @@ RelExpr CDM::getRelExpr(RelType type, const Symbol &s,
 void CDM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   switch (rel.type) {
   case R_CDM_16:
-    checkUInt(ctx, loc, val, 16, rel);
-    write16le(loc, val);
+    // Allow overflow to support Harvard memory model
+    // where RAM addresses start at 0x80000
+    write16le(loc, val & 0xffff);
     break;
   default:
     llvm_unreachable("unknown relocation");
