@@ -56,8 +56,11 @@ SECTIONS
   __data_rom = LOADADDR(.data);
   __data_length = SIZEOF(.data);
   __bss_length = SIZEOF(.bss);
+  __stack_start = (RAM_ORIGIN + RAM_LENGTH) & 0xFFFF;
 }
 
+ASSERT(RAM_ORIGIN % 2 == 0, "ERROR(cdm-rt): RAM_ORIGIN must be a multiple of 2");
+ASSERT(RAM_ORIGIN % 2 != 0 || RAM_LENGTH % 2 == 0, "ERROR(cdm-rt): RAM_LENGTH must be a multiple of 2");
 ASSERT(__vector_table_ex == __vector_table + 0x4, "ERROR(cdm-rt): missing reset vector");
 ASSERT(__vector_table_ex == __vector_table || __vector_table_ex == __vector_table + 0x4, "ERROR(cdm-rt): invalid reset vector");
 ASSERT(__vector_table_int != __vector_table_ex, "ERROR(cdm-rt): missing exception vectors");

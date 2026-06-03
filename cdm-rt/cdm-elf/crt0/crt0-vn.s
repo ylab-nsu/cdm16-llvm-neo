@@ -11,7 +11,7 @@
 .global _start
 .type _start,%function
 _start:
-ldi fp, 0
+ldi fp, __stack_start
 stsp fp
 jsr main
 halt
