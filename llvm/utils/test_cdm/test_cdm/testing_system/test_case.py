@@ -102,8 +102,11 @@ class ElfEndToEndTestCase(TestCase):
                     """)
         absolute_sections_size += len(sec.content)
 
+      ram_origin = cls._START_OF_ABSOLUTE_SECTIONS + absolute_sections_size
+      ram_origin = ram_origin + ram_origin % 2
+
       temp.write(f"""
-                 RAM_ORIGIN = {cls._START_OF_ABSOLUTE_SECTIONS + absolute_sections_size};
+                 RAM_ORIGIN = {ram_origin};
                  """)
 
       return Path(temp.name)
