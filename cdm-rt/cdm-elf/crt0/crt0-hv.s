@@ -12,7 +12,7 @@
 .type _start,%function
 _start:
 # Initialize stack
-ldi fp, 0
+ldi fp, __stack_start
 stsp fp
 
 # Copy .data
@@ -33,10 +33,11 @@ bnz 0b
 # Initialize .bss
 ldi r0, __bss
 ldi r1, __bss_length
+ldi r2, 0
 cmp r1, 0
 br 1f
 0:
-stw r0, fp
+stw r0, r2
 add r0, 2
 add r1, -2
 1:
