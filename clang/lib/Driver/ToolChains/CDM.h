@@ -79,12 +79,12 @@ private:
   const std::vector<const char *> StdLibs = {"c"};
   const std::vector<const char *> BuiltinNames = {"cdm-builtins"};
 
-  const std::vector<const char *> StartFilesVonNeumann = {"crt0-vn.o"};
-  const std::vector<const char *> StartFilesHarvard = {"crt0-hv.o"};
+  const std::vector<const char *> StartFilesVonNeumann = {"crt0-vonNeumann.o"};
+  const std::vector<const char *> StartFilesHarvard = {"crt0-harvard.o"};
   const std::vector<const char *> LinkerScriptsVonNeumann = {
-      "ldscripts/cdm-vn.ld"};
+      "ldscripts/cdm-vonNeumann.ld"};
   const std::vector<const char *> LinkerScriptsHarvard = {
-      "ldscripts/cdm-hv.ld"};
+      "ldscripts/cdm-harvard.ld"};
 };
 
 } // end namespace toolchains
