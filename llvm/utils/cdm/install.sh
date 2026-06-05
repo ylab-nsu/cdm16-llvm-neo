@@ -279,8 +279,15 @@ curl --proto "=https" --tlsv1.2 -#fLo "$download_dir/llvm.tar.gz" "$download_url
 mkdir -p "$download_dir/llvm"
 echo "Extracting LLVM..."
 tar -xzf "$download_dir/llvm.tar.gz" -C "$install_dir/lib/llvm"
+
+binaries="clang llc ld.lld llvm-ar llvm-as llvm-dis llvm-link llvm-mc llvm-nm \
+    llvm-objcopy llvm-objdump llvm-readelf llvm-readobj llvm-size llvm-strings opt"
+
+echo "Creating executable symlinks..."
 mkdir -p "$install_dir/bin"
-ln -s "$install_dir_abs/lib/llvm/bin/clang" "$install_dir/bin/clang-cdm"
+for binary in $binaries; do
+    ln -s "$install_dir_abs/lib/llvm/bin/$binary" "$install_dir_abs/bin/$binary-cdm"
+done
 
 llvm_info="$install_dir/.cdm-llvm"
 uninstall_script="$install_dir/lib/uninstall.sh"
