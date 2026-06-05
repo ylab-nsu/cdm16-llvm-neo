@@ -224,6 +224,9 @@ python=$(find_python)
 check_venv "$python"
 
 if [ "$no_ask" -eq 0 ]; then
+    echo "Welcome to the interactive CDM-16 LLVM installer!"
+    echo "When prompted for input, press enter to use the default value."
+    echo
     prompt_input "Enter release name ($version):" version true
     prompt_input "Enter install directory ($install_dir):" install_dir check_install_dir update
     echo
