@@ -37,11 +37,15 @@ public:
   // always generate non-PIC code
   bool isPICDefaultForced() const override { return true; }
 
+  bool SupportsProfiling() const override { return false; }
+
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
 
-  bool SupportsProfiling() const override { return false; }
+  void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                             llvm::opt::ArgStringList &CC1Args,
+                             Action::OffloadKind) const override;
 
   const std::vector<const char *> &getStdLibs() const { return StdLibs; }
   const std::vector<const char *> &getBuiltinNames() const {
