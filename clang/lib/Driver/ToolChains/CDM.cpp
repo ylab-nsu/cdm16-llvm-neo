@@ -46,21 +46,22 @@ void CDMToolChain::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
 
 std::optional<CDMToolChain::MemoryModel>
 CDMToolChain::getMemoryModel(const Driver &D, const llvm::opt::ArgList &Args) {
-  if (!Args.hasArg(options::OPT_mmem_model_EQ)) {
+  Arg *A = Args.getLastArg(options::OPT_mmem_model_EQ);
+  if (!A) {
     return MemoryModel::VonNeumann;
   }
 
-  StringRef ArgValue = Args.getLastArgValue(options::OPT_mmem_model_EQ);
+  StringRef Val = A->getValue();
   std::optional<MemoryModel> Model =
-      llvm::StringSwitch<std::optional<MemoryModel>>(ArgValue)
+      llvm::StringSwitch<std::optional<MemoryModel>>(Val)
           .Case("vonNeumann", MemoryModel::VonNeumann)
           .Case("harvard", MemoryModel::Harvard)
           .Case("vn", MemoryModel::VonNeumann)
           .Case("hv", MemoryModel::Harvard)
           .Default(std::nullopt);
-
   if (!Model) {
-    D.Diag(diag::err_drv_clang_unsupported) << ArgValue;
+    D.Diag(diag::err_drv_unsupported_option_argument)
+        << A->getSpelling() << Val;
   }
   return Model;
 }
