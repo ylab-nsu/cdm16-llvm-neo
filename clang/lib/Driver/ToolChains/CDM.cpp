@@ -24,6 +24,26 @@ void CDMToolChain::AddClangSystemIncludeArgs(
   }
 }
 
+void CDMToolChain::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                                         llvm::opt::ArgStringList &CC1Args,
+                                         Action::OffloadKind Ofk) const {
+  Generic_ELF::addClangTargetOptions(DriverArgs, CC1Args, Ofk);
+
+  std::optional<CDMToolChain::MemoryModel> MemModel =
+      CDMToolChain::getMemoryModel(getDriver(), DriverArgs);
+  if (!MemModel) {
+    return;
+  }
+  switch (MemModel.value()) {
+  case MemoryModel::VonNeumann:
+    CC1Args.push_back("-D__VON_NEUMANN__");
+    break;
+  case MemoryModel::Harvard:
+    CC1Args.push_back("-D__HARVARD__");
+    break;
+  }
+}
+
 std::optional<CDMToolChain::MemoryModel>
 CDMToolChain::getMemoryModel(const Driver &D, const llvm::opt::ArgList &Args) {
   if (!Args.hasArg(options::OPT_mmem_model_EQ)) {
