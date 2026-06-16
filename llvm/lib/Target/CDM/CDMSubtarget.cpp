@@ -19,10 +19,21 @@ CDMSubtarget::CDMSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                            const CDMTargetMachine &TM)
     : CDMGenSubtargetInfo(TT, CPU, CPU, FS),
       InstrInfo(std::make_unique<CDMInstrInfo>()),
-      FrameLowering(std::make_unique<CDMFrameLowering>(*this)),
+      FrameLowering(std::make_unique<CDMFrameLowering>(
+          initializeSubtargetDependencies(CPU, FS, TM))),
       TLInfo(std::make_unique<CDMISelLowering>(TM, *this))
 
-{}
+{
+  ParseSubtargetFeatures(CPU, /*TuneCPU*/ CPU, FS);
+}
+
+CDMSubtarget &
+CDMSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
+                                              const TargetMachine &TM) {
+  ParseSubtargetFeatures(CPU, /*TuneCPU*/ CPU, FS);
+  return *this;
+}
+
 const TargetFrameLowering *CDMSubtarget::getFrameLowering() const {
   return FrameLowering.get();
 }

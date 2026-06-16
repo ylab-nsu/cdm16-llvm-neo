@@ -19,6 +19,7 @@ public:
 
 private:
 #include "CDMGenDAGISel.inc"
+  const CDMSubtarget *Subtarget = nullptr;
 
   void Select(SDNode *N) override;
   bool trySelectPointerCall(SDNode *N);
@@ -27,11 +28,17 @@ private:
   bool selectAddr(SDNode *Op, SDValue N, SDValue &Addr);
   bool selectAddr2Reg(SDNode *Op, SDValue N, SDValue &Base, SDValue &Offset);
   bool selectConstAddr(SDNode *Op, SDValue N, SDValue &Addr);
-  bool selectConstAddr2Reg(SDNode *Op, SDValue N, SDValue &Base, SDValue &Offset);
+  bool selectConstAddr2Reg(SDNode *Op, SDValue N, SDValue &Base,
+                           SDValue &Offset);
 
   bool SelectInlineAsmMemoryOperand(const SDValue &Op,
                                     InlineAsm::ConstraintCode ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    Subtarget = &MF.getSubtarget<CDMSubtarget>();
+    return SelectionDAGISel::runOnMachineFunction(MF);
+  }
 
   inline CDMCOND::CondOp condCodeToCDMCond(ISD::CondCode CC) const {
     switch (CC) {

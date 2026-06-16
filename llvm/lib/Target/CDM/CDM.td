@@ -1,4 +1,5 @@
 include "llvm/Target/Target.td"
+include "CDMExtensions.td"
 include "CDMRegisterInfo.td"
 include "CDMInstrInfo.td"
 include "CDMCallingConv.td"
