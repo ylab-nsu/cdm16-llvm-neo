@@ -26,6 +26,7 @@ public:
   CDMSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                const CDMTargetMachine &TM);
   void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
+
   const CDMISelLowering *getTargetLowering() const override {
     return TLInfo.get();
   }
@@ -38,10 +39,22 @@ public:
     return &TSInfo;
   }
 
+  CDMSubtarget &initializeSubtargetDependencies(StringRef CPU, StringRef FS,
+                                                const TargetMachine &TM);
+
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
+  bool GETTER() const { return ATTRIBUTE; }
+#include "CDMGenSubtargetInfo.inc"
+
 protected:
   std::unique_ptr<const CDMInstrInfo> InstrInfo;
   std::unique_ptr<const CDMFrameLowering> FrameLowering;
   std::unique_ptr<const CDMISelLowering> TLInfo;
+
+private:
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
+  bool ATTRIBUTE = DEFAULT;
+#include "CDMGenSubtargetInfo.inc"
 };
 
 } // namespace llvm

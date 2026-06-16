@@ -289,6 +289,13 @@ def cdmizeCondXform : SDNodeXForm<cond, [{
 }]>;
 
 //===----------------------------------------------------------------------===//
+// CDM target feature predicates
+//===----------------------------------------------------------------------===//
+
+def HasExtM : Predicate<"Subtarget->hasExtM()">,
+              AssemblerPredicate<(all_of ExtensionM)>;
+
+//===----------------------------------------------------------------------===//
 //===----------------------------------------------------------------------===//
 // CDM Instruction list
 //===----------------------------------------------------------------------===//
@@ -460,6 +467,30 @@ def STPC : Inst1Op<0b1001, (outs), (ins CPURegs:$rd), "stpc\t$rd", [(brind CPURe
 def MOVE : Inst2Op<0b0000, (outs CPURegs:$rd), (ins CPURegs:$rs), "move\t$rs, $rd", []> {
   let Defs = [PSR]; // LLVM assumes that copyPhysReg (where MOVE is used) doesn't clobber anything.
                     // This "Defs" isn't considered.
+}
+
+let Constraints = "$rdlo = $rs,$rdhi = $rd", isCommutable = 1, Defs = [PSR] in {
+  // Unsigned multiple
+  // Multiplies rs and rd. Puts the lower half of the result into rs and the upper half into rd.
+  def UMUL : Inst2Op<0b1100, (outs CPURegs:$rdlo, CPURegs:$rdhi), (ins CPURegs:$rs, CPURegs:$rd), "umul\t$rs, $rd",
+               [(set CPURegs:$rdlo, CPURegs:$rdhi, (umullohi CPURegs:$rs, CPURegs:$rd))]>, Requires<[HasExtM]>;
+
+  // Signed multiply
+  // Multiplies rs and rd. Puts the lower half of the result into rs and the upper half into rd.
+  def SMUL : Inst2Op<0b1101, (outs CPURegs:$rdlo, CPURegs:$rdhi), (ins CPURegs:$rs, CPURegs:$rd), "smul\t$rs, $rd",
+               [(set CPURegs:$rdlo, CPURegs:$rdhi, (smullohi CPURegs:$rs, CPURegs:$rd))]>, Requires<[HasExtM]>;
+}
+
+let Constraints = "$rdquot = $rs,$rdrem = $rd", Defs = [PSR] in {
+  // Unsigned divide
+  // Divides rs by rd. Puts the quotient into rs and the remainder into rd.
+  def UDIV : Inst2Op<0b1110, (outs CPURegs:$rdquot, CPURegs:$rdrem), (ins CPURegs:$rs, CPURegs:$rd), "udiv\t$rs, $rd",
+               [(set CPURegs:$rdquot, CPURegs:$rdrem, (udivrem CPURegs:$rs, CPURegs:$rd))]>, Requires<[HasExtM]>;
+
+  // Signed divide
+  // Divides rs by rd. Puts the quotient into rs and the remainder into rd.
+  def SDIV : Inst2Op<0b1111, (outs CPURegs:$rdquot, CPURegs:$rdrem), (ins CPURegs:$rs, CPURegs:$rd), "sdiv\t$rs, $rd",
+               [(set CPURegs:$rdquot, CPURegs:$rdrem, (sdivrem CPURegs:$rs, CPURegs:$rd))]>, Requires<[HasExtM]>;
 }
 
 //===----------------------------------------------------------------------===//

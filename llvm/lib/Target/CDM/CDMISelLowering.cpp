@@ -72,7 +72,7 @@ CDMISelLowering::CDMISelLowering(const CDMTargetMachine &TM,
   setOperationAction(ISD::SETCC, MVT::i16, Expand);
 
   // 32-bit and 64-bit shifts are expanded into shift-rotate chains
-  // or loops if the shift amount is variable.
+  // or loops if the shift amount is variable
   setOperationAction(ISD::SHL, MVT::i32, Custom);
   setOperationAction(ISD::SRL, MVT::i32, Custom);
   setOperationAction(ISD::SRA, MVT::i32, Custom);
@@ -83,31 +83,37 @@ CDMISelLowering::CDMISelLowering(const CDMTargetMachine &TM,
   setOperationAction(ISD::SRL_PARTS, MVT::i16, Expand);
   setOperationAction(ISD::SRA_PARTS, MVT::i16, Expand);
 
-  // We don't support multiplication/division natively,
-  // so they are lowered to libcalls.
-  setOperationAction(ISD::MUL, MVT::i16, LibCall);
-  setOperationAction(ISD::SMUL_LOHI, MVT::i16, Expand);
-  setOperationAction(ISD::UMUL_LOHI, MVT::i16, Expand);
+  // We have an optional mul/div extension
+  if (!Subtarget.hasExtM()) {
+    setOperationAction(ISD::SDIVREM, MVT::i16, Expand);
+    setOperationAction(ISD::UDIVREM, MVT::i16, Expand);
+    setOperationAction(ISD::SMUL_LOHI, MVT::i16, Expand);
+    setOperationAction(ISD::UMUL_LOHI, MVT::i16, Expand);
+  }
+
+  // Other kinds of mul/div operations are expanded
+  setOperationAction(ISD::MUL, MVT::i16, Expand);
   setOperationAction(ISD::MULHS, MVT::i16, Expand);
   setOperationAction(ISD::MULHU, MVT::i16, Expand);
-  setOperationAction(ISD::SDIV, MVT::i16, LibCall);
-  setOperationAction(ISD::UDIV, MVT::i16, LibCall);
-  setOperationAction(ISD::SDIVREM, MVT::i16, Expand);
-  setOperationAction(ISD::UDIVREM, MVT::i16, Expand);
-  setOperationAction(ISD::SREM, MVT::i16, LibCall);
-  setOperationAction(ISD::UREM, MVT::i16, LibCall);
+  setOperationAction(ISD::SDIV, MVT::i16, Expand);
+  setOperationAction(ISD::UDIV, MVT::i16, Expand);
+  setOperationAction(ISD::SREM, MVT::i16, Expand);
+  setOperationAction(ISD::UREM, MVT::i16, Expand);
 
+  // Custom lowering for 32/64 bit addition and subtraction
+  // that generates better code
   setOperationAction(ISD::ADD, MVT::i32, Custom);
   setOperationAction(ISD::SUB, MVT::i32, Custom);
   setOperationAction(ISD::ADD, MVT::i64, Custom);
   setOperationAction(ISD::SUB, MVT::i64, Custom);
 
-  // Expand other ops
+  // Bit ops are expanded
   setOperationAction(ISD::BSWAP, MVT::i16, Expand);
   setOperationAction(ISD::CTLZ, MVT::i16, Expand);
   setOperationAction(ISD::CTTZ, MVT::i16, Expand);
   setOperationAction(ISD::CTPOP, MVT::i16, Expand);
 
+  // Atomic ops are lowered to libcalls
   setOperationAction(ISD::ATOMIC_SWAP, MVT::i16, Expand);
   setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i16, Expand);
   setOperationAction(ISD::ATOMIC_LOAD_ADD, MVT::i16, Expand);

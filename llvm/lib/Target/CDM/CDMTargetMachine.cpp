@@ -32,7 +32,7 @@ CDMTargetMachine::CDMTargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, computeDataLayout(), TT, CPU, FS, Options,
                                Reloc::Static, CodeModel::Small, OL),
       TLOF(std::make_unique<CDMTargetObjectFile>()),
-      DataLayout(computeDataLayout()), DefaultSubtarget(TT, CPU, FS, *this) {
+      DataLayout(computeDataLayout()), Subtarget(TT, CPU, FS, *this) {
   initAsmInfo();
   //  Options.EmitAddrsig = false;
 }
