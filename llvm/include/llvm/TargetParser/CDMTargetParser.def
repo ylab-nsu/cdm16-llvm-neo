@@ -2,3 +2,4 @@
 #define CDM_EXTENSION(ARCH_NAME, FLAG_NAME)
 #endif
 CDM_EXTENSION('m', "+M")
+CDM_EXTENSION('e', "+E")
