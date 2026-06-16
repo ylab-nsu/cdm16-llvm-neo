@@ -25,36 +25,36 @@ class CDMSubtarget : public CDMGenSubtargetInfo {
 public:
   CDMSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                const CDMTargetMachine &TM);
+
   void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
-  const CDMISelLowering *getTargetLowering() const override {
-    return TLInfo.get();
+  const CDMISelLowering *getTargetLowering() const override { return &TLInfo; }
+  const TargetFrameLowering *getFrameLowering() const override {
+    return &FrameLowering;
   }
-  const TargetFrameLowering *getFrameLowering() const override;
-  const CDMInstrInfo *getInstrInfo() const override { return InstrInfo.get(); }
+  const CDMInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const CDMRegisterInfo *getRegisterInfo() const override {
-    return &(InstrInfo->getRegisterInfo());
+    return &InstrInfo.getRegisterInfo();
   }
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
   }
 
-  CDMSubtarget &initializeSubtargetDependencies(StringRef CPU, StringRef FS,
-                                                const TargetMachine &TM);
-
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool GETTER() const { return ATTRIBUTE; }
 #include "CDMGenSubtargetInfo.inc"
 
-protected:
-  std::unique_ptr<const CDMInstrInfo> InstrInfo;
-  std::unique_ptr<const CDMFrameLowering> FrameLowering;
-  std::unique_ptr<const CDMISelLowering> TLInfo;
-
 private:
+  CDMFrameLowering FrameLowering;
+  CDMInstrInfo InstrInfo;
+  CDMISelLowering TLInfo;
+
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool ATTRIBUTE = DEFAULT;
 #include "CDMGenSubtargetInfo.inc"
+
+  CDMSubtarget &initializeSubtargetDependencies(StringRef CPU, StringRef FS,
+                                                const TargetMachine &TM);
 };
 
 } // namespace llvm
