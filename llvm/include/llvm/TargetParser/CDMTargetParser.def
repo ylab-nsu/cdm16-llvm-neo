@@ -1,5 +1,5 @@
 #ifndef CDM_EXTENSION
 #define CDM_EXTENSION(ARCH_NAME, FLAG_NAME)
 #endif
-CDM_EXTENSION('m', "+M")
-CDM_EXTENSION('e', "+E")
+CDM_EXTENSION('m', "+m")
+CDM_EXTENSION('e', "+e")
