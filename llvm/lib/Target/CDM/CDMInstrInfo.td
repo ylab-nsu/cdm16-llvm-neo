@@ -292,8 +292,13 @@ def cdmizeCondXform : SDNodeXForm<cond, [{
 // CDM target feature predicates
 //===----------------------------------------------------------------------===//
 
+// mul/div extension
 def HasExtM : Predicate<"Subtarget->hasExtM()">,
               AssemblerPredicate<(all_of ExtensionM)>;
+
+// OS extension
+def HasExtE : Predicate<"Subtarget->hasExtE()">,
+              AssemblerPredicate<(all_of ExtensionE)>;
 
 //===----------------------------------------------------------------------===//
 //===----------------------------------------------------------------------===//
@@ -458,6 +463,14 @@ def STPC : Inst1Op<0b1001, (outs), (ins CPURegs:$rd), "stpc\t$rd", [(brind CPURe
   let isIndirectBranch = 1;
 }
 
+// Load shadow SP
+// Copies value from shadow SP to rd.
+def LDSSP : Inst1Op<0b1110, (outs CPURegs:$rd), (ins), "ldssp\t$rd", []>, Requires<[HasExtE]>;
+
+// Store shadow SP
+// Copies value from rd to shadow SP.
+def STSSP : Inst1Op<0b1111, (outs), (ins CPURegs:$rd), "stssp\t$rd", []>, Requires<[HasExtE]>;
+
 //===----------------------------------------------------------------------===//
 // 2op format
 //===----------------------------------------------------------------------===//
@@ -473,25 +486,42 @@ let Constraints = "$rdlo = $rs,$rdhi = $rd", isCommutable = 1, Defs = [PSR] in {
   // Unsigned multiple
   // Multiplies rs and rd. Puts the lower half of the result into rs and the upper half into rd.
   def UMUL : Inst2Op<0b1100, (outs CPURegs:$rdlo, CPURegs:$rdhi), (ins CPURegs:$rs, CPURegs:$rd), "umul\t$rs, $rd",
-               [(set CPURegs:$rdlo, CPURegs:$rdhi, (umullohi CPURegs:$rs, CPURegs:$rd))]>, Requires<[HasExtM]>;
+               [(set CPURegs:$rdlo, CPURegs:$rdhi, (umullohi CPURegs:$rs, CPURegs:$rd))]>,
+             Requires<[HasExtM]>;
 
   // Signed multiply
   // Multiplies rs and rd. Puts the lower half of the result into rs and the upper half into rd.
   def SMUL : Inst2Op<0b1101, (outs CPURegs:$rdlo, CPURegs:$rdhi), (ins CPURegs:$rs, CPURegs:$rd), "smul\t$rs, $rd",
-               [(set CPURegs:$rdlo, CPURegs:$rdhi, (smullohi CPURegs:$rs, CPURegs:$rd))]>, Requires<[HasExtM]>;
+               [(set CPURegs:$rdlo, CPURegs:$rdhi, (smullohi CPURegs:$rs, CPURegs:$rd))]>,
+             Requires<[HasExtM]>;
 }
 
 let Constraints = "$rdquot = $rs,$rdrem = $rd", Defs = [PSR] in {
   // Unsigned divide
   // Divides rs by rd. Puts the quotient into rs and the remainder into rd.
   def UDIV : Inst2Op<0b1110, (outs CPURegs:$rdquot, CPURegs:$rdrem), (ins CPURegs:$rs, CPURegs:$rd), "udiv\t$rs, $rd",
-               [(set CPURegs:$rdquot, CPURegs:$rdrem, (udivrem CPURegs:$rs, CPURegs:$rd))]>, Requires<[HasExtM]>;
+               [(set CPURegs:$rdquot, CPURegs:$rdrem, (udivrem CPURegs:$rs, CPURegs:$rd))]>,
+             Requires<[HasExtM]>;
 
   // Signed divide
   // Divides rs by rd. Puts the quotient into rs and the remainder into rd.
   def SDIV : Inst2Op<0b1111, (outs CPURegs:$rdquot, CPURegs:$rdrem), (ins CPURegs:$rs, CPURegs:$rd), "sdiv\t$rs, $rd",
-               [(set CPURegs:$rdquot, CPURegs:$rdrem, (sdivrem CPURegs:$rs, CPURegs:$rd))]>, Requires<[HasExtM]>;
+               [(set CPURegs:$rdquot, CPURegs:$rdrem, (sdivrem CPURegs:$rs, CPURegs:$rd))]>,
+             Requires<[HasExtM]>;
 }
+
+let Constraints = "$rdold = $rd" in {
+  // Atomic swap words
+  def SWPW : Inst2Op<0b0010, (outs CPURegs:$rdold), (ins CPURegs:$rs, CPURegs:$rd), "swpw\t$rs, $rd", []>,
+             Requires<[HasExtE]>;
+
+  // Atomic swap bytes (zero extend)
+  def SWPB : Inst2Op<0b0011, (outs CPURegs:$rdold), (ins CPURegs:$rs, CPURegs:$rd), "swpb\t$rs, $rd", []>,
+             Requires<[HasExtE]>;
+}
+
+// CDM8-like alias
+def SWP : MnemonicAlias<"swp", "swpw">;
 
 //===----------------------------------------------------------------------===//
 // mem2/mem3 format
@@ -648,6 +678,9 @@ def TST : InstAlias<"tst\t$rd", (CMPImm6 CPURegs:$rd, 0)>;
 // Software interrupt
 // Triggers an interrupt with vector with number imm9.
 def INT : InstImm9<0b0000, (outs), (ins interruptVec:$imm), "int\t$imm", []>;
+
+// System call is "int 0x7"
+def SYSCALL : InstAlias<"syscall", (INT 7)>, Requires<[HasExtE]>;
 
 // Reset processor
 // Fetches reset vector thus performing soft reset.
