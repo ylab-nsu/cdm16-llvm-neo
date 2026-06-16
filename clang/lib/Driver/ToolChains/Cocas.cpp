@@ -6,11 +6,11 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Types.h"
-#include "llvm/TargetParser/Triple.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdlib>
 #include <cstring>
 #include <optional>
@@ -38,7 +38,8 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-c");
   }
   // If job kind is link and incremental linking requested, "Merge" objects
-  else if (JA.getKind() == Action::LinkJobClass && Args.hasArg(options::OPT_r)) {
+  else if (JA.getKind() == Action::LinkJobClass &&
+           Args.hasArg(options::OPT_r)) {
     CmdArgs.push_back("-m");
   }
 
@@ -59,9 +60,10 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  // Target cdm16
+  // Target settings
   CmdArgs.push_back("-t");
-  CmdArgs.push_back("cdm16");
+  CmdArgs.push_back(
+      Args.MakeArgString(Args.getLastArgValue(options::OPT_march_EQ, "cdm16")));
 
   // Add output file
   CmdArgs.push_back("-o");
@@ -75,23 +77,26 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (JA.getKind() == Action::LinkJobClass) {
-    if (!Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib, options::OPT_r)) {
+    if (!Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib,
+                     options::OPT_r)) {
       CmdArgs.push_back(
           Args.MakeArgString(getCocasToolChain().GetFilePath("crt0.o")));
     }
-    if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs, options::OPT_r)){
-        // Add object files from standard lib
-        for (const char *obj : getCocasToolChain().getStdLibObjs()) {
-          CmdArgs.push_back(
-              Args.MakeArgString(getCocasToolChain().GetFilePath(obj)));
-        }
+    if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
+                     options::OPT_r)) {
+      // Add object files from standard lib
+      for (const char *obj : getCocasToolChain().getStdLibObjs()) {
+        CmdArgs.push_back(
+            Args.MakeArgString(getCocasToolChain().GetFilePath(obj)));
+      }
     }
-    if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs, options::OPT_r)){
-        // Add builtins
-        for (const char *obj : getCocasToolChain().getBuiltinNames()) {
-          CmdArgs.push_back(getCocasToolChain().getCompilerRTArgString(
-              Args, obj, ToolChain::FT_Object));
-        }
+    if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
+                     options::OPT_r)) {
+      // Add builtins
+      for (const char *obj : getCocasToolChain().getBuiltinNames()) {
+        CmdArgs.push_back(getCocasToolChain().getCompilerRTArgString(
+            Args, obj, ToolChain::FT_Object));
+      }
     }
 
     std::vector<std::string> libSearchDirs =
@@ -193,10 +198,10 @@ void CocasToolChain::AddClangSystemIncludeArgs(
     llvm::opt::ArgStringList &CC1Args) const {
 
   if (DriverArgs.hasArg(options::OPT_nostdinc) ||
-      DriverArgs.hasArg(options::OPT_nostdlibinc)){
+      DriverArgs.hasArg(options::OPT_nostdlibinc)) {
     return;
   }
-  if (getIncludePath()){
+  if (getIncludePath()) {
     addSystemInclude(DriverArgs, CC1Args, *getIncludePath());
   }
 }
