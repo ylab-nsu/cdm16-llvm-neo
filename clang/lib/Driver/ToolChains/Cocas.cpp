@@ -1,4 +1,5 @@
 #include "Cocas.h"
+#include "CDM.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
@@ -32,6 +33,12 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
                               const llvm::opt::ArgList &Args,
                               const char *LinkingOutput) const {
   ArgStringList CmdArgs;
+
+  // Claim all -mmem-model= options when linking
+  // to behave like the cocas-less target
+  if (JA.getKind() == Action::LinkJobClass) {
+    Args.claimAllArgs(options::OPT_mmem_model_EQ);
+  }
 
   // If job kind is Assemble, only assemble, don't link
   if (JA.getKind() == Action::AssembleJobClass) {
@@ -175,15 +182,24 @@ CocasToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
                               Action::OffloadKind DeviceOffloadKind) const {
   DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
 
-  // TODO: Remove this when C debug info emitting to objects in cocas got done
+  // Check that the memory model is valid and supported
+  bool MemModelValid =
+      checkMemoryModel(getDriver(), Args, {MemoryModel::VonNeumann});
 
-  // Remove all debug-related options and warn user, that they're ignored
   for (Arg *A : Args) {
     if (A->getOption().matches(options::OPT_DebugInfo_Group)) {
+      // Remove all debug-related options and warn user, that they're ignored
+      // TODO: Remove this when C debug info emitting to objects in cocas got
+      // done
       getDriver().Diag(clang::diag::warn_drv_unsupported_option_for_target)
           << A->getAsString(Args) << getTripleString();
 
       // Claim arg to avoid getting unused argument warn
+      A->claim();
+    } else if (!MemModelValid &&
+               A->getOption().matches(options::OPT_mmem_model_EQ)) {
+      // Remove all -mmem-model= arguments if the specified memory model is
+      // unsupported.
       A->claim();
     } else {
       DAL->append(A);
@@ -203,6 +219,20 @@ void CocasToolChain::AddClangSystemIncludeArgs(
   }
   if (getIncludePath()) {
     addSystemInclude(DriverArgs, CC1Args, *getIncludePath());
+  }
+}
+
+void CocasToolChain::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                                           llvm::opt::ArgStringList &CC1Args,
+                                           Action::OffloadKind Ofk) const {
+  MemoryModel MemModel = getMemoryModel(getDriver(), DriverArgs);
+  switch (MemModel) {
+  case MemoryModel::VonNeumann:
+    CC1Args.push_back("-D__VON_NEUMANN__");
+    break;
+  case MemoryModel::Harvard:
+    CC1Args.push_back("-D__HARVARD__");
+    break;
   }
 }
 
