@@ -11,15 +11,22 @@
 namespace clang {
 namespace driver {
 
+enum class MemoryModel {
+  VonNeumann,
+  Harvard,
+};
+
+bool checkMemoryModel(const Driver &D, const llvm::opt::ArgList &Args,
+                      const ArrayRef<MemoryModel> AllowedModels = {
+                          MemoryModel::VonNeumann, MemoryModel::Harvard});
+
+MemoryModel getMemoryModel(const Driver &D, const llvm::opt::ArgList &Args,
+                           MemoryModel DefaultModel = MemoryModel::VonNeumann);
+
 namespace toolchains {
 
 class LLVM_LIBRARY_VISIBILITY CDMToolChain : public Generic_ELF {
 public:
-  enum class MemoryModel {
-    VonNeumann,
-    Harvard,
-  };
-
   CDMToolChain(const Driver &D, const llvm::Triple &Triple,
                const llvm::opt::ArgList &Args)
       : Generic_ELF(D, Triple, Args) {}
@@ -38,6 +45,10 @@ public:
   bool isPICDefaultForced() const override { return true; }
 
   bool SupportsProfiling() const override { return false; }
+
+  llvm::opt::DerivedArgList *
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+                Action::OffloadKind DeviceOffloadKind) const override;
 
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
@@ -68,9 +79,6 @@ public:
       return LinkerScriptsHarvard;
     }
   }
-
-  static std::optional<MemoryModel>
-  getMemoryModel(const Driver &D, const llvm::opt::ArgList &Args);
 
 protected:
   Tool *buildLinker() const override;

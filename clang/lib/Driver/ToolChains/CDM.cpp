@@ -7,8 +7,85 @@ using namespace clang::driver;
 using namespace clang::driver::toolchains;
 using namespace clang::driver::tools;
 
+bool clang::driver::checkMemoryModel(
+    const Driver &D, const llvm::opt::ArgList &Args,
+    const ArrayRef<MemoryModel> AllowedModels) {
+  Arg *A = Args.getLastArgNoClaim(options::OPT_mmem_model_EQ);
+  if (!A) {
+    return true;
+  }
+
+  StringRef Val = A->getValue();
+  std::optional<MemoryModel> Model =
+      llvm::StringSwitch<std::optional<MemoryModel>>(Val)
+          .Case("vonNeumann", MemoryModel::VonNeumann)
+          .Case("harvard", MemoryModel::Harvard)
+          .Case("vn", MemoryModel::VonNeumann)
+          .Case("hv", MemoryModel::Harvard)
+          .Default(std::nullopt);
+
+  if (!Model) {
+    D.Diag(diag::err_drv_unsupported_option_argument)
+        << A->getSpelling() << Val;
+    return false;
+  }
+  if (std::find(AllowedModels.begin(), AllowedModels.end(), Model) ==
+      AllowedModels.end()) {
+    D.Diag(clang::diag::err_drv_unsupported_option_argument_for_target)
+        << A->getSpelling() << Val << D.getTargetTriple();
+    return false;
+  }
+  return true;
+}
+
+MemoryModel clang::driver::getMemoryModel(const Driver &D,
+                                          const llvm::opt::ArgList &Args,
+                                          MemoryModel DefaultModel) {
+  Arg *A = Args.getLastArg(options::OPT_mmem_model_EQ);
+  if (!A) {
+    return DefaultModel;
+  }
+
+  return llvm::StringSwitch<MemoryModel>(A->getValue())
+      .Case("vonNeumann", MemoryModel::VonNeumann)
+      .Case("harvard", MemoryModel::Harvard)
+      .Case("vn", MemoryModel::VonNeumann)
+      .Case("hv", MemoryModel::Harvard)
+      .Default(DefaultModel);
+}
+
 Tool *CDMToolChain::buildLinker() const {
   return new tools::CDM::LldLinker(*this);
+}
+
+DerivedArgList *
+CDMToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
+                            StringRef BoundArch,
+                            Action::OffloadKind DeviceOffloadKind) const {
+  DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
+
+  // Check that the memory model is valid
+  bool MemModelValid = checkMemoryModel(getDriver(), Args);
+
+  for (Arg *A : Args) {
+    if (A->getOption().matches(options::OPT_DebugInfo_Group)) {
+      // Remove all debug-related options and warn user, that they're ignored
+      // TODO: Remove this when DWARF debug info is supported
+      getDriver().Diag(clang::diag::warn_drv_unsupported_option_for_target)
+          << A->getAsString(Args) << getTripleString();
+
+      // Claim arg to avoid getting unused argument warn
+      A->claim();
+    } else if (!MemModelValid &&
+               A->getOption().matches(options::OPT_mmem_model_EQ)) {
+      // Remove all -mmem-model= arguments if the last one is invalid.
+      A->claim();
+    } else {
+      DAL->append(A);
+    }
+  }
+
+  return DAL;
 }
 
 void CDMToolChain::AddClangSystemIncludeArgs(
@@ -29,12 +106,8 @@ void CDMToolChain::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                                          Action::OffloadKind Ofk) const {
   Generic_ELF::addClangTargetOptions(DriverArgs, CC1Args, Ofk);
 
-  std::optional<CDMToolChain::MemoryModel> MemModel =
-      CDMToolChain::getMemoryModel(getDriver(), DriverArgs);
-  if (!MemModel) {
-    return;
-  }
-  switch (MemModel.value()) {
+  MemoryModel MemModel = getMemoryModel(getDriver(), DriverArgs);
+  switch (MemModel) {
   case MemoryModel::VonNeumann:
     CC1Args.push_back("-D__VON_NEUMANN__");
     break;
@@ -42,28 +115,6 @@ void CDMToolChain::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
     CC1Args.push_back("-D__HARVARD__");
     break;
   }
-}
-
-std::optional<CDMToolChain::MemoryModel>
-CDMToolChain::getMemoryModel(const Driver &D, const llvm::opt::ArgList &Args) {
-  Arg *A = Args.getLastArg(options::OPT_mmem_model_EQ);
-  if (!A) {
-    return MemoryModel::VonNeumann;
-  }
-
-  StringRef Val = A->getValue();
-  std::optional<MemoryModel> Model =
-      llvm::StringSwitch<std::optional<MemoryModel>>(Val)
-          .Case("vonNeumann", MemoryModel::VonNeumann)
-          .Case("harvard", MemoryModel::Harvard)
-          .Case("vn", MemoryModel::VonNeumann)
-          .Case("hv", MemoryModel::Harvard)
-          .Default(std::nullopt);
-  if (!Model) {
-    D.Diag(diag::err_drv_unsupported_option_argument)
-        << A->getSpelling() << Val;
-  }
-  return Model;
 }
 
 void CDM::LldLinker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -100,14 +151,10 @@ void CDM::LldLinker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
-  std::optional<CDMToolChain::MemoryModel> MemModel =
-      CDMToolChain::getMemoryModel(D, Args);
-  if (!MemModel) {
-    return;
-  }
+  MemoryModel MemModel = getMemoryModel(D, Args);
+
   if (!Args.hasArg(options::OPT_r, options::OPT_T)) {
-    for (const char *Script :
-         getCDMToolChain().getLinkerScripts(MemModel.value())) {
+    for (const char *Script : getCDMToolChain().getLinkerScripts(MemModel)) {
       CmdArgs.push_back("-T");
       CmdArgs.push_back(
           Args.MakeArgString(getCDMToolChain().GetFilePath(Script)));
@@ -117,7 +164,7 @@ void CDM::LldLinker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
                    options::OPT_r)) {
-    for (const char *Obj : getCDMToolChain().getStartFiles(MemModel.value())) {
+    for (const char *Obj : getCDMToolChain().getStartFiles(MemModel)) {
       CmdArgs.push_back(Args.MakeArgString(getCDMToolChain().GetFilePath(Obj)));
     }
   }
