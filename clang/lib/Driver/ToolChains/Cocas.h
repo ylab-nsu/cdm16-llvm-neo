@@ -18,9 +18,9 @@ class LLVM_LIBRARY_VISIBILITY CocasToolChain : public ToolChain {
 
   std::optional<std::string> CocasPath; // Cocas executable path
   std::optional<std::string> IncludePath;
-  const std::vector<const char *> StdLibObjs = {"libc.o"};
+  const std::vector<const char *> StdLibObjs = {"c.lib"};
   // Each name <name> corresponds to file
-  // <clang_resources_dir>/lib/cdm/clang_rt.<name>.o
+  // <clang_resources_dir>/lib/cdm/clang_rt.<name>.lib
   const std::vector<const char *> BuiltinNames = {"cdm-builtins"};
 
 public:

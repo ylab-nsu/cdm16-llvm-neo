@@ -102,12 +102,19 @@ void CDM::Cocas::ConstructJob(Compilation &C, const JobAction &JA,
       // Add builtins
       for (const char *obj : getCocasToolChain().getBuiltinNames()) {
         CmdArgs.push_back(getCocasToolChain().getCompilerRTArgString(
-            Args, obj, ToolChain::FT_Object));
+            Args, obj, ToolChain::FT_Static));
       }
     }
 
+    // User search paths
     std::vector<std::string> libSearchDirs =
         Args.getAllArgValues(options::OPT_L);
+
+    // Default search paths
+    for (auto LibPath : getCocasToolChain().getFilePaths()) {
+      libSearchDirs.push_back(LibPath);
+    }
+
     std::vector<std::string> libsToLink = Args.getAllArgValues(options::OPT_l);
 
     // Link files, provided with -l option

@@ -731,19 +731,26 @@ std::string ToolChain::buildCompilerRTBasename(const llvm::opt::ArgList &Args,
   bool IsITANMSVCWindows =
       TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment();
 
-  const char *Prefix =
-      IsITANMSVCWindows || Type == ToolChain::FT_Object ? "" : "lib";
+  const char *Prefix;
+  if (IsITANMSVCWindows || TT.isCocas() || Type == ToolChain::FT_Object) {
+    Prefix = "";
+  } else {
+    Prefix = "lib";
+  }
+
   const char *Suffix;
   switch (Type) {
   case ToolChain::FT_Object:
     Suffix = IsITANMSVCWindows ? ".obj" : ".o";
     break;
   case ToolChain::FT_Static:
-    Suffix = IsITANMSVCWindows ? ".lib" : ".a";
+    Suffix = IsITANMSVCWindows || TT.isCocas() ? ".lib" : ".a";
     break;
   case ToolChain::FT_Shared:
     if (TT.isOSWindows())
       Suffix = TT.isWindowsGNUEnvironment() ? ".dll.a" : ".lib";
+    else if (TT.isCocas())
+      Suffix = ".lib";
     else if (TT.isOSAIX())
       Suffix = ".a";
     else
