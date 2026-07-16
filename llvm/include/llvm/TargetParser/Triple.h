@@ -921,6 +921,10 @@ public:
     return getArch() == Triple::cdm;
   }
 
+  bool isCocas() const {
+    return getEnvironment() == Triple::Cocas;
+  }
+
   /// Tests whether the target supports the EHABI exception
   /// handling standard.
   bool isTargetEHABICompatible() const {
