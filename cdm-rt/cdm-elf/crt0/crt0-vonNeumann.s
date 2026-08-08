@@ -2,10 +2,21 @@
 .short _start, 0
 
 .section .ivt.exceptions, "a", @progbits
-.short _unaligned_sp, 1
-.short _unaligned_pc, 2
-.short _invalid_inst, 3
-.short _double_fault, 4
+.short _ex_unaligned_sp, 0x1
+.short _ex_unaligned_pc, 0x2
+.short _ex_invalid_inst, 0x3
+.short _ex_double_fault, 0x4
+.short _ex_priv_violation, 0x5
+.short _ex_reserved_6, 0x6
+.short _ex_syscall, 0x7
+.short _ex_reserved_8, 0x8
+.short _ex_reserved_9, 0x9
+.short _ex_reserved_a, 0xa
+.short _ex_reserved_b, 0xb
+.short _ex_reserved_c, 0xc
+.short _ex_reserved_d, 0xd
+.short _ex_reserved_e, 0xe
+.short _ex_reserved_f, 0xf
 
 .section .text._start, "ax", @progbits
 .global _start
