@@ -21,11 +21,11 @@ ISR void _interrupt_handler(void);
 #define DEFAULT_VECTOR ((ivt_vector_t){ _interrupt_handler, 0 })
 
 // The number of standard exception handler entries in the IVT.
-#define EXCEPTION_COUNT 4
+#define EXCEPTION_COUNT 15
 // The starting index of the user interrupt handler section of the IVT.
-#define INTERRUPT_START 5
+#define INTERRUPT_START 16
 // The number of user interrupt handler entries in the IVT.
-#define INTERRUPT_COUNT 59
+#define INTERRUPT_COUNT 48
 
 #ifndef __COCAS__
 #define __CDM_RT_IVT_COUNT(...) __CDM_RT_IVT_COUNT_(__VA_ARGS__ __VA_OPT__(,)  \

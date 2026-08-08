@@ -3,10 +3,21 @@ EXTERN(_default_handler);
 PROVIDE(_exception_handler = _default_handler);
 PROVIDE(_interrupt_handler = _default_handler);
 
-PROVIDE(_unaligned_sp = _exception_handler);
-PROVIDE(_unaligned_pc = _exception_handler);
-PROVIDE(_invalid_inst = _exception_handler);
-PROVIDE(_double_fault = _exception_handler);
+PROVIDE(_ex_unaligned_sp = _exception_handler);
+PROVIDE(_ex_unaligned_pc = _exception_handler);
+PROVIDE(_ex_invalid_inst = _exception_handler);
+PROVIDE(_ex_double_fault = _exception_handler);
+PROVIDE(_ex_priv_violation = _exception_handler);
+PROVIDE(_ex_reserved_6 = _exception_handler);
+PROVIDE(_ex_syscall = _exception_handler);
+PROVIDE(_ex_reserved_8 = _exception_handler);
+PROVIDE(_ex_reserved_9 = _exception_handler);
+PROVIDE(_ex_reserved_a = _exception_handler);
+PROVIDE(_ex_reserved_b = _exception_handler);
+PROVIDE(_ex_reserved_c = _exception_handler);
+PROVIDE(_ex_reserved_d = _exception_handler);
+PROVIDE(_ex_reserved_e = _exception_handler);
+PROVIDE(_ex_reserved_f = _exception_handler);
 
 MEMORY {
     PROGMEM : ORIGIN = 0x0, LENGTH = 64K
@@ -64,4 +75,4 @@ ASSERT(RAM_ORIGIN % 2 != 0 || RAM_LENGTH % 2 == 0, "ERROR(cdm-rt): RAM_LENGTH mu
 ASSERT(__vector_table_ex == __vector_table + 0x4, "ERROR(cdm-rt): missing reset vector");
 ASSERT(__vector_table_ex == __vector_table || __vector_table_ex == __vector_table + 0x4, "ERROR(cdm-rt): invalid reset vector");
 ASSERT(__vector_table_int != __vector_table_ex, "ERROR(cdm-rt): missing exception vectors");
-ASSERT(__vector_table_int == __vector_table_ex || __vector_table_int == __vector_table_ex + 0x10, "ERROR(cdm-rt): incorrect number of exception vectors");
+ASSERT(__vector_table_int == __vector_table_ex || __vector_table_int == __vector_table_ex + 15 * 0x4, "ERROR(cdm-rt): incorrect number of exception vectors");
