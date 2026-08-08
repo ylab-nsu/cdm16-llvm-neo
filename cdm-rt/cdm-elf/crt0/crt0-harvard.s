@@ -55,7 +55,9 @@ add r1, -2
 bnz 0b
 
 # Hand control over to user code
+addsp -8
 jsr main
+addsp 8
 halt
 
 .global _default_handler

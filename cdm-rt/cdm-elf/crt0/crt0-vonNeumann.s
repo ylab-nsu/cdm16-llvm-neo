@@ -24,7 +24,9 @@
 _start:
 ldi fp, __stack_start
 stsp fp
+addsp -8
 jsr main
+addsp 8
 halt
 
 .global _default_handler
