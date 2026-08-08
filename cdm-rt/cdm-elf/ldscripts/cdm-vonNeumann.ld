@@ -31,8 +31,6 @@ SECTIONS
 {
   .ivt 0x00 : {             /* Interrupt vector table */
     __vector_table = .;
-    KEEP(*(.ivt.reset_vector));
-    __vector_table_ex = .;
     KEEP(*(.ivt.exceptions));
     __vector_table_int = .;
     KEEP(*(.ivt.interrupts));
@@ -65,7 +63,5 @@ SECTIONS
 
 ASSERT(RAM_ORIGIN % 2 == 0, "ERROR(cdm-rt): RAM_ORIGIN must be a multiple of 2");
 ASSERT(RAM_ORIGIN % 2 != 0 || RAM_LENGTH % 2 == 0, "ERROR(cdm-rt): RAM_LENGTH must be a multiple of 2");
-ASSERT(__vector_table_ex == __vector_table + 0x4, "ERROR(cdm-rt): missing reset vector");
-ASSERT(__vector_table_ex == __vector_table || __vector_table_ex == __vector_table + 0x4, "ERROR(cdm-rt): invalid reset vector");
-ASSERT(__vector_table_int != __vector_table_ex, "ERROR(cdm-rt): missing exception vectors");
-ASSERT(__vector_table_int == __vector_table_ex || __vector_table_int == __vector_table_ex + 15 * 0x4, "ERROR(cdm-rt): incorrect number of exception vectors");
+ASSERT(__vector_table_int != __vector_table, "ERROR(cdm-rt): missing exception vectors");
+ASSERT(__vector_table_int == __vector_table || __vector_table_int == __vector_table + 16 * 0x4, "ERROR(cdm-rt): incorrect number of exception vectors (must be 16)");

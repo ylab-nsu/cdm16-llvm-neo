@@ -1,7 +1,5 @@
-.section .ivt.reset_vector, "a", @progbits
-.short _start, 0
-
 .section .ivt.exceptions, "a", @progbits
+.short _start, 0x0
 .short _ex_unaligned_sp, 0x1
 .short _ex_unaligned_pc, 0x2
 .short _ex_invalid_inst, 0x3

@@ -20,10 +20,8 @@ ISR void _interrupt_handler(void);
 // The default interrupt vector for unused interrupts.
 #define DEFAULT_VECTOR ((ivt_vector_t){ _interrupt_handler, 0 })
 
-// The number of standard exception handler entries in the IVT.
-#define EXCEPTION_COUNT 15
-// The starting index of the user interrupt handler section of the IVT.
-#define INTERRUPT_START 16
+// The number of standard exception handler entries (including the reset vector) in the IVT.
+#define EXCEPTION_COUNT 16
 // The number of user interrupt handler entries in the IVT.
 #define INTERRUPT_COUNT 48
 
