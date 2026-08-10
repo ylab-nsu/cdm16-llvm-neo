@@ -16,15 +16,15 @@ void some_fun_calling_fun(){
 
 // correct
 __attribute__((noinline))
-__attribute__((CDM_ISR))
-void some_isr(){
+__attribute__((interrupt))
+void some_isr(void *ctx){
   tick++;
 }
 
 
 __attribute__((noinline))
-__attribute__((CDM_ISR))
-void some_isr_calling_fun(){
+__attribute__((interrupt))
+void some_isr_calling_fun(void *ctx){
   some_fun();
 }
 

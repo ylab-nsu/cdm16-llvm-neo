@@ -65,7 +65,7 @@ void test_stps(int value){
   stps(value);
 }
 
-ISR void test_isr(){
+ISR void test_isr(context_t *context){
 // CHECK-LABEL: test_isr>
 // CHECK: rti
 // CHECK-NOT: rts
