@@ -1,3 +1,4 @@
+add_subdirectory(bits)
 configure_file(interrupt.h ${CDM_RT_INC_DIR}/cdm/interrupt.h COPYONLY)
 configure_file(register.h ${CDM_RT_INC_DIR}/cdm/register.h COPYONLY)
 configure_file(execution.h ${CDM_RT_INC_DIR}/cdm/execution.h COPYONLY)

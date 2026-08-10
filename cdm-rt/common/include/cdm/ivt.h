@@ -1,22 +1,28 @@
 #if defined(__CDM__) && !defined(_CDM_RT_IVT_H)
 #define _CDM_RT_IVT_H
 
+// Register types
+#include <cdm/bits/register.h>
+
 // Makes the function an interrupt service routine.
 #define ISR __attribute__((interrupt))
+
+// Interrupt service routine type.
+typedef ISR void isr_t(context_t *context);
 
 // IVT entry.
 typedef struct {
     // The ISR pointer.
-    ISR void (*handler)(void);
+    isr_t *handler;
     // The value of PSR when the ISR is invoked.
     unsigned int psr;
 } ivt_vector_t;
 
 // The default interrupt service routine.
-ISR void _interrupt_handler(void);
+isr_t _interrupt_handler;
 
 // Defines an IVT entry.
-#define VECTOR(handler, psr) ((ivt_vector_t){ (handler), (psr) })
+#define VECTOR(handler, psr) ((ivt_vector_t){ (isr_t*)(handler), (psr) })
 // The default interrupt vector for unused interrupts.
 #define DEFAULT_VECTOR ((ivt_vector_t){ _interrupt_handler, 0 })
 
