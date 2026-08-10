@@ -18,12 +18,22 @@ void SemaCDM::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
   if (!AL.checkExactlyNumArgs(SemaRef, 0))
     return;
 
-  // CDM interrupt handlers must have no parameter and be void type.
-  if (hasFunctionProto(D) && getFunctionOrMethodNumParams(D) != 0) {
+  // CDM interrupt handlers must have one pointer parameter
+  if (hasFunctionProto(D) && getFunctionOrMethodNumParams(D) != 1) {
     Diag(D->getLocation(), diag::warn_interrupt_signal_attribute_invalid)
-        << /*CDM*/ 4 << /*interrupt*/ 0 << 0;
+        << /*CDM*/ 4 << /*interrupt*/ 0 << 2;
     return;
   }
+  if (hasFunctionProto(D) && getFunctionOrMethodNumParams(D) == 1) {
+    QualType ParamType = getFunctionOrMethodParamType(D, 0);
+    if (!ParamType->isPointerType()) {
+      Diag(D->getLocation(), diag::warn_interrupt_signal_attribute_invalid)
+          << /*CDM*/ 4 << /*interrupt*/ 0 << 2;
+      return;
+    }
+  }
+
+  // CDM interrupt handlers must return void
   if (!getFunctionOrMethodResultType(D)->isVoidType()) {
     Diag(D->getLocation(), diag::warn_interrupt_signal_attribute_invalid)
         << /*CDM*/ 4 << /*interrupt*/ 0 << 1;

@@ -419,7 +419,7 @@ def err_arm_interrupt_called : Error<
 def warn_interrupt_signal_attribute_invalid : Warning<
   "%select{MIPS|MSP430|RISC-V|AVR|CDM}0 '%select{interrupt|signal}1' "
   "attribute only applies to functions that have "
-  "%select{no parameters|a 'void' return type}2">,
+  "%select{no parameters|a 'void' return type|one pointer parameter}2">,
   InGroup<IgnoredAttributes>;
 def warn_riscv_repeated_interrupt_attribute : Warning<
   "repeated RISC-V 'interrupt' attribute">, InGroup<IgnoredAttributes>;
