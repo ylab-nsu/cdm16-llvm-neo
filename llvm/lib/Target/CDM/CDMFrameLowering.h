@@ -30,6 +30,7 @@ protected:
 private:
   const CDMSubtarget &STI;
   static void ensureStackFrameAddressable(const MachineFunction &MF);
+  static bool isISRWithContext(const MachineFunction &MF);
 };
 
 } // namespace llvm

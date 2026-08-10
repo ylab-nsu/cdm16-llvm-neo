@@ -61,7 +61,15 @@ CDMRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   case CallingConv::Cold:
     return CSR_O16_SaveList;
   case CallingConv::CDM_INTR:
-    return CSR_O16_ALL_SaveList;
+    if (MF->getFunction().arg_size() == 1 &&
+        !MF->getFunction().arg_begin()->use_empty()) {
+      // The parameter is the pointer to the CPU context.
+      // Since the context is saved in the prologue, we don't
+      // need LLVM to save any registers for us.
+      return CSR_NONE_SaveList;
+    } else {
+      return CSR_O16_ALL_SaveList;
+    }
   }
   llvm_unreachable("Unknown calling convention");
 }
