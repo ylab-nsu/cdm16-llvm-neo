@@ -5,7 +5,7 @@ target datalayout = "e-m:e-p:16:16-i8:8-i16:16-i32:16-i64:16-f16:16-f32:16-f64:1
 ; Test for isr functions
 
 ; Function Attrs: noinline nounwind optnone
-define cc228 void @some_isr_calling_fun() #0 {
+define cc228 void @some_isr_calling_fun(ptr %context) #0 {
 entry:
 ; CHECK-LABEL: some_isr_calling_fun>
 ; CHECK-NOT: rts
