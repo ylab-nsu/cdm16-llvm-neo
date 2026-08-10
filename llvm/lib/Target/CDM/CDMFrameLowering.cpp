@@ -49,6 +49,12 @@ void CDMFrameLowering::ensureStackFrameAddressable(const MachineFunction &MF) {
   }
 }
 
+bool CDMFrameLowering::isISRWithContext(const MachineFunction &MF) {
+  const Function &F = MF.getFunction();
+  return F.getCallingConv() == CallingConv::CDM_INTR && F.arg_size() == 1 &&
+         !F.arg_begin()->use_empty();
+}
+
 //- Must have, hasFP() is pure virtual of parent
 // hasFP - Return true if the specified function should have a dedicated frame
 // pointer register.  This is true if the function has variable sized allocas or
@@ -56,7 +62,8 @@ void CDMFrameLowering::ensureStackFrameAddressable(const MachineFunction &MF) {
 bool CDMFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   return MF.getTarget().Options.DisableFramePointerElim(MF) ||
-         MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken();
+         MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
+         isISRWithContext(MF);
 }
 
 void CDMFrameLowering::emitPrologue(MachineFunction &MF,
@@ -73,7 +80,13 @@ void CDMFrameLowering::emitPrologue(MachineFunction &MF,
   // Second, compute final stack size.
   uint64_t StackSize = MFI.getStackSize();
 
-  if (hasFP(MF)) {
+  if (isISRWithContext(MF)) {
+    for (unsigned Reg : {CDM::FP, CDM::R6, CDM::R5, CDM::R4, CDM::R3, CDM::R2,
+                         CDM::R1, CDM::R0}) {
+      BuildMI(MBB, MBBI, DL, TII->get(CDM::PUSH)).addReg(Reg);
+    }
+    BuildMI(MBB, MBBI, DL, TII->get(CDM::LDSP), CDM::FP);
+  } else if (hasFP(MF)) {
     BuildMI(MBB, MBBI, DL, TII->get(CDM::PUSH)).addReg(CDM::FP);
     BuildMI(MBB, MBBI, DL, TII->get(CDM::LDSP), CDM::FP);
   }
@@ -114,7 +127,13 @@ void CDMFrameLowering::emitEpilogue(MachineFunction &MF,
     TII->adjustStackPtr(StackSize, MBB, MBBI, DL);
   }
 
-  if (hasFP(MF)) {
+  if (isISRWithContext(MF)) {
+    BuildMI(MBB, MBBI, DL, TII->get(CDM::STSP)).addReg(CDM::FP);
+    for (unsigned Reg : {CDM::R0, CDM::R1, CDM::R2, CDM::R3, CDM::R4, CDM::R5,
+                         CDM::R6, CDM::FP}) {
+      BuildMI(MBB, MBBI, DL, TII->get(CDM::POP)).addReg(Reg);
+    }
+  } else if (hasFP(MF)) {
     BuildMI(MBB, MBBI, DL, TII->get(CDM::STSP)).addReg(CDM::FP);
     BuildMI(MBB, MBBI, DL, TII->get(CDM::POP), CDM::FP);
   }

@@ -139,6 +139,15 @@ SDValue CDMISelLowering::LowerFormalArguments(
   auto &MF = DAG.getMachineFunction();
   auto &MFI = MF.getFrameInfo();
   auto &RegInfo = MF.getRegInfo();
+  auto &F = MF.getFunction();
+
+  if (F.getCallingConv() == CallingConv::CDM_INTR && F.arg_size() == 1 &&
+      !F.arg_begin()->use_empty()) {
+    int FI = MFI.CreateFixedObject(2 * 10, 0, true);
+    SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(MF.getDataLayout()));
+    InVals.push_back(FIPtr);
+    return Chain;
+  }
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
