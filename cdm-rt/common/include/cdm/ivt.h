@@ -22,7 +22,7 @@ typedef struct {
 isr_t _interrupt_handler;
 
 // Defines an IVT entry.
-#define VECTOR(handler, psr) ((ivt_vector_t){ (isr_t*)(handler), (psr) })
+#define VECTOR(handler, psr) ((ivt_vector_t){ (handler), (psr) })
 // The default interrupt vector for unused interrupts.
 #define DEFAULT_VECTOR ((ivt_vector_t){ _interrupt_handler, 0 })
 
