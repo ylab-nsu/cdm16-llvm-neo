@@ -202,6 +202,13 @@ CDMRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   case CallingConv::Cold:
     return CSR_O16_RegMask;
   case CallingConv::CDM_INTR:
+    if (MF.getFunction().arg_size() == 1 &&
+        !MF.getFunction().arg_begin()->use_empty()) {
+      // See getCalleeSavedRegs
+      return CSR_NONE_RegMask;
+    } else {
+      return CSR_O16_ALL_RegMask;
+    }
     return CSR_O16_ALL_RegMask;
   }
   llvm_unreachable("Unknown calling convention");
