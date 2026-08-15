@@ -25,7 +25,7 @@ entry:
 ; CHECK-NEXT: ssw r0, -2
 ; CHECK-NEXT: addsp -8
 ; CHECK-NEXT: ldi r0, -2
-; CHECK-NEXT: add r0, fp, r0
+; CHECK-NEXT: add fp, r0, r0
 ; CHECK-NEXT: jsr bar
 ; CHECK-NEXT: addsp 8
 ; CHECK-NEXT: lsw r0, -2

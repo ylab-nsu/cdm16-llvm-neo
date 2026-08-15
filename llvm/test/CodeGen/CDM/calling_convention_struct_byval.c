@@ -27,18 +27,15 @@ int foo(struct s ss){
 
 int main(){
 // CHECK-LABEL: main>
-//  
-//  CHECK-DAG: ldi [[RSD:r[0-6]]], 2
+//
+//  CHECK-DAG: ldi [[RS1:r[0-6]]], 2
+//  CHECK: ssw [[RS1]], -8
 //  CHECK-DAG: ldi [[RS2:r[0-6]]], 3
+//  CHECK: ssw [[RS2]], -6
 //
 //  CHECK: ldi r0, -8
-//  CHECK-NEXT: add r0, fp, r0
-//  CHECK: stw r0, [[RSD]], [[RS2]]
-//  CHECK: ssw [[RSD]], -8
-//
-//  CHECK-NEXT: addsp	-8
-//  CHECK-NEXT: jsr	foo
-//  CHECK-NEXT: addsp	8
+//  CHECK-NEXT: add fp, r0, r0
+//  CHECK: jsr	foo
 	struct s ss;
 	ss.a = 2;
 	ss.b = 3;
