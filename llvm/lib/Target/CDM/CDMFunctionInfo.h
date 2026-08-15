@@ -17,6 +17,8 @@ class CDMFunctionInfo : public MachineFunctionInfo {
 public:
   CDMFunctionInfo(const Function &F, const TargetSubtargetInfo *STI) {
     IsInterruptHandler = F.getCallingConv() == CallingConv::CDM_INTR;
+    IsISRWithContext =
+        IsInterruptHandler && F.arg_size() == 1 && !F.arg_begin()->use_empty();
   }
 
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
@@ -25,12 +27,18 @@ public:
   Register getSRetReturnReg() const { return SRetReturnReg; }
   void setSRetReturnReg(Register Reg) { SRetReturnReg = Reg; }
 
+  // When true, the function saves all registers in the prologue
+  // and restores them in the epilogue. This option is used for
+  // interrupt service routines with a context pointer parameter.
+  bool isISRWithContext() const { return IsISRWithContext; }
+
   bool isInterruptHandler() { return IsInterruptHandler; }
 
 private:
   virtual void anchor();
 
-  bool IsInterruptHandler;
+  bool IsISRWithContext = false;
+  bool IsInterruptHandler = false;
   int VarArgsFrameIndex = 0;
   Register SRetReturnReg;
 };
