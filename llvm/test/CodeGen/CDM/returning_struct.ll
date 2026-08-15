@@ -32,20 +32,12 @@ entry:
 define dso_local i16 @bar() #1 {
 entry:
 ; CHECK-LABEL: bar>
-; CHECK: addsp -8
-
-; CHECK-NEXT: ssw r4, -2
-; CHECK-NEXT: ssw r5, -4
-
-; CHECK-NEXT: addsp -8
-; CHECK-NEXT: ldi [[REG1:r[0-6]]], -8
-; CHECK-NEXT: add [[REG1]], fp, [[PTRREG:r[0-6]]]
-; CHECK-NEXT: ldi [[REG2:r[0-6]]], 2
+; CHECK: addsp -4
+; CHECK: ldi [[REG1:r[0-6]]], -4
+; CHECK-NEXT: add fp, [[REG1]], r0
+; CHECK-NEXT: ldi r1, 2
 ; CHECK-NEXT: ldi r2, 3
-; CHECK-NEXT: move [[PTRREG]], r0
-; CHECK-NEXT: move [[REG2]], r1
 ; CHECK-NEXT: jsr foo
-; CHECK-NEXT: addsp 8
   %out = alloca %struct.s, align 2
   call void @foo(ptr dead_on_unwind nonnull writable sret(%struct.s) align 2 %out, i16 noundef 2, i16 noundef 3)
   %0 = load i16, ptr %out, align 2
