@@ -157,7 +157,6 @@ bool CDMDagToDagIsel::selectAddrFrameIndex(SDNode *Op, SDValue N, SDValue &Base,
         return true;
       }
     }
-    return true;
   }
   return false;
 }
