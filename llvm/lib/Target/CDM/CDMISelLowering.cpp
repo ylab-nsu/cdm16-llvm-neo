@@ -139,10 +139,11 @@ SDValue CDMISelLowering::LowerFormalArguments(
   auto &MF = DAG.getMachineFunction();
   auto &MFI = MF.getFrameInfo();
   auto &RegInfo = MF.getRegInfo();
-  auto &F = MF.getFunction();
 
-  if (F.getCallingConv() == CallingConv::CDM_INTR && F.arg_size() == 1 &&
-      !F.arg_begin()->use_empty()) {
+  if (MF.getInfo<CDMFunctionInfo>()->isISRWithContext()) {
+    // This function is an ISR with a pointer parameter that points to the
+    // processor context saved on the stack. We need to create a corresponding
+    // stack object and set a flag to emit a special prologue/epilogue pair.
     int FI = MFI.CreateFixedObject(2 * 10, 0, true);
     SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(MF.getDataLayout()));
     InVals.push_back(FIPtr);

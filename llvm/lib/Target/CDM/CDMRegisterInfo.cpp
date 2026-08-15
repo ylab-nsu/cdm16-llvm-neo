@@ -2,6 +2,7 @@
 // Created by ilya on 21.11.23.
 //
 
+#include "CDMFunctionInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCInstrDesc.h"
 #define DEBUG_TYPE "cdm-reg-info"
@@ -56,21 +57,17 @@ BitVector CDMRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
 const MCPhysReg *
 CDMRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
+  if (MF->getInfo<CDMFunctionInfo>()->isISRWithContext()) {
+    // Handled by the prologue
+    return CSR_NONE_SaveList;
+  }
   switch (MF->getFunction().getCallingConv()) {
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::Cold:
     return CSR_O16_SaveList;
   case CallingConv::CDM_INTR:
-    if (MF->getFunction().arg_size() == 1 &&
-        !MF->getFunction().arg_begin()->use_empty()) {
-      // The parameter is the pointer to the CPU context.
-      // Since the context is saved in the prologue, we don't
-      // need LLVM to save any registers for us.
-      return CSR_NONE_SaveList;
-    } else {
-      return CSR_O16_ALL_SaveList;
-    }
+    return CSR_O16_ALL_SaveList;
   }
   llvm_unreachable("Unknown calling convention");
 }
@@ -196,19 +193,16 @@ Register CDMRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
 const uint32_t *
 CDMRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                       CallingConv::ID Id) const {
+  if (MF.getInfo<CDMFunctionInfo>()->isISRWithContext()) {
+    // Handled by the prologue
+    return CSR_NONE_RegMask;
+  }
   switch (Id) {
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::Cold:
     return CSR_O16_RegMask;
   case CallingConv::CDM_INTR:
-    if (MF.getFunction().arg_size() == 1 &&
-        !MF.getFunction().arg_begin()->use_empty()) {
-      // See getCalleeSavedRegs
-      return CSR_NONE_RegMask;
-    } else {
-      return CSR_O16_ALL_RegMask;
-    }
     return CSR_O16_ALL_RegMask;
   }
   llvm_unreachable("Unknown calling convention");
