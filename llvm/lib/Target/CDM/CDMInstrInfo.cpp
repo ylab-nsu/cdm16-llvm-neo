@@ -41,9 +41,10 @@ void CDMInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   MachineMemOperand *MMO =
       getStackMemOperand(MBB, FI, MachineMemOperand::MOStore);
 
-  BuildMI(MBB, I, DL, get(CDM::SSW))
+  BuildMI(MBB, I, DL, get(CDM::PseudoStoreFrameWord))
       .addReg(SrcReg, getKillRegState(IsKill))
       .addFrameIndex(FI)
+      .addImm(0)
       .addMemOperand(MMO);
 }
 
@@ -60,8 +61,9 @@ void CDMInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   MachineMemOperand *MMO =
       getStackMemOperand(MBB, FrameIndex, MachineMemOperand::MOLoad);
 
-  BuildMI(MBB, MI, DL, get(CDM::LSW), DestReg)
+  BuildMI(MBB, MI, DL, get(CDM::PseudoLoadFrameWord), DestReg)
       .addFrameIndex(FrameIndex)
+      .addImm(0)
       .addMemOperand(MMO);
 }
 

@@ -245,6 +245,12 @@ def mem2Reg : Operand<iPTR> {
   let PrintMethod = "printMem2RegOperand";
 }
 
+// Frame index + constant offset
+// Used in FP-relative load/store pseudos
+def addrFrameOp : Operand<iPTR> {
+  let MIOperandInfo = (ops imm16Op, imm16Op);
+}
+
 //===----------------------------------------------------------------------===//
 // CDM DAG patterns and transforms
 //===----------------------------------------------------------------------===//
@@ -256,14 +262,15 @@ let WantsRoot = 1 in {
   // reg+reg absolute data address pattern.
   def addr2Reg : ComplexPattern<iPTR, 2, "selectAddr2Reg", [], []>;
 
-  // Frame-relative data address pattern.
-  def addrFrame : ComplexPattern<iPTR, 1, "selectAddrFrameIndex", [frameindex], []>;
-
   // Simple absolute program memory address pattern.
   def constAddr : ComplexPattern<iPTR, 1, "selectConstAddr", [], []>;
 
   // reg+reg absolute program memory address pattern.
   def constAddr2Reg : ComplexPattern<iPTR, 2, "selectConstAddr2Reg", [], []>;
+
+  // Frame-relative data address pattern: frame index + constant offset
+  // Only used in pseudos
+  def addrFrame : ComplexPattern<iPTR, 2, "selectAddrFrameIndex", [frameindex], []>;
 }
 
 // Immediate values with specific ranges (immM_N -> [M; N]).
@@ -286,6 +293,10 @@ def storeAligned  : PatFrag<(ops node:$val, node:$ptr), (store node:$val, node:$
 // Transforms LLVM cond codes to CDM cond codes
 def cdmizeCondXform : SDNodeXForm<cond, [{
   return CurDAG->getTargetConstant(condCodeToCDMCond(N->get()), N, MVT::i16);
+}]>;
+
+def to_tframeindex : SDNodeXForm<frameindex, [{
+  return CurDAG->getTargetFrameIndex(N->getIndex(), N->getValueType(0));
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -592,36 +603,34 @@ def ST : MnemonicAlias<"st", "stw">;
 // imm6 format
 //===----------------------------------------------------------------------===//
 
-class CDMLoadStack<bits<4> opcode, string mnem, Operand OffOp, SDPatternOperator OpNode>
+class CDMLoadStack<bits<4> opcode, string mnem, Operand OffOp>
     : InstImm6<opcode, (outs CPURegs:$rd), (ins OffOp:$imm),
-               !strconcat(mnem, "\t$rd, $imm"),
-               [(set CPURegs:$rd, (OpNode addrFrame:$imm))]>;
+               !strconcat(mnem, "\t$rd, $imm"), []>;
 
-class CDMStoreStack<bits<4> opcode, string mnem, Operand OffOp, SDPatternOperator OpNode>
+class CDMStoreStack<bits<4> opcode, string mnem, Operand OffOp>
     : InstImm6<opcode, (outs), (ins CPURegs:$rd, OffOp:$imm),
-               !strconcat(mnem, "\t$rd, $imm"),
-               [(OpNode CPURegs:$rd, addrFrame:$imm)]>;
+               !strconcat(mnem, "\t$rd, $imm"), []>;
 
 let Uses = [FP], PostEncoderMethod = "adjustImmOpCode<1, 9>" in {
   // Load word relative to fp
   // Loads a word from memory location fp + off to rd.
-  def LSW : CDMLoadStack<0b0000, "lsw", imm6WordOffset, loadAligned>;
+  def LSW : CDMLoadStack<0b0000, "lsw", imm6WordOffset>;
 
   // Load unsigned byte relative to fp
   // Loads a byte from memory location fp + off to rd with zero extend.
-  def LSB : CDMLoadStack<0b0010, "lsb", imm6ByteOffset, zextloadi8>;
+  def LSB : CDMLoadStack<0b0010, "lsb", imm6ByteOffset>;
 
   // Load signed byte relative to fp
   // Loads a byte from memory location fp + off to rd with sign extend.
-  def LSSB : CDMLoadStack<0b0100, "lssb", imm6ByteOffset, sextloadi8>;
+  def LSSB : CDMLoadStack<0b0100, "lssb", imm6ByteOffset>;
 
   // Store word relative to fp
   // Stores 2 bytes from rd to memory location fp + off.
-  def SSW : CDMStoreStack<0b0110, "ssw", imm6WordOffset, storeAligned>;
+  def SSW : CDMStoreStack<0b0110, "ssw", imm6WordOffset>;
 
   // Store byte relative to fp
   // Stores the least significant byte of rd to memory location fp + off.
-  def SSB : CDMStoreStack<0b1000, "ssb", imm6ByteOffset, truncstorei8>;
+  def SSB : CDMStoreStack<0b1000, "ssb", imm6ByteOffset>;
 }
 
 // Load small immediate to register
@@ -1061,6 +1070,37 @@ let usesCustomInserter = true in {
       : CDMPseudo<(outs), (ins), "", [(atomic_fence timm, timm)]>;
 }
 
+// Frame-relative loads and stores with an additional offset operator.
+// These are needed to optimize FrameIndex+constant loads/stores (e.g. structs fields, i32, i64)
+class CDMPseudoLoadStack<SDPatternOperator OpNode>
+    : CDMPseudo<(outs CPURegs:$rd), (ins (addrFrameOp $frameIndex, $offset):$addr), "",
+               [(set CPURegs:$rd, (OpNode addrFrame:$addr))]>;
+
+class CDMPseudoStoreStack<SDPatternOperator OpNode>
+    : CDMPseudo<(outs), (ins CPURegs:$rd, (addrFrameOp $frameIndex, $offset):$addr), "",
+               [(OpNode CPURegs:$rd, addrFrame:$addr)]>;
+
+let Uses = [FP] in {
+  // Lowered into LSW
+  def PseudoLoadFrameWord : CDMPseudoLoadStack<loadAligned>;
+
+  // Lowered into LSB
+  def PseudoLoadFrameByteZext : CDMPseudoLoadStack<zextloadi8>;
+
+  // Lowered into LSSB
+  def PseudoLoadFrameByteSext : CDMPseudoLoadStack<sextloadi8>;
+
+  // Lowered into SSW
+  def PseudoStoreFrameWord : CDMPseudoStoreStack<storeAligned>;
+
+  // Lowered into SSB
+  def PseudoStoreFrameByte : CDMPseudoStoreStack<truncstorei8>;
+
+  // Address of frame objects (e.g. emitted when taking the address of a local variable)
+  // Lowered into ADD $offset, fp, $rd
+  def PseudoFrameAddress : CDMPseudo<(outs CPURegs:$rd), (ins i16imm:$fi, i16imm:$offset), "", []>;
+}
+
 //===----------------------------------------------------------------------===//
 // Non-Instruction Patterns
 //===----------------------------------------------------------------------===//
@@ -1077,14 +1117,17 @@ def : Pat<(cdm_call (i16 tglobaladdr:$target)), (JSRImm9 tglobaladdr:$target)>;
 def : Pat<(cdm_call (i16 texternalsym:$target)), (JSRImm9 texternalsym:$target)>;
 
 // Load frame address
-def : Pat<(i16 addrFrame:$addr), (ADD (LDIImm6 imm:$addr), FP)>;
+def : Pat<(frameindex:$fi),
+          (PseudoFrameAddress (i16 (to_tframeindex $fi)), 0)>;
+def : Pat<(add frameindex:$fi, imm:$offset),
+          (PseudoFrameAddress (i16 (to_tframeindex $fi)), imm:$offset)>;
 
 // Load byte from address with anyext
 def : Pat<(i16(extloadi8 addr:$addr)), (LDB addr:$addr)>;
 def : Pat<(i16(extloadi8 addr2Reg:$addr)), (LDB2Reg addr2Reg:$addr)>;
 def : Pat<(i16(extloadi8 constAddr:$addr)), (LCB constAddr:$addr)>;
 def : Pat<(i16(extloadi8 constAddr2Reg:$addr)), (LCB2Reg constAddr2Reg:$addr)>;
-def : Pat<(i16(extloadi8 addrFrame:$src)), (LSB addrFrame:$src)>;
+def : Pat<(i16(extloadi8 addrFrame:$src)), (PseudoLoadFrameByteZext addrFrame:$src)>;
 
 // Conditional branch
 def : Pat<(brcc cond:$cnd, CPURegs:$lhs, imm6:$rhs, bb:$target),

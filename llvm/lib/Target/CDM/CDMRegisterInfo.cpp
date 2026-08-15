@@ -3,6 +3,7 @@
 //
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/MC/MCInstrDesc.h"
 #define DEBUG_TYPE "cdm-reg-info"
 
 #include "CDMFrameLowering.h"
@@ -74,85 +75,118 @@ CDMRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   llvm_unreachable("Unknown calling convention");
 }
 
-bool CDMRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
-                                          int SPAdj, unsigned int FIOperandNum,
-                                          RegScavenger *RS) const {
+bool CDMRegisterInfo::lowerFrameAddress(MachineBasicBlock::iterator II) const {
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
   const TargetInstrInfo *InstrInfo = MF.getSubtarget().getInstrInfo();
   MachineBasicBlock &MBB = *MI.getParent();
 
-  unsigned I = 0;
-  while (!MI.getOperand(I).isFI()) {
-    ++I;
-    assert(I < MI.getNumOperands() && "Instr doesn't have FrameIndex operand!");
+  int FrameIndex = MI.getOperand(1).getIndex();
+  int64_t FpOffset = MF.getFrameInfo().getObjectOffset(FrameIndex);
+  int64_t ObjectOffset = MI.getOperand(2).getImm();
+
+  const MachineOperand &SrcOperand = MI.getOperand(0);
+  Register DstReg = SrcOperand.getReg();
+
+  BuildMI(MBB, II, II->getDebugLoc(), InstrInfo->get(CDM::LDIImm6), DstReg)
+      .addImm(FpOffset + ObjectOffset);
+
+  BuildMI(MBB, II, II->getDebugLoc(), InstrInfo->get(CDM::ADD))
+      .add(SrcOperand)
+      .addReg(MF.getSubtarget().getRegisterInfo()->getFrameRegister(MF))
+      .addReg(DstReg, RegState::Kill);
+
+  MI.getParent()->erase(II);
+  return true;
+}
+
+bool CDMRegisterInfo::lowerFrameLoadStore(
+    MachineBasicBlock::iterator II, unsigned int FIOperandNum,
+    const FrameMemSubstitution &Subst) const {
+  MachineInstr &MI = *II;
+  MachineFunction &MF = *MI.getParent()->getParent();
+  const TargetInstrInfo *InstrInfo = MF.getSubtarget().getInstrInfo();
+  MachineBasicBlock &MBB = *MI.getParent();
+
+  int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
+  int64_t FpOffset = MF.getFrameInfo().getObjectOffset(FrameIndex);
+  int64_t ObjectOffset = MI.getOperand(FIOperandNum + 1).getImm();
+
+  const MachineOperand &SrcOperand = MI.getOperand(0);
+
+  if (FpOffset >= Subst.MemSize * 64 || FpOffset < Subst.MemSize * -64) {
+    const MachineOperand &SrcOperand = MI.getOperand(0);
+
+    Register OffsetReg;
+    if (Subst.CanReuseTargetRegister) {
+      // if load
+      OffsetReg = SrcOperand.getReg(); // just use same register since load will
+                                       // re-define it anyway
+    } else {
+      // if store
+      OffsetReg = huntRegister(MBB, CDM::CPURegsRegClass, MI, true);
+      if (!OffsetReg) // should not happen, but report in case a bug occurs
+        report_fatal_error("Couldn't find register to use");
+    }
+
+    BuildMI(MBB, II, II->getDebugLoc(), InstrInfo->get(CDM::LDIImm16),
+            OffsetReg)
+        .addImm(FpOffset + ObjectOffset);
+
+    BuildMI(MBB, II, II->getDebugLoc(), InstrInfo->get(Subst.LongOpcode))
+        .add(SrcOperand)
+        .addReg(OffsetReg, RegState::Kill)
+        .addReg(MF.getSubtarget().getRegisterInfo()->getFrameRegister(MF));
+  } else {
+    BuildMI(MBB, II, II->getDebugLoc(), InstrInfo->get(Subst.ShortOpcode))
+        .add(SrcOperand)
+        .addImm(FpOffset + ObjectOffset);
   }
+
+  MI.getParent()->erase(II);
+  return true;
+}
+
+bool CDMRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
+                                          int SPAdj, unsigned int FIOperandNum,
+                                          RegScavenger *RS) const {
+  MachineInstr &MI = *II;
+  MachineFunction &MF = *MI.getParent()->getParent();
 
   LLVM_DEBUG(errs() << "\nFunction : " << MF.getFunction().getName() << "\n";
              errs() << "<--------->\n"
                     << MI);
 
-  int FrameIndex = MI.getOperand(I).getIndex();
-  uint64_t StackSize = MF.getFrameInfo().getStackSize();
+  int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
   int64_t FpOffset = MF.getFrameInfo().getObjectOffset(FrameIndex);
+  uint64_t StackSize = MF.getFrameInfo().getStackSize();
 
-  LLVM_DEBUG(errs() << "FrameIndex : " << FrameIndex << "\n"
-                    << "FpOffset   : " << FpOffset << "\n"
-                    << "StackSize  : " << StackSize << "\n");
+  LLVM_DEBUG(errs() << "FrameIndex   : " << FrameIndex << "\n"
+                    << "FpOffset     : " << FpOffset << "\n"
+                    << "StackSize    : " << StackSize << "\n");
 
-  MI.getOperand(I).ChangeToImmediate(FpOffset);
+  if (MI.getOpcode() == CDM::PseudoFrameAddress) {
+    return lowerFrameAddress(II);
+  }
 
-  // Opcode -> (Opcode, MemSize)
-  static const std::map<unsigned, std::pair<unsigned, int>>
+  static const std::map<unsigned, FrameMemSubstitution>
       FPRelSubstitutionOpcsTable = {
-          {CDM::SSW, {CDM::STW2Reg, 2}},   {CDM::LSW, {CDM::LDW2Reg, 2}},
-          {CDM::SSB, {CDM::STB2Reg, 1}},   {CDM::LSB, {CDM::LDB2Reg, 1}},
-          {CDM::LSSB, {CDM::LDSB2Reg, 1}},
+          {CDM::PseudoStoreFrameWord, {CDM::SSW, CDM::STW2Reg, 2, false}},
+          {CDM::PseudoLoadFrameWord, {CDM::LSW, CDM::LDW2Reg, 2, true}},
+          {CDM::PseudoStoreFrameByte, {CDM::SSB, CDM::STB2Reg, 1, false}},
+          {CDM::PseudoLoadFrameByteZext, {CDM::LSB, CDM::LDB2Reg, 1, true}},
+          {CDM::PseudoLoadFrameByteSext, {CDM::LSSB, CDM::LDSB2Reg, 1, true}},
       };
 
   const auto Opcode = MI.getOpcode();
   const auto OpcodeFindIter = FPRelSubstitutionOpcsTable.find(Opcode);
-  const auto InstDesc = InstrInfo->get(Opcode);
 
-  if (OpcodeFindIter == FPRelSubstitutionOpcsTable.end()) {
-    return false; // no instruction to change
+  if (OpcodeFindIter != FPRelSubstitutionOpcsTable.end()) {
+    return lowerFrameLoadStore(II, FIOperandNum, OpcodeFindIter->second);
   }
 
-  auto [SubstitutionOpc, MemSize] = OpcodeFindIter->second;
-
-  if (FpOffset >= MemSize * 64 || FpOffset < MemSize * -64) {
-    const MachineOperand &SrcOperand = MI.getOperand(0);
-
-    Register OffsetReg;
-
-    if (InstDesc.mayLoad()) {
-      // if load
-      OffsetReg = SrcOperand.getReg(); // just use same register since load will
-                                       // re-define it anyway
-    } else if (InstDesc.mayStore()) {
-      // if store
-      OffsetReg = huntRegister(MBB, CDM::CPURegsRegClass, MI, true);
-      if (!OffsetReg) // should not happen, but report in case a bug occurs
-        report_fatal_error("Couldn't find register to use");
-    } else {
-      llvm_unreachable("Unhandled FP-relative instruction");
-    }
-
-    BuildMI(MBB, II, II->getDebugLoc(), InstrInfo->get(CDM::LDIImm16),
-            OffsetReg)
-        .addImm(FpOffset);
-
-    BuildMI(MBB, II, II->getDebugLoc(), InstrInfo->get(SubstitutionOpc))
-        .add(SrcOperand)
-        .addReg(OffsetReg, RegState::Kill)
-        .addReg(MF.getSubtarget().getRegisterInfo()->getFrameRegister(MF))
-        .addImm(0);
-
-    MI.getParent()->erase(II);
-    return true; // original instruction is removed
-  }
-
-  return false; // instruction not removed
+  MI.getOperand(FIOperandNum).ChangeToImmediate(FpOffset);
+  return false;
 }
 
 Register CDMRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
