@@ -36,8 +36,20 @@ public:
                                bool AllowStackAdj);
 
 private:
+  struct FrameMemSubstitution {
+    unsigned ShortOpcode;
+    unsigned LongOpcode;
+    signed MemSize;
+    bool CanReuseTargetRegister;
+  };
+
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID Id) const override;
+
+  bool lowerFrameAddress(MachineBasicBlock::iterator II) const;
+  bool lowerFrameLoadStore(MachineBasicBlock::iterator II,
+                           unsigned int FIOperandNum,
+                           const FrameMemSubstitution &Subst) const;
 };
 
 } // namespace llvm

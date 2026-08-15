@@ -93,18 +93,6 @@ bool CDMDagToDagIsel::trySelectPointerCall(SDNode *N) {
   return true;
 }
 
-bool CDMDagToDagIsel::selectAddrFrameIndex(SDNode *Op, SDValue N,
-                                           SDValue &Base) {
-  EVT ValTy = N.getValueType();
-  SDLoc DL(N);
-
-  if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(N)) {
-    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
-    return true;
-  }
-  return false;
-}
-
 bool CDMDagToDagIsel::selectAddr(SDNode *Op, SDValue N, SDValue &Base) {
   if (isProgramMemoryAccess(cast<MemSDNode>(Op))) {
     return false;
@@ -126,8 +114,49 @@ bool CDMDagToDagIsel::selectAddr2Reg(SDNode *Op, SDValue N, SDValue &Base,
   }
 
   if (N.getOpcode() == ISD::ADD) {
-    Base = N.getOperand(0);
-    Offset = N.getOperand(1);
+    const SDValue &Op1 = N.getOperand(0);
+    const SDValue &Op2 = N.getOperand(1);
+
+    if (isa<FrameIndexSDNode>(Op1) && isa<ConstantSDNode>(Op2)) {
+      return false;
+    } else if (isa<FrameIndexSDNode>(Op2) && isa<ConstantSDNode>(Op1)) {
+      return false;
+    }
+
+    Base = Op1;
+    Offset = Op2;
+    return true;
+  }
+  return false;
+}
+
+bool CDMDagToDagIsel::selectAddrFrameIndex(SDNode *Op, SDValue N, SDValue &Base,
+                                           SDValue &Offset) {
+  EVT ValTy = N.getValueType();
+  SDLoc DL(N);
+
+  if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(N)) {
+    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
+    Offset = CurDAG->getTargetConstant(0, DL, ValTy);
+    return true;
+  }
+  if (N->getOpcode() == ISD::ADD) {
+    const SDValue &Op1 = N.getOperand(0);
+    const SDValue &Op2 = N.getOperand(1);
+
+    if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(Op1)) {
+      if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Op2)) {
+        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
+        Offset = CurDAG->getTargetConstant(CN->getAPIntValue(), DL, ValTy);
+        return true;
+      }
+    } else if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(Op2)) {
+      if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Op1)) {
+        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
+        Offset = CurDAG->getTargetConstant(CN->getAPIntValue(), DL, ValTy);
+        return true;
+      }
+    }
     return true;
   }
   return false;
@@ -148,7 +177,7 @@ bool CDMDagToDagIsel::selectConstAddr(SDNode *Op, SDValue N, SDValue &Base) {
 }
 
 bool CDMDagToDagIsel::selectConstAddr2Reg(SDNode *Op, SDValue N, SDValue &Base,
-                                     SDValue &Offset) {
+                                          SDValue &Offset) {
   if (!isProgramMemoryAccess(cast<MemSDNode>(Op))) {
     return false;
   }
