@@ -9,28 +9,32 @@ namespace clang {
 SemaCDM::SemaCDM(Sema &S) : SemaBase(S) {}
 
 void SemaCDM::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
-  if (!isFuncOrMethodForAttrSubject(D)) {
-    Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
-        << AL << AL.isRegularKeywordAttribute() << ExpectedFunction;
+  if (!isFuncOrMethodForAttrSubject(D) || !hasFunctionProto(D) ||
+      isInstanceMethod(D) ||
+      CXXMethodDecl::isStaticOverloadedOperator(
+          cast<NamedDecl>(D)->getDeclName().getCXXOverloadedOperator())) {
+    Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type)
+        << AL << AL.isRegularKeywordAttribute()
+        << ExpectedFunctionWithProtoType;
     return;
   }
 
-  if (!AL.checkExactlyNumArgs(SemaRef, 0))
+  if (!AL.checkExactlyNumArgs(SemaRef, 0)) {
     return;
+  }
 
   // CDM interrupt handlers must have one pointer parameter
-  if (hasFunctionProto(D) && getFunctionOrMethodNumParams(D) != 1) {
+  if (getFunctionOrMethodNumParams(D) != 1) {
     Diag(D->getLocation(), diag::warn_interrupt_signal_attribute_invalid)
         << /*CDM*/ 4 << /*interrupt*/ 0 << 2;
     return;
   }
-  if (hasFunctionProto(D) && getFunctionOrMethodNumParams(D) == 1) {
-    QualType ParamType = getFunctionOrMethodParamType(D, 0);
-    if (!ParamType->isPointerType()) {
-      Diag(D->getLocation(), diag::warn_interrupt_signal_attribute_invalid)
-          << /*CDM*/ 4 << /*interrupt*/ 0 << 2;
-      return;
-    }
+
+  QualType ParamType = getFunctionOrMethodParamType(D, 0);
+  if (!ParamType->isPointerType()) {
+    Diag(D->getLocation(), diag::warn_interrupt_signal_attribute_invalid)
+        << /*CDM*/ 4 << /*interrupt*/ 0 << 2;
+    return;
   }
 
   // CDM interrupt handlers must return void
