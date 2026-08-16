@@ -142,8 +142,9 @@ SDValue CDMISelLowering::LowerFormalArguments(
 
   if (MF.getInfo<CDMFunctionInfo>()->isISRWithContext()) {
     // This function is an ISR with a pointer parameter that points to the
-    // processor context saved on the stack. We need to create a corresponding
-    // stack object and set a flag to emit a special prologue/epilogue pair.
+    // processor context saved on the stack. We need to create the corresponding
+    // stack object and lower the argument to a frame index.
+    // The structure on the stack if generated later in the prologue.
     int FI = MFI.CreateFixedObject(2 * 10, 0, true);
     SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(MF.getDataLayout()));
     InVals.push_back(FIPtr);

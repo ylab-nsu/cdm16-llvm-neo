@@ -28,8 +28,8 @@ public:
   void setSRetReturnReg(Register Reg) { SRetReturnReg = Reg; }
 
   // When true, the function saves all registers in the prologue
-  // and restores them in the epilogue. This option is used for
-  // interrupt service routines with a context pointer parameter.
+  // and restores them in the epilogue. The function must be an ISR
+  // with a single pointer parameter that points the context saved on the stack.
   bool isISRWithContext() const { return IsISRWithContext; }
 
   bool isInterruptHandler() { return IsInterruptHandler; }

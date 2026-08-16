@@ -76,6 +76,8 @@ void CDMFrameLowering::emitPrologue(MachineFunction &MF,
   uint64_t StackSize = MFI.getStackSize();
 
   if (MF.getInfo<CDMFunctionInfo>()->isISRWithContext()) {
+    // Save the full processor context when the function
+    // is an ISR with a pointer parameter.
     for (unsigned Reg : {CDM::FP, CDM::R6, CDM::R5, CDM::R4, CDM::R3, CDM::R2,
                          CDM::R1, CDM::R0}) {
       BuildMI(MBB, MBBI, DL, TII->get(CDM::PUSH)).addReg(Reg);
@@ -123,6 +125,8 @@ void CDMFrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   if (MF.getInfo<CDMFunctionInfo>()->isISRWithContext()) {
+    // Resture the full context saved by the prologue
+    // when the function is an ISR with a pointer parameter.
     BuildMI(MBB, MBBI, DL, TII->get(CDM::STSP)).addReg(CDM::FP);
     for (unsigned Reg : {CDM::R0, CDM::R1, CDM::R2, CDM::R3, CDM::R4, CDM::R5,
                          CDM::R6, CDM::FP}) {
