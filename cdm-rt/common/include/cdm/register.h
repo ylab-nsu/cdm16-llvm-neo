@@ -1,4 +1,4 @@
-#if defined(__CDM__) && !defined(_CDM_RT_REGISTER_H)
+#ifndef _CDM_RT_REGISTER_H
 #define _CDM_RT_REGISTER_H
 
 // Register types

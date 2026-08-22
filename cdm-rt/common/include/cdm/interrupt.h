@@ -1,4 +1,4 @@
-#if defined(__CDM__) && !defined(_CDM_RT_INTERRUPT_H)
+#ifndef _CDM_RT_INTERRUPT_H
 #define _CDM_RT_INTERRUPT_H
 
 // Enable hardware interrupts.
