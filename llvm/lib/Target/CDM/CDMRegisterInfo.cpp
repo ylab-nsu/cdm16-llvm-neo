@@ -57,10 +57,6 @@ BitVector CDMRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
 const MCPhysReg *
 CDMRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
-  if (MF->getInfo<CDMFunctionInfo>()->isISRWithContext()) {
-    // Handled by the prologue
-    return CSR_NONE_SaveList;
-  }
   switch (MF->getFunction().getCallingConv()) {
   case CallingConv::C:
   case CallingConv::Fast:
@@ -75,18 +71,25 @@ CDMRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 bool CDMRegisterInfo::lowerFrameAddress(MachineBasicBlock::iterator II) const {
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
+  const CDMFunctionInfo &TFI = *MF.getInfo<CDMFunctionInfo>();
   const TargetInstrInfo *InstrInfo = MF.getSubtarget().getInstrInfo();
   MachineBasicBlock &MBB = *MI.getParent();
 
   int FrameIndex = MI.getOperand(1).getIndex();
-  int64_t FpOffset = MF.getFrameInfo().getObjectOffset(FrameIndex);
+  int64_t FrameOffset = MF.getFrameInfo().getObjectOffset(FrameIndex);
   int64_t ObjectOffset = MI.getOperand(2).getImm();
+  int64_t CSROffset = TFI.getCaleeSavedSize();
+  // (Frame - FP) + (Object - Frame) + (Word - Object)
+  int64_t FinalOffset = CSROffset + FrameOffset + ObjectOffset;
+
+  LLVM_DEBUG(errs() << "ObjectOffset : " << ObjectOffset << "\n"
+                    << "FinalOffset  : " << FinalOffset << "\n");
 
   const MachineOperand &SrcOperand = MI.getOperand(0);
   Register DstReg = SrcOperand.getReg();
 
   BuildMI(MBB, II, II->getDebugLoc(), InstrInfo->get(CDM::LDIImm6), DstReg)
-      .addImm(FpOffset + ObjectOffset);
+      .addImm(FinalOffset);
 
   BuildMI(MBB, II, II->getDebugLoc(), InstrInfo->get(CDM::ADD))
       .add(SrcOperand)
@@ -102,16 +105,23 @@ bool CDMRegisterInfo::lowerFrameLoadStore(
     const FrameMemSubstitution &Subst) const {
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
+  const CDMFunctionInfo &TFI = *MF.getInfo<CDMFunctionInfo>();
   const TargetInstrInfo *InstrInfo = MF.getSubtarget().getInstrInfo();
   MachineBasicBlock &MBB = *MI.getParent();
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
-  int64_t FpOffset = MF.getFrameInfo().getObjectOffset(FrameIndex);
+  int64_t FrameOffset = MF.getFrameInfo().getObjectOffset(FrameIndex);
   int64_t ObjectOffset = MI.getOperand(FIOperandNum + 1).getImm();
+  int64_t CSROffset = TFI.getCaleeSavedSize();
+  // (Frame - FP) + (Object - Frame) + (Word - Object)
+  int64_t FinalOffset = CSROffset + FrameOffset + ObjectOffset;
+
+  LLVM_DEBUG(errs() << "ObjectOffset : " << ObjectOffset << "\n"
+                    << "FinalOffset  : " << FinalOffset << "\n");
 
   const MachineOperand &SrcOperand = MI.getOperand(0);
 
-  if (FpOffset >= Subst.MemSize * 64 || FpOffset < Subst.MemSize * -64) {
+  if (FinalOffset >= Subst.MemSize * 64 || FinalOffset < Subst.MemSize * -64) {
     const MachineOperand &SrcOperand = MI.getOperand(0);
 
     Register OffsetReg;
@@ -128,7 +138,7 @@ bool CDMRegisterInfo::lowerFrameLoadStore(
 
     BuildMI(MBB, II, II->getDebugLoc(), InstrInfo->get(CDM::LDIImm16),
             OffsetReg)
-        .addImm(FpOffset + ObjectOffset);
+        .addImm(FinalOffset);
 
     BuildMI(MBB, II, II->getDebugLoc(), InstrInfo->get(Subst.LongOpcode))
         .add(SrcOperand)
@@ -137,7 +147,7 @@ bool CDMRegisterInfo::lowerFrameLoadStore(
   } else {
     BuildMI(MBB, II, II->getDebugLoc(), InstrInfo->get(Subst.ShortOpcode))
         .add(SrcOperand)
-        .addImm(FpOffset + ObjectOffset);
+        .addImm(FinalOffset);
   }
 
   MI.getParent()->erase(II);
@@ -149,17 +159,20 @@ bool CDMRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                           RegScavenger *RS) const {
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
+  const CDMFunctionInfo &TFI = *MF.getInfo<CDMFunctionInfo>();
 
   LLVM_DEBUG(errs() << "\nFunction : " << MF.getFunction().getName() << "\n";
              errs() << "<--------->\n"
                     << MI);
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
-  int64_t FpOffset = MF.getFrameInfo().getObjectOffset(FrameIndex);
+  int64_t FrameOffset = MF.getFrameInfo().getObjectOffset(FrameIndex);
+  int64_t CSROffset = TFI.getCaleeSavedSize();
   uint64_t StackSize = MF.getFrameInfo().getStackSize();
 
   LLVM_DEBUG(errs() << "FrameIndex   : " << FrameIndex << "\n"
-                    << "FpOffset     : " << FpOffset << "\n"
+                    << "FrameOffset  : " << FrameOffset << "\n"
+                    << "CSROffset    : " << CSROffset << "\n"
                     << "StackSize    : " << StackSize << "\n");
 
   if (MI.getOpcode() == CDM::PseudoFrameAddress) {
@@ -182,7 +195,7 @@ bool CDMRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     return lowerFrameLoadStore(II, FIOperandNum, OpcodeFindIter->second);
   }
 
-  MI.getOperand(FIOperandNum).ChangeToImmediate(FpOffset);
+  MI.getOperand(FIOperandNum).ChangeToImmediate(FrameOffset + CSROffset);
   return false;
 }
 
@@ -193,10 +206,6 @@ Register CDMRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
 const uint32_t *
 CDMRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                       CallingConv::ID Id) const {
-  if (MF.getInfo<CDMFunctionInfo>()->isISRWithContext()) {
-    // Handled by the prologue
-    return CSR_NONE_RegMask;
-  }
   switch (Id) {
   case CallingConv::C:
   case CallingConv::Fast:

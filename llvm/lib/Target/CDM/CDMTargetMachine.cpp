@@ -71,6 +71,7 @@ public:
   }
 
   bool addInstSelector() override;
+  void addPostRegAlloc() override;
 };
 
 } // namespace
@@ -82,4 +83,8 @@ TargetPassConfig *CDMTargetMachine::createPassConfig(PassManagerBase &PM) {
 bool CDMPassConfig::addInstSelector() {
   addPass(createCDMISelDagLegacy(getTM<CDMTargetMachine>(), getOptLevel()));
   return false;
+}
+
+void CDMPassConfig::addPostRegAlloc() {
+  addPass(createCDMFrameAnalyzerPass());
 }

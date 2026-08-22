@@ -34,9 +34,21 @@ public:
 
   bool isInterruptHandler() { return IsInterruptHandler; }
 
+  unsigned getCaleeSavedSize() const { return CalleeSavedSize; }
+  void setCaleeSavedSize(unsigned Value) { CalleeSavedSize = Value; }
+
+  unsigned getEstimatedFrameSize() const { return EstimatedFrameSize; }
+  void setEstimatedFrameSize(unsigned Value) { EstimatedFrameSize = Value; }
+
+  bool getUsesFrameIndices() const { return UsesFrameIndices; }
+  void setUsesFrameIndices(bool Value) { UsesFrameIndices = Value; }
+
 private:
   virtual void anchor();
 
+  unsigned CalleeSavedSize = 0;
+  unsigned EstimatedFrameSize = 0;
+  bool UsesFrameIndices = false;
   bool IsISRWithContext = false;
   bool IsInterruptHandler = false;
   int VarArgsFrameIndex = 0;
