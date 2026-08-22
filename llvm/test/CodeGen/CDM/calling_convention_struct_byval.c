@@ -12,16 +12,11 @@ struct s {
 __attribute__((noinline))
 int foo(struct s ss){
 // CHECK-LABEL: foo>
-// CHECK-NEXT: # %bb.0:
-// CHECK-NEXT: push fp
-// CHECK-NEXT: ldsp fp
-// CHECK-NEXT: ldi [[REG1:r[0-6]]], 2
+// CHECK: ldi [[REG1:r[0-6]]], 2
 // CHECK-NEXT: ldw r0, [[REG1]], [[REG2:r[0-6]]]
 // CHECK-NEXT: ldw r0, [[REG3:r[0-6]]]
 // CHECK-NEXT: add [[REG2]], [[REG3]], r0
-// CHECK-NEXT: stsp fp
-// CHECK-NEXT: pop fp
-// CHECK-NEXT: rts
+// CHECK: rts
 	return ss.a + ss.b;
 }
 

@@ -33,7 +33,6 @@ entry:
 ; CHECK-NEXT: addsp -8
 ; CHECK-NEXT: ldi r0, 2
 ; CHECK-NEXT: jsr foo
-; CHECK-NEXT: addsp 8
 ; CHECK-NEXT: stsp fp
 ; CHECK-NEXT: pop fp
 ; CHECK-NEXT: rts

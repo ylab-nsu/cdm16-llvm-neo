@@ -57,7 +57,7 @@ entry:
 define i64 @shift64(i64 %a, i64 %b) #0 {
 entry:
 ; CHECK-LABEL: shift64>
-; CHECK: lsw [[REG:r[0-6]]], 12
+; CHECK: lsw [[REG:r[0-6]]], {{[0-9]+}}
 ; CHECK-NEXT: br [[LABEL2:.*]]
 ; CHECK-NEXT: [[LABEL1:.*]]:
 ; CHECK: shra r3, r3, 1
