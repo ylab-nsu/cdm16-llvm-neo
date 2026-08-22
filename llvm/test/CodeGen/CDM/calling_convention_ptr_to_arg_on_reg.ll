@@ -17,17 +17,13 @@ entry:
 define i16 @foo(i16 %a) #1 {
 entry:
 ; CHECK-LABEL: foo>
-; CHECK-NEXT: # @foo
-; CHECK-NEXT: # %bb.0:
-; CHECK-NEXT: push fp
+; CHECK: push fp
 ; CHECK-NEXT: ldsp fp
-; CHECK-NEXT: addsp -2
+; CHECK-NEXT: addsp -10
 ; CHECK-NEXT: ssw r0, -2
-; CHECK-NEXT: addsp -8
 ; CHECK-NEXT: ldi r0, -2
 ; CHECK-NEXT: add fp, r0, r0
 ; CHECK-NEXT: jsr bar
-; CHECK-NEXT: addsp 8
 ; CHECK-NEXT: lsw r0, -2
 ; CHECK-NEXT: inc r0
 ; CHECK-NEXT: stsp fp

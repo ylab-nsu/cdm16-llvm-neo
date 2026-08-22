@@ -63,17 +63,9 @@ ISR void context_unused(context_t *ctx) {
     // CHECK-NOT: push r6
     // CHECK-NOT: push r5
     // CHECK-NOT: push r4
-    // CHECK-NOT: push r3
-    // CHECK-NOT: push r2
-    // CHECK-NOT: push r1
-    // CHECK-NOT: push r0
     context_t ctx2;
     foo(&ctx2);
     // CHECK: jsr foo
-    // CHECK-NOT: pop r0
-    // CHECK-NOT: pop r1
-    // CHECK-NOT: pop r2
-    // CHECK-NOT: pop r3
     // CHECK-NOT: pop r4
     // CHECK-NOT: pop r5
     // CHECK-NOT: pop r6

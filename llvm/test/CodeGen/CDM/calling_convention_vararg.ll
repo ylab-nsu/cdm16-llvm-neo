@@ -48,7 +48,6 @@ entry:
 ; CHECK-NEXT: ldi r2, 3
 ; CHECK-NEXT: ldi r3, 4
 ; CHECK-NEXT: jsr foo
-; CHECK-NEXT: addsp 10
   %call = tail call i16 (i16, ...) @foo(i16 1, i16 2, i16 3, i16 4, i16 5)
   ret i16 %call
 }

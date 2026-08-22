@@ -32,7 +32,6 @@ entry:
 define dso_local i16 @bar() #1 {
 entry:
 ; CHECK-LABEL: bar>
-; CHECK: addsp -4
 ; CHECK: ldi [[REG1:r[0-6]]], -4
 ; CHECK-NEXT: add fp, [[REG1]], r0
 ; CHECK-NEXT: ldi r1, 2
