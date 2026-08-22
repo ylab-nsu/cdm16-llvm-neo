@@ -144,8 +144,10 @@ SDValue CDMISelLowering::LowerFormalArguments(
     // This function is an ISR with a pointer parameter that points to the
     // processor context saved on the stack. We need to create the corresponding
     // stack object and lower the argument to a frame index.
-    // The structure on the stack if generated later in the prologue.
-    int FI = MFI.CreateFixedObject(2 * 10, 0, true);
+    //
+    // The GPRs are callee-saved, and CSRs are part of the frame, but PS and PC are not,
+    // so the offset only includes the 8 GPRs.
+    int FI = MFI.CreateFixedObject(2 * 10, -2 * 8, true);
     SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(MF.getDataLayout()));
     InVals.push_back(FIPtr);
     return Chain;
@@ -181,7 +183,7 @@ SDValue CDMISelLowering::LowerFormalArguments(
     // The stack pointer offset is relative to the caller stack frame.
     int FI =
         MFI.CreateFixedObject(ValVT.getSizeInBits() / 8,
-                              4 + StackReserved + VA.getLocMemOffset(), true);
+                              2 + StackReserved + VA.getLocMemOffset(), true);
     SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(MF.getDataLayout()));
 
     // Create load nodes to retrieve arguments from the stack
@@ -207,7 +209,7 @@ SDValue CDMISelLowering::LowerFormalArguments(
   CDMFI->setVarArgsFrameIndex(0);
 
   // Block of code below handle varargs passed through registers
-  int VaArgStartSPOffset = 4 + RegArgCount * 2;
+  int VaArgStartSPOffset = 2 + RegArgCount * 2;
   SmallVector<SDValue, 5> OutChains;
   for (int VaArgSPOffset = VaArgStartSPOffset, RegNum = 5 + RegArgCount;
        RegNum <= 8; RegNum++, VaArgSPOffset += 2) {

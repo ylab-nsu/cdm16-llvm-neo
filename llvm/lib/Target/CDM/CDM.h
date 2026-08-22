@@ -4,8 +4,11 @@
 #include "MCTargetDesc/CDMMCTargetDesc.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/Pass.h"
 
 namespace llvm {
+
+FunctionPass *createCDMFrameAnalyzerPass();
 
 enum AddressSpace {
   DataMemory,

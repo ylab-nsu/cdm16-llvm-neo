@@ -114,6 +114,9 @@ void CDMInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void CDMInstrInfo::adjustStackPtr(int64_t Amount, MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
                                   const DebugLoc &DL) const {
+  if (Amount == 0) {
+    return;
+  }
   const int64_t ImmLimit = Amount < 0 ? -1024 : 1023;
   int64_t Rest = Amount;
 
