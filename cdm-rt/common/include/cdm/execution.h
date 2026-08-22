@@ -1,4 +1,4 @@
-#if defined(__CDM__) && !defined(_CDM_RT_EXECUTION_H)
+#ifndef _CDM_RT_EXECUTION_H
 #define _CDM_RT_EXECUTION_H
 
 // Halt the processor until a hard reset is performed.
