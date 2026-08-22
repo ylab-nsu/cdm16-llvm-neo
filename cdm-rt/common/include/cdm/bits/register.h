@@ -1,5 +1,5 @@
-#if defined(__CDM__) && !defined(_CDM_RT_REGISTER_TYPES_H)
-#define _CDM_RT_REGISTER_TYPES_H
+#if defined(__CDM__) && !defined(_CDM_RT_BITS_REGISTER_H)
+#define _CDM_RT_BITS_REGISTER_H
 
 // Processor register value type
 typedef unsigned int reg_t;
