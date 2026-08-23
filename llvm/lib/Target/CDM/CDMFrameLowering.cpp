@@ -24,7 +24,7 @@ namespace llvm {
 
 // It is better to use an alternative algorithm to adjust the stack pointer
 // in the prologue when the frame is larger than this number of bytes.
-constexpr int64_t BigFrameThreshold = 4 * 1024 - 16;
+constexpr int64_t BigFrameThreshold = 4 * 1024;
 
 void CDMFrameLowering::ensureStackFrameAddressable(const MachineFunction &MF) {
   static int DK_LargeStackFrameSize = // NOLINT
