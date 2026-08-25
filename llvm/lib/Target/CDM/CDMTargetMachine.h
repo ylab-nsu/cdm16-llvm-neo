@@ -11,7 +11,8 @@ namespace llvm {
 class CDMTargetMachine : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   const DataLayout DataLayout;
-  CDMSubtarget Subtarget;
+
+  mutable StringMap<std::unique_ptr<CDMSubtarget>> SubtargetMap;
 
 public:
   CDMTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -26,9 +27,8 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
-  const CDMSubtarget *getSubtargetImpl(const Function &F) const override {
-    return &Subtarget;
-  }
+
+  const CDMSubtarget *getSubtargetImpl(const Function &F) const override;
 
   MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,

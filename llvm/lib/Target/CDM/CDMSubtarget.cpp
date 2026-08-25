@@ -13,9 +13,9 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "CDMGenSubtargetInfo.inc"
 
-CDMSubtarget::CDMSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
+CDMSubtarget::CDMSubtarget(StringRef CPU, StringRef FS,
                            const CDMTargetMachine &TM)
-    : CDMGenSubtargetInfo(TT, CPU, CPU, FS),
+    : CDMGenSubtargetInfo(TM.getTargetTriple(), CPU, CPU, FS),
       FrameLowering(initializeSubtargetDependencies(CPU, FS, TM)), InstrInfo(),
       TLInfo(TM, *this)
 

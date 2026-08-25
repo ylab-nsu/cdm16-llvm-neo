@@ -23,8 +23,7 @@ class CDMSubtarget : public CDMGenSubtargetInfo {
   SelectionDAGTargetInfo TSInfo;
 
 public:
-  CDMSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
-               const CDMTargetMachine &TM);
+  CDMSubtarget(StringRef CPU, StringRef FS, const CDMTargetMachine &TM);
 
   void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 

@@ -1,6 +1,7 @@
 #include "CDMTargetMachine.h"
 #include "CDMFunctionInfo.h"
 #include "CDMIselDAGToDAG.h"
+#include "CDMSubtarget.h"
 #include "CDMTargetObjectFile.h"
 #include "TargetInfo/CDMTargetInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -32,11 +33,28 @@ CDMTargetMachine::CDMTargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, computeDataLayout(), TT, CPU, FS, Options,
                                Reloc::Static, CodeModel::Small, OL),
       TLOF(std::make_unique<CDMTargetObjectFile>()),
-      DataLayout(computeDataLayout()), Subtarget(TT, CPU, FS, *this) {
+      DataLayout(computeDataLayout()) {
   initAsmInfo();
-  //  Options.EmitAddrsig = false;
 }
 CDMTargetMachine::~CDMTargetMachine() = default;
+
+const CDMSubtarget *
+CDMTargetMachine::getSubtargetImpl(const Function &F) const {
+  Attribute CPUAttr = F.getFnAttribute("target-cpu");
+  Attribute FSAttr = F.getFnAttribute("target-features");
+
+  std::string CPU =
+      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+  std::string FS =
+      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+
+  auto &I = SubtargetMap[CPU + FS];
+  if (!I) {
+    resetTargetOptions(F);
+    I = std::make_unique<CDMSubtarget>(CPU, FS, *this);
+  }
+  return I.get();
+}
 
 MachineFunctionInfo *CDMTargetMachine::createMachineFunctionInfo(
     BumpPtrAllocator &Allocator, const Function &F,
