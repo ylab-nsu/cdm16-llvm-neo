@@ -90,6 +90,9 @@ public:
       return CCCR_OK;
     }
   }
+
+private:
+  bool hasExtension(StringRef Ext) const;
 };
 } // namespace targets
 } // namespace clang
