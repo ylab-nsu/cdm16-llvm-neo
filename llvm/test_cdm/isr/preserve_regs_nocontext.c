@@ -34,7 +34,7 @@ volatile long long value2 = 0x0FAC0BEBDEAD1EAA;
 
 volatile context_t _context;
 
-ISR void isr(context_t *context) {
+static ISR void isr(context_t *context) {
   value1 <<= 30;
   value1 += value2;
 }

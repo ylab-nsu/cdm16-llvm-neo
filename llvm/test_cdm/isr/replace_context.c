@@ -43,7 +43,7 @@ const context_t _context = {
     .pc = (reg_t)&new_pc,
 };
 
-ISR void isr(context_t *context) { *context = _context; }
+static ISR void isr(context_t *context) { *context = _context; }
 
 INTERRUPT_VECTORS(VECTOR(isr, 0));
 
