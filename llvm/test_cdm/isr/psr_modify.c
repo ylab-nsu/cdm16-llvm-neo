@@ -12,7 +12,7 @@ int main() {
 
 volatile int and_value = 0;
 
-ISR void isr(context_t *context) {
+static ISR void isr(context_t *context) {
     context->ps &= and_value;
 }
 

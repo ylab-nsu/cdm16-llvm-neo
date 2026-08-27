@@ -12,7 +12,7 @@ int main() {
 
 volatile int add_value = 6;
 
-ISR void isr(context_t *context) {
+static ISR void isr(context_t *context) {
     context->pc += add_value;
 }
 
