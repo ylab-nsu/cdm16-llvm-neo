@@ -158,7 +158,7 @@ bool CDMFrameLowering::assignCalleeSavedSpillSlots(
     // Calee saved spill slots are always allocated in a contiguous area
     // at the start of the frame.
     Offset += 2;
-    int FI = MFI.CreateFixedObject(2, -Offset, true);
+    int FI = MFI.CreateFixedSpillStackObject(2, -Offset);
     I.setFrameIdx(FI);
   }
   TFI.setCaleeSavedSize(Offset);

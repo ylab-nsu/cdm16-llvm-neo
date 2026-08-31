@@ -147,7 +147,7 @@ SDValue CDMISelLowering::LowerFormalArguments(
     //
     // The GPRs are callee-saved, and CSRs are part of the frame, but PS and PC are not,
     // so the offset only includes the 8 GPRs.
-    int FI = MFI.CreateFixedObject(2 * 10, -2 * 8, false);
+    int FI = MFI.CreateFixedObject(2 * 10, -2 * 8, false, true);
     SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(MF.getDataLayout()));
     InVals.push_back(FIPtr);
     return Chain;
