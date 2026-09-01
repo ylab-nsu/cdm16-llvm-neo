@@ -58,7 +58,7 @@ add_public_tablegen_target(CDMCommonTableGen)
 add_llvm_target(CDMCodeGen
         CDMTargetMachine.cpp
         CDMAsmPrinter.cpp
-        CDMIselDAGToDAG.cpp
+        CDMISelDAGToDAG.cpp
         CDMSubtarget.cpp
         CDMTargetObjectFile.cpp
         CDMISelLowering.cpp
