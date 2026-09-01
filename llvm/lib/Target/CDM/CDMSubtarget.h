@@ -20,8 +20,6 @@
 namespace llvm {
 
 class CDMSubtarget : public CDMGenSubtargetInfo {
-  SelectionDAGTargetInfo TSInfo;
-
 public:
   CDMSubtarget(StringRef CPU, StringRef FS, const CDMTargetMachine &TM);
 
@@ -44,13 +42,14 @@ public:
 #include "CDMGenSubtargetInfo.inc"
 
 private:
-  CDMFrameLowering FrameLowering;
-  CDMInstrInfo InstrInfo;
-  CDMISelLowering TLInfo;
-
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool ATTRIBUTE = DEFAULT;
 #include "CDMGenSubtargetInfo.inc"
+
+  CDMFrameLowering FrameLowering;
+  CDMInstrInfo InstrInfo;
+  CDMISelLowering TLInfo;
+  SelectionDAGTargetInfo TSInfo;
 
   CDMSubtarget &initializeSubtargetDependencies(StringRef CPU, StringRef FS,
                                                 const TargetMachine &TM);
