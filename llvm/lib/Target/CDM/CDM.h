@@ -1,14 +1,21 @@
 #ifndef LLVM_LIB_TARGET_CDM_CDM_H
 #define LLVM_LIB_TARGET_CDM_CDM_H
 
-#include "MCTargetDesc/CDMMCTargetDesc.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Pass.h"
+#include "llvm/PassRegistry.h"
 
 namespace llvm {
 
+class CDMTargetMachine;
+class FunctionPass;
+class PassRegistry;
+
+FunctionPass *createCDMISelDag(CDMTargetMachine &TM, CodeGenOptLevel OptLevel);
 FunctionPass *createCDMFrameAnalyzerPass();
+
+void initializeCDMAsmPrinterPass(PassRegistry &);
+void initializeCDMDAGToDAGISelLegacyPass(PassRegistry &);
 
 enum AddressSpace {
   DataMemory,

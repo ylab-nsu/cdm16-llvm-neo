@@ -1,3 +1,4 @@
+
 //
 // Created by ilya on 21.10.23.
 //
@@ -5,14 +6,13 @@
 #ifndef LLVM_CDMSUBTARGET_H
 #define LLVM_CDMSUBTARGET_H
 
-#include "CDMISelLowering.h"
-
-#include "CDMFrameLowering.h"
-#include "CDMInstrInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/TargetParser/Triple.h"
+
+#include "CDMFrameLowering.h"
+#include "CDMISelLowering.h"
+#include "CDMInstrInfo.h"
+#include "MCTargetDesc/CDMMCTargetDesc.h"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "CDMGenSubtargetInfo.inc"
@@ -22,8 +22,6 @@ namespace llvm {
 class CDMSubtarget : public CDMGenSubtargetInfo {
 public:
   CDMSubtarget(StringRef CPU, StringRef FS, const CDMTargetMachine &TM);
-
-  void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
   const CDMISelLowering *getTargetLowering() const override { return &TLInfo; }
   const TargetFrameLowering *getFrameLowering() const override {
@@ -36,6 +34,8 @@ public:
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
   }
+
+  void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool GETTER() const { return ATTRIBUTE; }

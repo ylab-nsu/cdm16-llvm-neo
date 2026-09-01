@@ -1,20 +1,22 @@
 #include "CDMTargetMachine.h"
-#include "CDMFunctionInfo.h"
-#include "CDMIselDAGToDAG.h"
-#include "CDMSubtarget.h"
-#include "CDMTargetObjectFile.h"
-#include "TargetInfo/CDMTargetInfo.h"
+
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
 #include <optional>
+
+#include "CDMFunctionInfo.h"
+#include "CDMSubtarget.h"
+#include "CDMTargetObjectFile.h"
+#include "TargetInfo/CDMTargetInfo.h"
+
 using namespace llvm;
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCDMTarget() {
-  // Register the target.
   RegisterTargetMachine<CDMTargetMachine> X(getTheCDMTarget());
 
-  //  PassRegistry &PR = *PassRegistry::getPassRegistry();
-  //  initializeSparcDAGToDAGISelPass(PR);
+  PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeCDMAsmPrinterPass(PR);
+  initializeCDMDAGToDAGISelLegacyPass(PR);
 }
 
 static std::string computeDataLayout() {
@@ -36,6 +38,7 @@ CDMTargetMachine::CDMTargetMachine(const Target &T, const Triple &TT,
       DataLayout(computeDataLayout()) {
   initAsmInfo();
 }
+
 CDMTargetMachine::~CDMTargetMachine() = default;
 
 const CDMSubtarget *
@@ -81,10 +84,8 @@ TargetPassConfig *CDMTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 bool CDMPassConfig::addInstSelector() {
-  addPass(createCDMISelDagLegacy(getTM<CDMTargetMachine>(), getOptLevel()));
+  addPass(createCDMISelDag(getTM<CDMTargetMachine>(), getOptLevel()));
   return false;
 }
 
-void CDMPassConfig::addPostRegAlloc() {
-  addPass(createCDMFrameAnalyzerPass());
-}
+void CDMPassConfig::addPostRegAlloc() { addPass(createCDMFrameAnalyzerPass()); }

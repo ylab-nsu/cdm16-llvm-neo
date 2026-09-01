@@ -4,12 +4,13 @@
 
 #include "CDMInstrInfo.h"
 
-#include "CDM.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/Support/ErrorHandling.h"
+
+#include "MCTargetDesc/CDMMCTargetDesc.h"
 
 #define GET_INSTRINFO_CTOR_DTOR
 #include "CDMGenInstrInfo.inc"
@@ -279,7 +280,8 @@ void CDMInstrInfo::expandShiftExt(MachineBasicBlock &MBB,
   finalizeBundle(MBB, Bundler.begin(), Bundler.end());
 }
 
-// Expands PseudoAddExt32 and PseudoSubExt32 pseudos into add+addc and sub+subc pairs.
+// Expands PseudoAddExt32 and PseudoSubExt32 pseudos into add+addc and sub+subc
+// pairs.
 void CDMInstrInfo::expandArithExt(MachineBasicBlock &MBB,
                                   MachineInstr &MI) const {
   MachineFunction &MF = *MBB.getParent();

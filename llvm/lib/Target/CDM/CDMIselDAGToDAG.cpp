@@ -2,33 +2,92 @@
 // Created by ilya on 21.10.23.
 //
 
-#include "CDMIselDAGToDAG.h"
-#include "CDM.h"
-
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/MachineConstantPool.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
-#include "llvm/CodeGen/SelectionDAGNodes.h"
-#include "llvm/IR/InlineAsm.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
-#include <utility>
+
+#include "CDM.h"
+#include "CDMTargetMachine.h"
+#include "MCTargetDesc/CDMMCTargetDesc.h"
 
 #define DEBUG_TYPE "cdm-isel"
 #define PASS_NAME "CDM DAG->DAG Instruction Selection"
 
 using namespace llvm;
 
-char CDMDagToDagIselLegacy::ID = 0;
+namespace {
 
-StringRef CDMDagToDagIselLegacy::getPassName() const { return PASS_NAME; }
+class CDMDAGToDAGISel : public SelectionDAGISel {
+public:
+  explicit CDMDAGToDAGISel(CDMTargetMachine &TM,
+                           CodeGenOptLevel OL = CodeGenOptLevel::Default)
+      : SelectionDAGISel(TM, OL) {}
 
-void CDMDagToDagIsel::Select(SDNode *N) {
+private:
+#include "CDMGenDAGISel.inc"
+  const CDMSubtarget *Subtarget = nullptr;
+
+  void Select(SDNode *N) override;
+  bool trySelectPointerCall(SDNode *N);
+
+  bool selectAddr(SDNode *Op, SDValue N, SDValue &Addr);
+  bool selectAddr2Reg(SDNode *Op, SDValue N, SDValue &Base, SDValue &Offset);
+  bool selectConstAddr(SDNode *Op, SDValue N, SDValue &Addr);
+  bool selectConstAddr2Reg(SDNode *Op, SDValue N, SDValue &Base,
+                           SDValue &Offset);
+  bool selectAddrFrameIndex(SDNode *Op, SDValue N, SDValue &Addr,
+                            SDValue &Offset);
+
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                    InlineAsm::ConstraintCode ConstraintID,
+                                    std::vector<SDValue> &OutOps) override;
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    Subtarget = &MF.getSubtarget<CDMSubtarget>();
+    return SelectionDAGISel::runOnMachineFunction(MF);
+  }
+
+  inline CDMCOND::CondOp condCodeToCDMCond(ISD::CondCode CC) const {
+    switch (CC) {
+    case ISD::CondCode::SETLT:
+      return CDMCOND::LT;
+    case ISD::CondCode::SETLE:
+      return CDMCOND::LE;
+    case ISD::CondCode::SETGT:
+      return CDMCOND::GT;
+    case ISD::CondCode::SETGE:
+      return CDMCOND::GE;
+    case ISD::CondCode::SETULT:
+      return CDMCOND::LO;
+    case ISD::CondCode::SETULE:
+      return CDMCOND::LS;
+    case ISD::CondCode::SETUGT:
+      return CDMCOND::HI;
+    case ISD::CondCode::SETUGE:
+      return CDMCOND::HS;
+    case ISD::CondCode::SETEQ:
+      return CDMCOND::EQ;
+    case ISD::CondCode::SETNE:
+      return CDMCOND::NE;
+    default:
+      llvm_unreachable("Unknown branch condition");
+    }
+  }
+};
+
+class CDMDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  StringRef getPassName() const override { return PASS_NAME; }
+
+  explicit CDMDAGToDAGISelLegacy(CDMTargetMachine &TM, CodeGenOptLevel OptLevel)
+      : SelectionDAGISelLegacy(
+            ID, std::make_unique<CDMDAGToDAGISel>(TM, OptLevel)) {}
+
+  static char ID;
+};
+} // namespace
+
+void CDMDAGToDAGISel::Select(SDNode *N) {
 
   if (N->isMachineOpcode()) {
     LLVM_DEBUG(errs() << "== Tried to select already selected node ";
@@ -47,7 +106,7 @@ void CDMDagToDagIsel::Select(SDNode *N) {
   SelectCode(N);
 }
 
-bool CDMDagToDagIsel::trySelectPointerCall(SDNode *N) {
+bool CDMDAGToDAGISel::trySelectPointerCall(SDNode *N) {
   SDValue Target = N->getOperand(1);
 
   // If target is just symbol, pass through to default tablegen pattern matching
@@ -93,7 +152,7 @@ bool CDMDagToDagIsel::trySelectPointerCall(SDNode *N) {
   return true;
 }
 
-bool CDMDagToDagIsel::selectAddr(SDNode *Op, SDValue N, SDValue &Base) {
+bool CDMDAGToDAGISel::selectAddr(SDNode *Op, SDValue N, SDValue &Base) {
   if (isProgramMemoryAccess(cast<MemSDNode>(Op))) {
     return false;
   }
@@ -107,7 +166,7 @@ bool CDMDagToDagIsel::selectAddr(SDNode *Op, SDValue N, SDValue &Base) {
   return true;
 }
 
-bool CDMDagToDagIsel::selectAddr2Reg(SDNode *Op, SDValue N, SDValue &Base,
+bool CDMDAGToDAGISel::selectAddr2Reg(SDNode *Op, SDValue N, SDValue &Base,
                                      SDValue &Offset) {
   if (isProgramMemoryAccess(cast<MemSDNode>(Op))) {
     return false;
@@ -130,7 +189,7 @@ bool CDMDagToDagIsel::selectAddr2Reg(SDNode *Op, SDValue N, SDValue &Base,
   return false;
 }
 
-bool CDMDagToDagIsel::selectAddrFrameIndex(SDNode *Op, SDValue N, SDValue &Base,
+bool CDMDAGToDAGISel::selectAddrFrameIndex(SDNode *Op, SDValue N, SDValue &Base,
                                            SDValue &Offset) {
   EVT ValTy = N.getValueType();
   SDLoc DL(N);
@@ -161,7 +220,7 @@ bool CDMDagToDagIsel::selectAddrFrameIndex(SDNode *Op, SDValue N, SDValue &Base,
   return false;
 }
 
-bool CDMDagToDagIsel::selectConstAddr(SDNode *Op, SDValue N, SDValue &Base) {
+bool CDMDAGToDAGISel::selectConstAddr(SDNode *Op, SDValue N, SDValue &Base) {
   if (!isProgramMemoryAccess(cast<MemSDNode>(Op))) {
     return false;
   }
@@ -175,7 +234,7 @@ bool CDMDagToDagIsel::selectConstAddr(SDNode *Op, SDValue N, SDValue &Base) {
   return true;
 }
 
-bool CDMDagToDagIsel::selectConstAddr2Reg(SDNode *Op, SDValue N, SDValue &Base,
+bool CDMDAGToDAGISel::selectConstAddr2Reg(SDNode *Op, SDValue N, SDValue &Base,
                                           SDValue &Offset) {
   if (!isProgramMemoryAccess(cast<MemSDNode>(Op))) {
     return false;
@@ -189,7 +248,7 @@ bool CDMDagToDagIsel::selectConstAddr2Reg(SDNode *Op, SDValue N, SDValue &Base,
   return false;
 }
 
-bool CDMDagToDagIsel::SelectInlineAsmMemoryOperand(
+bool CDMDAGToDAGISel::SelectInlineAsmMemoryOperand(
     const SDValue &Op, InlineAsm::ConstraintCode ConstraintCode,
     std::vector<SDValue> &OutOps) {
   switch (ConstraintCode) {
@@ -203,7 +262,11 @@ bool CDMDagToDagIsel::SelectInlineAsmMemoryOperand(
   return false;
 }
 
-FunctionPass *llvm::createCDMISelDagLegacy(llvm::CDMTargetMachine &TM,
-                                           CodeGenOptLevel OptLevel) {
-  return new CDMDagToDagIselLegacy(TM, OptLevel);
+FunctionPass *llvm::createCDMISelDag(llvm::CDMTargetMachine &TM,
+                                     CodeGenOptLevel OptLevel) {
+  return new CDMDAGToDAGISelLegacy(TM, OptLevel);
 }
+
+char CDMDAGToDAGISelLegacy::ID = 0;
+
+INITIALIZE_PASS(CDMDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)

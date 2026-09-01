@@ -3,7 +3,7 @@
 //
 
 #include "CDMMCInstLower.h"
-#include "CDMAsmPrinter.h"
+
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -12,8 +12,8 @@
 #include "llvm/MC/MCInst.h"
 
 namespace llvm {
-CDMMCInstLower::CDMMCInstLower(MCContext &C, CDMAsmPrinter &AsmPrinter)
-    : Ctx(C), AsmPrinter(AsmPrinter) {}
+CDMMCInstLower::CDMMCInstLower(MCContext &C, AsmPrinter &Printer)
+    : Ctx(C), Printer(Printer) {}
 
 void CDMMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   OutMI.setOpcode(MI->getOpcode());
@@ -43,18 +43,18 @@ MCOperand CDMMCInstLower::lowerOperand(const MachineOperand &MO) const {
   case MachineOperand::MO_MachineBasicBlock:
     return lowerSymbolOperand(MO.getMBB()->getSymbol(), 0);
   case MachineOperand::MO_GlobalAddress:
-    return lowerSymbolOperand(AsmPrinter.getSymbol(MO.getGlobal()),
+    return lowerSymbolOperand(Printer.getSymbol(MO.getGlobal()),
                               MO.getOffset());
   case MachineOperand::MO_ExternalSymbol:
     return lowerSymbolOperand(
-        AsmPrinter.GetExternalSymbolSymbol(MO.getSymbolName()), MO.getOffset());
+        Printer.GetExternalSymbolSymbol(MO.getSymbolName()), MO.getOffset());
   case MachineOperand::MO_JumpTableIndex:
-    return lowerSymbolOperand(AsmPrinter.GetJTISymbol(MO.getIndex()), 0);
+    return lowerSymbolOperand(Printer.GetJTISymbol(MO.getIndex()), 0);
   case MachineOperand::MO_BlockAddress:
     return lowerSymbolOperand(
-        AsmPrinter.GetBlockAddressSymbol(MO.getBlockAddress()), MO.getOffset());
+        Printer.GetBlockAddressSymbol(MO.getBlockAddress()), MO.getOffset());
   case MachineOperand::MO_ConstantPoolIndex:
-    return lowerSymbolOperand(AsmPrinter.GetCPISymbol(MO.getIndex()),
+    return lowerSymbolOperand(Printer.GetCPISymbol(MO.getIndex()),
                               MO.getOffset());
   case MachineOperand::MO_RegisterMask:
     break;
