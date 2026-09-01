@@ -9,17 +9,18 @@
 #include "llvm/MC/MCContext.h"
 
 namespace llvm {
-class CDMAsmPrinter;
+class AsmPrinter;
 
 class CDMMCInstLower {
-  MCContext &Ctx;
-  CDMAsmPrinter &AsmPrinter;
-
 public:
-  CDMMCInstLower(MCContext &C, CDMAsmPrinter &AsmPrinter);
+  CDMMCInstLower(MCContext &C, AsmPrinter &AsmPrinter);
   void lower(const MachineInstr *MI, MCInst &OutMI) const;
   MCOperand lowerOperand(const MachineOperand &MO) const;
   MCOperand lowerSymbolOperand(MCSymbol *Symbol, int64_t Offset) const;
+
+private:
+  MCContext &Ctx;
+  AsmPrinter &Printer;
 };
 
 } // namespace llvm

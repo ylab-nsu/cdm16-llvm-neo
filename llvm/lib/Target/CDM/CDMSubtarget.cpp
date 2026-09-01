@@ -3,11 +3,15 @@
 //
 
 #include "CDMSubtarget.h"
+
+#include "llvm/MC/TargetRegistry.h"
+
+#include "CDM.h"
 #include "CDMTargetMachine.h"
 
-using namespace llvm;
-
 #define DEBUG_TYPE "cdm-subtarget"
+
+using namespace llvm;
 
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
@@ -17,11 +21,7 @@ CDMSubtarget::CDMSubtarget(StringRef CPU, StringRef FS,
                            const CDMTargetMachine &TM)
     : CDMGenSubtargetInfo(TM.getTargetTriple(), CPU, CPU, FS),
       FrameLowering(initializeSubtargetDependencies(CPU, FS, TM)), InstrInfo(),
-      TLInfo(TM, *this)
-
-{
-  ParseSubtargetFeatures(CPU, /*TuneCPU*/ CPU, FS);
-}
+      TLInfo(TM, *this) {}
 
 CDMSubtarget &
 CDMSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,

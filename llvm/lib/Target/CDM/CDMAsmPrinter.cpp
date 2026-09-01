@@ -2,10 +2,6 @@
 // Created by ilya on 16.10.23.
 //
 
-#include "CDMAsmPrinter.h"
-#include "InstPrinter/CDMInstPrinter.h"
-#include "MCTargetDesc/CDMTargetStreamer.h"
-#include "TargetInfo/CDMTargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -34,13 +30,53 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
-#include "llvm/Target/TargetOptions.h"
+
+#include "CDM.h"
+#include "CDMMCInstLower.h"
+#include "InstPrinter/CDMInstPrinter.h"
+#include "MCTargetDesc/CDMTargetStreamer.h"
+#include "TargetInfo/CDMTargetInfo.h"
+
+#define DEBUG_TYPE "cdm-asm-printer"
+#define PASS_NAME "CDM Assembly Printer"
 
 using namespace llvm;
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCDMAsmPrinter() {
-  RegisterAsmPrinter<CDMAsmPrinter> X(getTheCDMTarget());
-}
+namespace {
+
+class CDMAsmPrinter : public AsmPrinter {
+  llvm::StringMap<int> SourceFiles;
+  std::optional<unsigned> SourceFileIndex;
+  std::optional<unsigned> LineNumber;
+  std::optional<unsigned> ColumnNumber;
+
+  std::optional<int> getSourceFileIndex(StringRef Checksum);
+  void collectAndEmitSourceFiles(Module &Module);
+  void emitDebugLoc(DILocation &DebugLoc);
+
+public:
+  explicit CDMAsmPrinter(TargetMachine &TM,
+                         std::unique_ptr<MCStreamer> Streamer)
+      : AsmPrinter(TM, std::move(Streamer)) {}
+
+  StringRef getPassName() const override { return PASS_NAME; }
+
+  void emitInstruction(const MachineInstr *Instr) override;
+  void emitStartOfAsmFile(Module &Module) override;
+
+  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
+                       const char *ExtraCode, raw_ostream &O) override;
+  bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
+                             const char *ExtraCode, raw_ostream &OS) override;
+
+  CDMTargetStreamer *getTargetStreamer() const {
+    return static_cast<CDMTargetStreamer *>(OutStreamer->getTargetStreamer());
+  }
+
+  static char ID;
+};
+
+} // namespace
 
 std::optional<int> CDMAsmPrinter::getSourceFileIndex(StringRef Checksum) {
   if (this->SourceFiles.contains(Checksum)) {
@@ -209,4 +245,13 @@ bool CDMAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
 
   OS << CDMInstPrinter::getRegisterName(Reg.getReg());
   return false;
+}
+
+char CDMAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(CDMAsmPrinter, DEBUG_TYPE, PASS_NAME, false, false)
+
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeCDMAsmPrinter() {
+  llvm::RegisterAsmPrinter<CDMAsmPrinter> X(getTheCDMTarget());
 }
