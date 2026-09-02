@@ -2,11 +2,6 @@
 // Created by ilya on 21.10.23.
 //
 
-#include "CDMISelLowering.h"
-#include "CDMRegisterInfo.h"
-#include "CDMSubtarget.h"
-#include "CDMTargetMachine.h"
-#include "MCTargetDesc/CDMMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -24,10 +19,17 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <vector>
 
+#include "CDMISelLowering.h"
+#include "CDMMachineFunctionInfo.h"
+#include "CDMRegisterInfo.h"
+#include "CDMSubtarget.h"
+#include "CDMTargetMachine.h"
+#include "MCTargetDesc/CDMMCTargetDesc.h"
+
 using namespace llvm;
 
 CDMTargetLowering::CDMTargetLowering(const CDMTargetMachine &TM,
-                                 const CDMSubtarget &ST)
+                                     const CDMSubtarget &ST)
     : TargetLowering(TM), Subtarget(ST) {
   addRegisterClass(MVT::i16, &CDM::CPURegsRegClass);
   computeRegisterProperties(Subtarget.getRegisterInfo());
@@ -128,7 +130,6 @@ CDMTargetLowering::CDMTargetLowering(const CDMTargetMachine &TM,
   setOperationAction(ISD::ATOMIC_LOAD_UMIN, MVT::i16, Expand);
 }
 
-#include "CDMFunctionInfo.h"
 #include "CDMGenCallingConv.inc"
 
 // Mostly taken from llvm-leg
@@ -140,13 +141,13 @@ SDValue CDMTargetLowering::LowerFormalArguments(
   auto &MFI = MF.getFrameInfo();
   auto &RegInfo = MF.getRegInfo();
 
-  if (MF.getInfo<CDMFunctionInfo>()->isISRWithContext()) {
+  if (MF.getInfo<CDMMachineFunctionInfo>()->isISRWithContext()) {
     // This function is an ISR with a pointer parameter that points to the
     // processor context saved on the stack. We need to create the corresponding
     // stack object and lower the argument to a frame index.
     //
-    // The GPRs are callee-saved, and CSRs are part of the frame, but PS and PC are not,
-    // so the offset only includes the 8 GPRs.
+    // The GPRs are callee-saved, and CSRs are part of the frame, but PS and PC
+    // are not, so the offset only includes the 8 GPRs.
     int FI = MFI.CreateFixedObject(2 * 10, -2 * 8, false, true);
     SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(MF.getDataLayout()));
     InVals.push_back(FIPtr);
@@ -192,7 +193,7 @@ SDValue CDMTargetLowering::LowerFormalArguments(
   }
 
   if (MF.getFunction().hasStructRetAttr()) {
-    CDMFunctionInfo *CFI = MF.getInfo<CDMFunctionInfo>();
+    CDMMachineFunctionInfo *CFI = MF.getInfo<CDMMachineFunctionInfo>();
     Register Reg = CFI->getSRetReturnReg();
     if (!Reg) {
       Reg = MF.getRegInfo().createVirtualRegister(&CDM::CPURegsRegClass);
@@ -205,7 +206,7 @@ SDValue CDMTargetLowering::LowerFormalArguments(
   if (!IsVarArg)
     return Chain;
 
-  CDMFunctionInfo *CDMFI = MF.getInfo<CDMFunctionInfo>();
+  CDMMachineFunctionInfo *CDMFI = MF.getInfo<CDMMachineFunctionInfo>();
   CDMFI->setVarArgsFrameIndex(0);
 
   // Block of code below handle varargs passed through registers
@@ -236,13 +237,13 @@ SDValue CDMTargetLowering::LowerFormalArguments(
 
 SDValue
 CDMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
-                             bool IsVarArg,
-                             const SmallVectorImpl<ISD::OutputArg> &Outs,
-                             const SmallVectorImpl<SDValue> &OutVals,
-                             const SDLoc &DL, SelectionDAG &DAG) const {
+                               bool IsVarArg,
+                               const SmallVectorImpl<ISD::OutputArg> &Outs,
+                               const SmallVectorImpl<SDValue> &OutVals,
+                               const SDLoc &DL, SelectionDAG &DAG) const {
   SmallVector<CCValAssign, 16> RVLocs;
   MachineFunction &MF = DAG.getMachineFunction();
-  CDMFunctionInfo *CFI = MF.getInfo<CDMFunctionInfo>();
+  CDMMachineFunctionInfo *CFI = MF.getInfo<CDMMachineFunctionInfo>();
 
   // CCState - Info about the registers and stack slot.
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, *DAG.getContext());
@@ -334,7 +335,7 @@ const char *CDMTargetLowering::getTargetNodeName(unsigned int Opcode) const {
 }
 
 SDValue CDMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
-                                   SmallVectorImpl<SDValue> &InVals) const {
+                                     SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG = CLI.DAG;
   SDLoc &Loc = CLI.DL;
   SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
@@ -521,8 +522,8 @@ SDValue CDMTargetLowering::lowerCallResult(
 }
 
 void CDMTargetLowering::ReplaceNodeResults(SDNode *N,
-                                         SmallVectorImpl<SDValue> &Results,
-                                         SelectionDAG &DAG) const {
+                                           SmallVectorImpl<SDValue> &Results,
+                                           SelectionDAG &DAG) const {
   switch (N->getOpcode()) {
   case ISD::SHL:
   case ISD::SRL:
@@ -573,7 +574,7 @@ SDValue CDMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue CDMTargetLowering::lowerGlobalAddress(SDValue Op,
-                                            SelectionDAG &DAG) const {
+                                              SelectionDAG &DAG) const {
   EVT VT = getPointerTy(DAG.getDataLayout());
 
   const GlobalValue *GV = cast<GlobalAddressSDNode>(Op)->getGlobal();
@@ -584,7 +585,7 @@ SDValue CDMTargetLowering::lowerGlobalAddress(SDValue Op,
 }
 
 SDValue CDMTargetLowering::lowerExternalSymbol(SDValue Op,
-                                             SelectionDAG &DAG) const {
+                                               SelectionDAG &DAG) const {
   EVT VT = getPointerTy(DAG.getDataLayout());
 
   const char *SymName = cast<ExternalSymbolSDNode>(Op)->getSymbol();
@@ -603,7 +604,7 @@ SDValue CDMTargetLowering::lowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue CDMTargetLowering::lowerBlockAddress(SDValue Op,
-                                           SelectionDAG &DAG) const {
+                                             SelectionDAG &DAG) const {
   EVT VT = getPointerTy(DAG.getDataLayout());
 
   const BlockAddress *BlockAddress =
@@ -614,7 +615,7 @@ SDValue CDMTargetLowering::lowerBlockAddress(SDValue Op,
 }
 
 SDValue CDMTargetLowering::lowerConstantPool(SDValue Op,
-                                           SelectionDAG &DAG) const {
+                                             SelectionDAG &DAG) const {
   EVT VT = getPointerTy(DAG.getDataLayout());
 
   ConstantPoolSDNode *CP = cast<ConstantPoolSDNode>(Op);
@@ -626,7 +627,7 @@ SDValue CDMTargetLowering::lowerConstantPool(SDValue Op,
 
 SDValue CDMTargetLowering::lowerVASTART(SDValue Op, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  CDMFunctionInfo *FuncInfo = MF.getInfo<CDMFunctionInfo>();
+  CDMMachineFunctionInfo *FuncInfo = MF.getInfo<CDMMachineFunctionInfo>();
 
   SDLoc DL(Op);
   SDValue FI = DAG.getFrameIndex(FuncInfo->getVarArgsFrameIndex(),
@@ -781,7 +782,7 @@ SDValue CDMTargetLowering::lowerArith32(SDValue Op, SelectionDAG &DAG) const {
 
 MachineBasicBlock *
 CDMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
-                                             MachineBasicBlock *MBB) const {
+                                               MachineBasicBlock *MBB) const {
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unknown instruction to emit with custom inserter");
@@ -815,7 +816,7 @@ CDMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
 MachineBasicBlock *
 CDMTargetLowering::emitPseudoSelectCC(MachineInstr &MI,
-                                    MachineBasicBlock *MBB) const {
+                                      MachineBasicBlock *MBB) const {
   const TargetInstrInfo *TII = MBB->getParent()->getSubtarget().getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
 
@@ -873,7 +874,7 @@ CDMTargetLowering::emitPseudoSelectCC(MachineInstr &MI,
 
 MachineBasicBlock *
 CDMTargetLowering::emitShiftLargeAmt(MachineInstr &MI,
-                                   MachineBasicBlock *MBB) const {
+                                     MachineBasicBlock *MBB) const {
   MachineFunction &MF = *MBB->getParent();
   MachineRegisterInfo &RI = MF.getRegInfo();
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
@@ -919,7 +920,8 @@ CDMTargetLowering::emitShiftLargeAmt(MachineInstr &MI,
 
 // Replaces shift_LOOP pseudos with inline loops.
 MachineBasicBlock *
-CDMTargetLowering::emitShiftLoop(MachineInstr &MI, MachineBasicBlock *MBB) const {
+CDMTargetLowering::emitShiftLoop(MachineInstr &MI,
+                                 MachineBasicBlock *MBB) const {
   MachineFunction &MF = *MBB->getParent();
   MachineRegisterInfo &RI = MF.getRegInfo();
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
@@ -1082,8 +1084,8 @@ CDMTargetLowering::emitShiftLoop(MachineInstr &MI, MachineBasicBlock *MBB) const
 
 std::pair<unsigned, const TargetRegisterClass *>
 CDMTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
-                                              StringRef Constraint,
-                                              MVT VT) const {
+                                                StringRef Constraint,
+                                                MVT VT) const {
   if (Constraint.size() == 1) {
     switch (Constraint[0]) {
     case 'r':
@@ -1100,7 +1102,7 @@ CDMTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
 #include "CDMGenAsmMatcher.inc"
 
 Register CDMTargetLowering::getRegisterByName(const char *RegName, LLT VT,
-                                            const MachineFunction &MF) const {
+                                              const MachineFunction &MF) const {
   Register Reg = MatchRegisterAltName(RegName);
   if (!Reg)
     Reg = MatchRegisterName(RegName);

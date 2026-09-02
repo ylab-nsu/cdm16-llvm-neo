@@ -23,7 +23,7 @@ add_llvm_target(CDMCodeGen
   CDMTargetObjectFile.cpp
   CDMISelLowering.cpp
   CDMFrameLowering.cpp
-  CDMFunctionInfo.cpp
+  CDMMachineFunctionInfo.cpp
   CDMRegisterInfo.cpp
   CDMInstrInfo.cpp
   CDMMCInstLower.cpp

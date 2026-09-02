@@ -45,7 +45,8 @@ class CDMTargetMachine;
 class CDMSubtarget;
 class CDMTargetLowering : public TargetLowering {
 public:
-  explicit CDMTargetLowering(const CDMTargetMachine &TM, const CDMSubtarget &ST);
+  explicit CDMTargetLowering(const CDMTargetMachine &TM,
+                             const CDMSubtarget &ST);
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool IsVarArg,
                                const SmallVectorImpl<ISD::InputArg> &Ins,
@@ -77,7 +78,7 @@ public:
                              const MachineFunction &MF) const override;
 
   MVT::SimpleValueType getCmpLibcallReturnType() const override {
-      return MVT::i16;
+    return MVT::i16;
   }
 
 private:
