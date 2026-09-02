@@ -2,44 +2,23 @@
 // Created by ilya on 21.11.23.
 //
 
-#include "CDMMachineFunctionInfo.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/MC/MCInstrDesc.h"
-#define DEBUG_TYPE "cdm-reg-info"
+#include "CDMRegisterInfo.h"
 
-#include "CDMFrameLowering.h"
-#include "MCTargetDesc/CDMMCTargetDesc.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/Register.h"
-#include "llvm/CodeGen/RegisterScavenging.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/DiagnosticPrinter.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/ModuleSummaryIndex.h"
-#include "llvm/IR/Type.h"
-#include "llvm/Support/BranchProbability.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/raw_ostream.h"
-#include <iterator>
 #include <map>
 
-#include "CDMRegisterInfo.h"
+#include "CDMFrameLowering.h"
+#include "CDMInstrInfo.h"
+#include "CDMMachineFunctionInfo.h"
+#include "MCTargetDesc/CDMMCTargetDesc.h"
+
+#define DEBUG_TYPE "cdm-reg-info"
 
 #define GET_REGINFO_TARGET_DESC
 #include "CDMGenRegisterInfo.inc"
-#include "CDMInstrInfo.h"
 
 namespace llvm {
 
