@@ -9,6 +9,6 @@ Target &llvm::getTheCDMTarget() {
 }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCDMTargetInfo() {
-  RegisterTarget<Triple::cdm, /*HasJIT=*/false> X(getTheCDMTarget(), "cdm",
-                                                  "CDM", "CDM");
+  RegisterTarget<Triple::cdm, /*HasJIT=*/false> X(
+      getTheCDMTarget(), "cdm", "CdM-16 educational processor", "CDM");
 }
