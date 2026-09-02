@@ -10,7 +10,6 @@
 
 #define GET_INSTRINFO_HEADER
 #include "CDMGenInstrInfo.inc"
-#include "llvm/CodeGen/ISDOpcodes.h"
 
 namespace llvm {
 
