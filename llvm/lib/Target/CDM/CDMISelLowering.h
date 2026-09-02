@@ -43,9 +43,9 @@ enum NodeType {
 
 class CDMTargetMachine;
 class CDMSubtarget;
-class CDMISelLowering : public TargetLowering {
+class CDMTargetLowering : public TargetLowering {
 public:
-  explicit CDMISelLowering(const CDMTargetMachine &TM, const CDMSubtarget &ST);
+  explicit CDMTargetLowering(const CDMTargetMachine &TM, const CDMSubtarget &ST);
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool IsVarArg,
                                const SmallVectorImpl<ISD::InputArg> &Ins,

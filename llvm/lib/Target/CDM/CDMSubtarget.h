@@ -23,7 +23,7 @@ class CDMSubtarget : public CDMGenSubtargetInfo {
 public:
   CDMSubtarget(StringRef CPU, StringRef FS, const CDMTargetMachine &TM);
 
-  const CDMISelLowering *getTargetLowering() const override { return &TLInfo; }
+  const CDMTargetLowering *getTargetLowering() const override { return &TLInfo; }
   const TargetFrameLowering *getFrameLowering() const override {
     return &FrameLowering;
   }
@@ -48,7 +48,7 @@ private:
 
   CDMFrameLowering FrameLowering;
   CDMInstrInfo InstrInfo;
-  CDMISelLowering TLInfo;
+  CDMTargetLowering TLInfo;
   SelectionDAGTargetInfo TSInfo;
 
   CDMSubtarget &initializeSubtargetDependencies(StringRef CPU, StringRef FS,

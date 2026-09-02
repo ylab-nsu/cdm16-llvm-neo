@@ -26,7 +26,7 @@
 
 using namespace llvm;
 
-CDMISelLowering::CDMISelLowering(const CDMTargetMachine &TM,
+CDMTargetLowering::CDMTargetLowering(const CDMTargetMachine &TM,
                                  const CDMSubtarget &ST)
     : TargetLowering(TM), Subtarget(ST) {
   addRegisterClass(MVT::i16, &CDM::CPURegsRegClass);
@@ -132,7 +132,7 @@ CDMISelLowering::CDMISelLowering(const CDMTargetMachine &TM,
 #include "CDMGenCallingConv.inc"
 
 // Mostly taken from llvm-leg
-SDValue CDMISelLowering::LowerFormalArguments(
+SDValue CDMTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
@@ -235,7 +235,7 @@ SDValue CDMISelLowering::LowerFormalArguments(
 }
 
 SDValue
-CDMISelLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
+CDMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                              bool IsVarArg,
                              const SmallVectorImpl<ISD::OutputArg> &Outs,
                              const SmallVectorImpl<SDValue> &OutVals,
@@ -302,7 +302,7 @@ CDMISelLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   return DAG.getNode(RetOpcode, DL, MVT::Other, RetOps);
 }
 
-bool CDMISelLowering::CanLowerReturn(
+bool CDMTargetLowering::CanLowerReturn(
     CallingConv::ID CallingConv, MachineFunction &MF, bool IsVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
     const Type *RetTy) const {
@@ -314,7 +314,7 @@ bool CDMISelLowering::CanLowerReturn(
 #define NODE_NAME(x)                                                           \
   case CDMISD::x:                                                              \
     return "CDMISD::" #x
-const char *CDMISelLowering::getTargetNodeName(unsigned int Opcode) const {
+const char *CDMTargetLowering::getTargetNodeName(unsigned int Opcode) const {
   switch (Opcode) {
     NODE_NAME(RTS);
     NODE_NAME(RTI);
@@ -333,7 +333,7 @@ const char *CDMISelLowering::getTargetNodeName(unsigned int Opcode) const {
   }
 }
 
-SDValue CDMISelLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
+SDValue CDMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                    SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG = CLI.DAG;
   SDLoc &Loc = CLI.DL;
@@ -496,7 +496,7 @@ SDValue CDMISelLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                          InVals);
 }
 
-SDValue CDMISelLowering::lowerCallResult(
+SDValue CDMTargetLowering::lowerCallResult(
     SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool IsVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, SDLoc DL, SelectionDAG &DAG,
     SmallVectorImpl<SDValue> &InVals) const {
@@ -520,7 +520,7 @@ SDValue CDMISelLowering::lowerCallResult(
   return Chain;
 }
 
-void CDMISelLowering::ReplaceNodeResults(SDNode *N,
+void CDMTargetLowering::ReplaceNodeResults(SDNode *N,
                                          SmallVectorImpl<SDValue> &Results,
                                          SelectionDAG &DAG) const {
   switch (N->getOpcode()) {
@@ -542,7 +542,7 @@ void CDMISelLowering::ReplaceNodeResults(SDNode *N,
   }
 }
 
-SDValue CDMISelLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
+SDValue CDMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   case ISD::GlobalAddress:
     return lowerGlobalAddress(Op, DAG);
@@ -572,7 +572,7 @@ SDValue CDMISelLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   return SDValue();
 }
 
-SDValue CDMISelLowering::lowerGlobalAddress(SDValue Op,
+SDValue CDMTargetLowering::lowerGlobalAddress(SDValue Op,
                                             SelectionDAG &DAG) const {
   EVT VT = getPointerTy(DAG.getDataLayout());
 
@@ -583,7 +583,7 @@ SDValue CDMISelLowering::lowerGlobalAddress(SDValue Op,
   return DAG.getNode(CDMISD::LOAD_SYM, SDLoc(Op), VT, Result);
 }
 
-SDValue CDMISelLowering::lowerExternalSymbol(SDValue Op,
+SDValue CDMTargetLowering::lowerExternalSymbol(SDValue Op,
                                              SelectionDAG &DAG) const {
   EVT VT = getPointerTy(DAG.getDataLayout());
 
@@ -593,7 +593,7 @@ SDValue CDMISelLowering::lowerExternalSymbol(SDValue Op,
   return DAG.getNode(CDMISD::LOAD_SYM, SDLoc(Op), VT, Result);
 }
 
-SDValue CDMISelLowering::lowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
+SDValue CDMTargetLowering::lowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = getPointerTy(DAG.getDataLayout());
 
   int JumpTableIndex = cast<JumpTableSDNode>(Op)->getIndex();
@@ -602,7 +602,7 @@ SDValue CDMISelLowering::lowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(CDMISD::LOAD_SYM, SDLoc(Op), VT, Result);
 }
 
-SDValue CDMISelLowering::lowerBlockAddress(SDValue Op,
+SDValue CDMTargetLowering::lowerBlockAddress(SDValue Op,
                                            SelectionDAG &DAG) const {
   EVT VT = getPointerTy(DAG.getDataLayout());
 
@@ -613,7 +613,7 @@ SDValue CDMISelLowering::lowerBlockAddress(SDValue Op,
   return DAG.getNode(CDMISD::LOAD_SYM, SDLoc(Op), VT, Result);
 }
 
-SDValue CDMISelLowering::lowerConstantPool(SDValue Op,
+SDValue CDMTargetLowering::lowerConstantPool(SDValue Op,
                                            SelectionDAG &DAG) const {
   EVT VT = getPointerTy(DAG.getDataLayout());
 
@@ -624,7 +624,7 @@ SDValue CDMISelLowering::lowerConstantPool(SDValue Op,
   return DAG.getNode(CDMISD::LOAD_SYM, SDLoc(Op), VT, Result);
 }
 
-SDValue CDMISelLowering::lowerVASTART(SDValue Op, SelectionDAG &DAG) const {
+SDValue CDMTargetLowering::lowerVASTART(SDValue Op, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   CDMFunctionInfo *FuncInfo = MF.getInfo<CDMFunctionInfo>();
 
@@ -641,7 +641,7 @@ SDValue CDMISelLowering::lowerVASTART(SDValue Op, SelectionDAG &DAG) const {
 
 // Transforms 32-bit and 64-bit shift DAG nodes
 // into custom shift_EXT32 and shift_EXT64 nodes.
-SDValue CDMISelLowering::lowerShifts(SDValue Op, SelectionDAG &DAG) const {
+SDValue CDMTargetLowering::lowerShifts(SDValue Op, SelectionDAG &DAG) const {
   const SDNode *N = Op.getNode();
   EVT VT = Op.getValueType();
   SDLoc DL(N);
@@ -707,7 +707,7 @@ SDValue CDMISelLowering::lowerShifts(SDValue Op, SelectionDAG &DAG) const {
                      Result.getValue(1));
 }
 
-SDValue CDMISelLowering::lowerArith64(SDValue Op, SelectionDAG &DAG) const {
+SDValue CDMTargetLowering::lowerArith64(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
 
   Type *RetTy = Type::getInt64Ty(*DAG.getContext());
@@ -746,7 +746,7 @@ SDValue CDMISelLowering::lowerArith64(SDValue Op, SelectionDAG &DAG) const {
   return CallResult.first;
 }
 
-SDValue CDMISelLowering::lowerArith32(SDValue Op, SelectionDAG &DAG) const {
+SDValue CDMTargetLowering::lowerArith32(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
 
   unsigned Opc;
@@ -780,7 +780,7 @@ SDValue CDMISelLowering::lowerArith32(SDValue Op, SelectionDAG &DAG) const {
 }
 
 MachineBasicBlock *
-CDMISelLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
+CDMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                              MachineBasicBlock *MBB) const {
   switch (MI.getOpcode()) {
   default:
@@ -814,7 +814,7 @@ CDMISelLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 }
 
 MachineBasicBlock *
-CDMISelLowering::emitPseudoSelectCC(MachineInstr &MI,
+CDMTargetLowering::emitPseudoSelectCC(MachineInstr &MI,
                                     MachineBasicBlock *MBB) const {
   const TargetInstrInfo *TII = MBB->getParent()->getSubtarget().getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
@@ -872,7 +872,7 @@ CDMISelLowering::emitPseudoSelectCC(MachineInstr &MI,
 }
 
 MachineBasicBlock *
-CDMISelLowering::emitShiftLargeAmt(MachineInstr &MI,
+CDMTargetLowering::emitShiftLargeAmt(MachineInstr &MI,
                                    MachineBasicBlock *MBB) const {
   MachineFunction &MF = *MBB->getParent();
   MachineRegisterInfo &RI = MF.getRegInfo();
@@ -919,7 +919,7 @@ CDMISelLowering::emitShiftLargeAmt(MachineInstr &MI,
 
 // Replaces shift_LOOP pseudos with inline loops.
 MachineBasicBlock *
-CDMISelLowering::emitShiftLoop(MachineInstr &MI, MachineBasicBlock *MBB) const {
+CDMTargetLowering::emitShiftLoop(MachineInstr &MI, MachineBasicBlock *MBB) const {
   MachineFunction &MF = *MBB->getParent();
   MachineRegisterInfo &RI = MF.getRegInfo();
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
@@ -1081,7 +1081,7 @@ CDMISelLowering::emitShiftLoop(MachineInstr &MI, MachineBasicBlock *MBB) const {
 }
 
 std::pair<unsigned, const TargetRegisterClass *>
-CDMISelLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
+CDMTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                               StringRef Constraint,
                                               MVT VT) const {
   if (Constraint.size() == 1) {
@@ -1099,7 +1099,7 @@ CDMISelLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
 #define GET_REGISTER_MATCHER
 #include "CDMGenAsmMatcher.inc"
 
-Register CDMISelLowering::getRegisterByName(const char *RegName, LLT VT,
+Register CDMTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                             const MachineFunction &MF) const {
   Register Reg = MatchRegisterAltName(RegName);
   if (!Reg)
