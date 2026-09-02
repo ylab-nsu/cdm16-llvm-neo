@@ -4,7 +4,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include <optional>
 
-#include "CDMFunctionInfo.h"
+#include "CDMMachineFunctionInfo.h"
 #include "CDMSubtarget.h"
 #include "CDMTargetObjectFile.h"
 #include "TargetInfo/CDMTargetInfo.h"
@@ -62,7 +62,8 @@ CDMTargetMachine::getSubtargetImpl(const Function &F) const {
 MachineFunctionInfo *CDMTargetMachine::createMachineFunctionInfo(
     BumpPtrAllocator &Allocator, const Function &F,
     const TargetSubtargetInfo *STI) const {
-  return CDMFunctionInfo::create<CDMFunctionInfo>(Allocator, F, STI);
+  return CDMMachineFunctionInfo::create<CDMMachineFunctionInfo>(Allocator, F,
+                                                                STI);
 }
 
 namespace {

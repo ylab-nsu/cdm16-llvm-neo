@@ -4,8 +4,8 @@
 
 #include "CDMFrameLowering.h"
 
-#include "CDMFunctionInfo.h"
 #include "CDMInstrInfo.h"
+#include "CDMMachineFunctionInfo.h"
 #include "CDMSubtarget.h"
 #include "MCTargetDesc/CDMMCTargetDesc.h"
 #include "llvm/ADT/SmallSet.h"
@@ -60,7 +60,7 @@ void CDMFrameLowering::ensureStackFrameAddressable(const MachineFunction &MF) {
 // FP.
 bool CDMFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const CDMFunctionInfo &TFI = *MF.getInfo<CDMFunctionInfo>();
+  const CDMMachineFunctionInfo &TFI = *MF.getInfo<CDMMachineFunctionInfo>();
   return MF.getTarget().Options.DisableFramePointerElim(MF) ||
          MFI.isFrameAddressTaken() || MFI.hasVarSizedObjects() ||
          TFI.getUsesFrameIndices() ||
@@ -75,7 +75,7 @@ bool CDMFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
 void CDMFrameLowering::emitPrologue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  const CDMFunctionInfo &TFI = *MF.getInfo<CDMFunctionInfo>();
+  const CDMMachineFunctionInfo &TFI = *MF.getInfo<CDMMachineFunctionInfo>();
   const CDMInstrInfo *TII = STI.getInstrInfo();
 
   MachineBasicBlock::iterator MBBI = MBB.begin();
@@ -118,7 +118,7 @@ void CDMFrameLowering::emitPrologue(MachineFunction &MF,
 
 void CDMFrameLowering::emitEpilogue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
-  const CDMFunctionInfo &TFI = *MF.getInfo<CDMFunctionInfo>();
+  const CDMMachineFunctionInfo &TFI = *MF.getInfo<CDMMachineFunctionInfo>();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const CDMInstrInfo *TII = STI.getInstrInfo();
 
@@ -150,7 +150,7 @@ void CDMFrameLowering::emitEpilogue(MachineFunction &MF,
 bool CDMFrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
     std::vector<CalleeSavedInfo> &CSI) const {
-  CDMFunctionInfo &TFI = *MF.getInfo<CDMFunctionInfo>();
+  CDMMachineFunctionInfo &TFI = *MF.getInfo<CDMMachineFunctionInfo>();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
   int64_t Offset = 0;
@@ -170,7 +170,7 @@ void CDMFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                             BitVector &SavedRegs,
                                             RegScavenger *RS) const {
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
-  CDMFunctionInfo &TFI = *MF.getInfo<CDMFunctionInfo>();
+  CDMMachineFunctionInfo &TFI = *MF.getInfo<CDMMachineFunctionInfo>();
 
   if (TFI.isISRWithContext()) {
     // ISRs that accept a pointer to the previous context need all registers
@@ -265,7 +265,7 @@ struct CDMFrameAnalyzer : public MachineFunctionPass {
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     const MachineFrameInfo &MFI = MF.getFrameInfo();
-    CDMFunctionInfo &TFI = *MF.getInfo<CDMFunctionInfo>();
+    CDMMachineFunctionInfo &TFI = *MF.getInfo<CDMMachineFunctionInfo>();
 
     TFI.setEstimatedFrameSize(MFI.estimateStackSize(MF));
 

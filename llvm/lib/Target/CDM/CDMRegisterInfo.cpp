@@ -2,7 +2,7 @@
 // Created by ilya on 21.11.23.
 //
 
-#include "CDMFunctionInfo.h"
+#include "CDMMachineFunctionInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCInstrDesc.h"
 #define DEBUG_TYPE "cdm-reg-info"
@@ -71,7 +71,7 @@ CDMRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 bool CDMRegisterInfo::lowerFrameAddress(MachineBasicBlock::iterator II) const {
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
-  const CDMFunctionInfo &TFI = *MF.getInfo<CDMFunctionInfo>();
+  const CDMMachineFunctionInfo &TFI = *MF.getInfo<CDMMachineFunctionInfo>();
   const TargetInstrInfo *InstrInfo = MF.getSubtarget().getInstrInfo();
   MachineBasicBlock &MBB = *MI.getParent();
 
@@ -105,7 +105,7 @@ bool CDMRegisterInfo::lowerFrameLoadStore(
     const FrameMemSubstitution &Subst) const {
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
-  const CDMFunctionInfo &TFI = *MF.getInfo<CDMFunctionInfo>();
+  const CDMMachineFunctionInfo &TFI = *MF.getInfo<CDMMachineFunctionInfo>();
   const TargetInstrInfo *InstrInfo = MF.getSubtarget().getInstrInfo();
   MachineBasicBlock &MBB = *MI.getParent();
 
@@ -159,7 +159,7 @@ bool CDMRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                           RegScavenger *RS) const {
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
-  const CDMFunctionInfo &TFI = *MF.getInfo<CDMFunctionInfo>();
+  const CDMMachineFunctionInfo &TFI = *MF.getInfo<CDMMachineFunctionInfo>();
 
   LLVM_DEBUG(errs() << "\nFunction : " << MF.getFunction().getName() << "\n";
              errs() << "<--------->\n"
