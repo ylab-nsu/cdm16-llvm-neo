@@ -88,7 +88,7 @@ void CDMAsmBackend::applyFixup(const MCFragment &Fragment, const MCFixup &Fixup,
   auto NumBytes = (NumBits / 8) + ((NumBits % 8) == 0 ? 0 : 1);
 
   // Mask the value and shift it into position.
-  Value &= ~(-1 << Info.TargetSize);
+  Value &= ~(UINT64_MAX << Info.TargetSize);
   Value <<= Info.TargetOffset;
 
   unsigned Offset = Fixup.getOffset();
