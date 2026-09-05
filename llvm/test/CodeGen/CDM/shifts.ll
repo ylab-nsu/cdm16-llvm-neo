@@ -13,7 +13,7 @@ entry:
 ; CHECK: shra r0, r0, 1
 ; CHECK-NEXT: dec r1
 ; CHECK-NEXT: [[LABEL2]]:
-; CHECK: tst r1
+; CHECK: cmp r1, 0
 ; CHECK-NEXT: bgt [[LABEL1]]
   %conv = sext i8 %a to i16
   %conv13 = zext nneg i8 %b to i16
@@ -31,7 +31,7 @@ entry:
 ; CHECK: shra r0, r0, 1
 ; CHECK-NEXT: dec r1
 ; CHECK-NEXT: [[LABEL2]]:
-; CHECK: tst r1
+; CHECK: cmp r1, 0
 ; CHECK-NEXT: bgt [[LABEL1]]
   %shr = ashr i16 %a, %b
   ret i16 %shr
@@ -47,7 +47,7 @@ entry:
 ; CHECK-NEXT: rcr r0, r0, 1
 ; CHECK-NEXT: dec r2
 ; CHECK-NEXT: [[LABEL2]]:
-; CHECK: tst r2
+; CHECK: cmp r2, 0
 ; CHECK-NEXT: bgt [[LABEL1]]
   %shr = ashr i32 %a, %b
   ret i32 %shr
@@ -66,7 +66,7 @@ entry:
 ; CHECK-NEXT: rcr r0, r0, 1
 ; CHECK-NEXT: dec [[REG]]
 ; CHECK-NEXT: [[LABEL2]]:
-; CHECK: tst [[REG]]
+; CHECK: cmp [[REG]], 0
 ; CHECK-NEXT: bgt [[LABEL1]]
   %shr = ashr i64 %a, %b
   ret i64 %shr

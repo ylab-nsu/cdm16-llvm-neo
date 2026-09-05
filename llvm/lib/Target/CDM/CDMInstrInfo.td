@@ -678,7 +678,7 @@ def DEC : InstAlias<"dec\t$rd", (ADDImm6 CPURegs:$rd, -1)>;
 // Test register
 // Compares register with 0 and sets Z, N flags according to the result.
 // Alias for CMP rd, 0
-def TST : InstAlias<"tst\t$rd", (CMPImm6 CPURegs:$rd, 0)>;
+def TST : InstAlias<"tst\t$rd", (CMPImm6 CPURegs:$rd, 0), 0>;
 
 //===----------------------------------------------------------------------===//
 // imm9 format
