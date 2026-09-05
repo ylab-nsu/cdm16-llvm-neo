@@ -18,14 +18,6 @@ define i16 @dec(i16 %a) #0 {
     ret i16 %result
 }
 
-define i16 @tst(i16 %a) #0 {
-; CHECK-LABEL: tst>
-; CHECK: tst {{r[0-6]}}
-    %cmp = icmp eq i16 %a, 0
-    %result = select i1 %cmp, i16 69, i16 420
-    ret i16 %result
-}
-
 ; Should not use aliases
 define i16 @add2(i16 %a) #0 {
 ; CHECK-LABEL: add2>
@@ -39,6 +31,15 @@ define i16 @addm2(i16 %a) #0 {
 ; CHECK-LABEL: addm2>
 ; CHECK: add {{r[0-6]}}, -2
     %result = add i16 %a, -2
+    ret i16 %result
+}
+
+; Should not use aliases
+define i16 @cmp0(i16 %a) #0 {
+; CHECK-LABEL: cmp0>
+; CHECK: cmp {{r[0-6]}}, 0
+    %cmp = icmp eq i16 %a, 0
+    %result = select i1 %cmp, i16 69, i16 420
     ret i16 %result
 }
 
