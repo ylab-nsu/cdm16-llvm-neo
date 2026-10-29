@@ -347,7 +347,7 @@ def DI: Inst0Op<0b0111, (outs), (ins), "di", []>;
 // absolute branch to address imm16.
 def JSRImm16 : Inst0OpImm16<0b1000, (outs), (ins imm16BrTarget:$imm), "jsr\t$imm", []> {
   let isCall = 1;
-  let isCodeGenOnly = 1;
+ // let isCodeGenOnly = 1;
 }
 
 let isTerminator = 1, isReturn = 1, isBarrier = 1 in {
@@ -426,7 +426,7 @@ let Uses = [SP], Defs = [SP] in {
 // Loads immediate value imm16 to rd.
 def LDIImm16 : Inst1OpImm16<0b0010, (outs CPURegs:$rd), (ins imm16Op:$imm), "ldi\t$rd, $imm", []> {
   let isReMaterializable = 1;
-  let isCodeGenOnly = 1;
+ // let isCodeGenOnly = 1;
 }
 
 // Jump to subroutine by pointer
@@ -728,7 +728,7 @@ def BRImm16 : InstBrAbs<(outs), (ins imm16BrTarget:$imm), "br\t$imm", []> {
   let isBranch = 1;
   let isTerminator = 1;
   let isBarrier = 1;
-  let isCodeGenOnly = 1;
+ // let isCodeGenOnly = 1;
 }
 
 // Absolute conditional branch
@@ -737,7 +737,7 @@ def BCondImm16 : InstBrAbs<(outs), (ins cdmCond:$cond, imm16BrTarget:$imm), "b$c
   let isTerminator = 1;
   let isBranch = 1;
   let Uses = [PSR];
-  let isCodeGenOnly = 1;
+ // let isCodeGenOnly = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -10,7 +10,7 @@ namespace llvm {
 
 class CDMTargetMachine : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
-  const DataLayout DataLayout;
+  const DataLayout DL;
 
   mutable StringMap<std::unique_ptr<CDMSubtarget>> SubtargetMap;
 
@@ -22,7 +22,7 @@ public:
                    bool JIT);
   ~CDMTargetMachine() override;
 
-  virtual const class DataLayout *getDataLayout() const { return &DataLayout; }
+  virtual const class DataLayout *getDataLayout() const { return &DL; }
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
