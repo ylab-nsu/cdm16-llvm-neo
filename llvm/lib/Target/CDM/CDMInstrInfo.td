@@ -159,16 +159,19 @@ def cdmCondAsmOp : AsmOperandClass {
 def imm16Op : Operand<i16> {
   let EncoderMethod = "encodeImm<FK_Data_2, 2>";
   let ParserMatchClass = immSymAsmOp;
+  let DecoderMethod = "DecodeSignedImm16";
 }
 
 // 9-bit immediate operand (value only).
 def imm9Op : Operand<i16> {
   let ParserMatchClass = imm9AsmOp;
+  let DecoderMethod = "DecodeSignedImm10";
 }
 
 // 6-bit immediate operand (value only).
 def imm6Op : Operand<i16> {
   let ParserMatchClass = imm6AsmOp;
+  let DecoderMethod = "DecodeSignedImm7";
 }
 
 // 6-bit immediate operand (value only, negated).
@@ -180,6 +183,7 @@ def imm6SubOp : Operand<i16> {
 def imm6LDIOp : Operand<i16> {
   let EncoderMethod = "encodeImm<CDM::fixup_load_imm6, 0, true>";
   let ParserMatchClass = immSymAsmOp;
+  let DecoderMethod = "DecodeSignedImm7";
 }
 
 // 16-bit absoulute branch target operand (symbol only).
@@ -201,6 +205,7 @@ def imm9CallTarget : Operand<i16> {
   let OperandType = "OPERAND_PCREL";
   let EncoderMethod = "encodeImm<CDM::fixup_call_imm9, 0, true>";
   let ParserMatchClass = immSymAsmOp;
+  let DecoderMethod = "DecodeSignedImm10";
 }
 
 // Condition code operand used in conditional branch instrcutions.
@@ -212,14 +217,20 @@ def cdmCond : Operand<OtherVT> {
 // Offset operands for frame-relative loads/stores and addsp.
 def imm9WordOffset : Operand<i16> {
   let EncoderMethod = "encodeOffset<2>";
+  // Restore the signed 10-bit offset and convert words to bytes.
+  let DecoderMethod = "DecodeStackWordOffset";
   let ParserMatchClass = imm9EvenAsmOp;
 }
 def imm6WordOffset : Operand<i16> {
   let EncoderMethod = "encodeOffset<2>";
+  // Restore the signed byte offset during disassembly.
+  let DecoderMethod = "DecodeFrameWordOffset";
   let ParserMatchClass = imm6EvenAsmOp;
 }
 def imm6ByteOffset : Operand<i16> {
   let EncoderMethod = "encodeOffset<1>";
+  // Restore the signed byte offset during disassembly.
+  let DecoderMethod = "DecodeStackByteOffset";
   let ParserMatchClass = imm6AsmOp;
 }
 
@@ -228,6 +239,7 @@ def imm6ByteOffset : Operand<i16> {
 def shamt : Operand<i16> {
   let EncoderMethod = "encodeShamt";
   let ParserMatchClass = shamtAsmOp;
+  let DecoderMethod = "DecodeShamt";
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -603,39 +615,41 @@ def ST : MnemonicAlias<"st", "stw">;
 // imm6 format
 //===----------------------------------------------------------------------===//
 
-class CDMLoadStack<bits<4> opcode, string mnem, Operand OffOp>
-    : InstImm6<opcode, (outs CPURegs:$rd), (ins OffOp:$imm),
+// Use the signed 7-bit stack format to preserve the sign bit
+// during instruction encoding and decoding.
+class CDMLoadStack<bits<3> opcode, string mnem, Operand OffOp>
+    : InstImm7<opcode, (outs CPURegs:$rd), (ins OffOp:$imm),
                !strconcat(mnem, "\t$rd, $imm"), []>;
 
-class CDMStoreStack<bits<4> opcode, string mnem, Operand OffOp>
-    : InstImm6<opcode, (outs), (ins CPURegs:$rd, OffOp:$imm),
+class CDMStoreStack<bits<3> opcode, string mnem, Operand OffOp>
+    : InstImm7<opcode, (outs), (ins CPURegs:$rd, OffOp:$imm),
                !strconcat(mnem, "\t$rd, $imm"), []>;
 
-let Uses = [FP], PostEncoderMethod = "adjustImmOpCode<1, 9>" in {
+let Uses = [FP] in {
   // Load word relative to fp
   // Loads a word from memory location fp + off to rd.
-  def LSW : CDMLoadStack<0b0000, "lsw", imm6WordOffset>;
+  def LSW : CDMLoadStack<0b000, "lsw", imm6WordOffset>;
 
   // Load unsigned byte relative to fp
   // Loads a byte from memory location fp + off to rd with zero extend.
-  def LSB : CDMLoadStack<0b0010, "lsb", imm6ByteOffset>;
+  def LSB : CDMLoadStack<0b001, "lsb", imm6ByteOffset>;
 
   // Load signed byte relative to fp
   // Loads a byte from memory location fp + off to rd with sign extend.
-  def LSSB : CDMLoadStack<0b0100, "lssb", imm6ByteOffset>;
+  def LSSB : CDMLoadStack<0b010, "lssb", imm6ByteOffset>;
 
   // Store word relative to fp
   // Stores 2 bytes from rd to memory location fp + off.
-  def SSW : CDMStoreStack<0b0110, "ssw", imm6WordOffset>;
+  def SSW : CDMStoreStack<0b011, "ssw", imm6WordOffset>;
 
   // Store byte relative to fp
   // Stores the least significant byte of rd to memory location fp + off.
-  def SSB : CDMStoreStack<0b1000, "ssb", imm6ByteOffset>;
+  def SSB : CDMStoreStack<0b100, "ssb", imm6ByteOffset>;
 }
 
 // Load small immediate to register
 // Loads immediate value imm6 to rd.
-def LDIImm6 : InstImm6<0b1010, (outs CPURegs:$rd), (ins imm6LDIOp:$imm), "ldi\t$rd, $imm",
+def LDIImm6 : InstImm7<0b101, (outs CPURegs:$rd), (ins imm6LDIOp:$imm), "ldi\t$rd, $imm",
                       [(set CPURegs:$rd, imm:$imm)]> {
   let isReMaterializable = 1;
 }
@@ -643,10 +657,15 @@ def LDIImm6 : InstImm6<0b1010, (outs CPURegs:$rd), (ins imm6LDIOp:$imm), "ldi\t$
 let Defs = [PSR], isReMaterializable = 1, Constraints = "$rs = $rd" in {
   // Add immediate
   // Computes rd + imm6 and puts result in rd.
-  def ADDImm6 : InstImm6<0b1100, (outs CPURegs:$rd), (ins CPURegs:$rs, imm6Op:$imm), "add\t$rs, $imm",
-                         [(set CPURegs:$rd, (add CPURegs:$rs, imm6:$imm))]> {
-    let PostEncoderMethod = "adjustImmOpCode<2, 9>";
-  }
+
+  //sign bit in 7bit
+  def ADDImm6 : InstImm7<
+      0b110,
+      (outs CPURegs:$rd),
+      (ins CPURegs:$rs, imm6Op:$imm),
+      "add\t$rs, $imm",
+      [(set CPURegs:$rd, (add CPURegs:$rs, imm6:$imm))]
+  >;
 
   // Subtract immediate
   // Computes rd - imm6 and puts result in rd.
@@ -660,9 +679,8 @@ let Defs = [PSR], isReMaterializable = 1, Constraints = "$rs = $rd" in {
 // Compare with immediate
 // Performs indestructible subtraction, sets flags
 // and thus compares numbers rd and imm6.
-def CMPImm6 : InstImm6<0b1110, (outs), (ins CPURegs:$rd, imm6Op:$imm), "cmp\t$rd, $imm", []> {
+def CMPImm6 : InstImm7<0b111, (outs), (ins CPURegs:$rd, imm6Op:$imm), "cmp\t$rd, $imm", []> {
   let Defs = [PSR];
-  let PostEncoderMethod = "adjustImmOpCode<1, 9>";
 }
 
 // Increment register
@@ -698,22 +716,31 @@ def RESET : InstImm9<0b0001, (outs), (ins interruptVec:$imm), "reset\t$imm", []>
 // Reset vector can be omitted
 def : InstAlias<"reset", (RESET 0), 0>;
 
-let Uses = [SP], Defs = [SP], PostEncoderMethod = "adjustImmOpCode<0, 9>" in {
+let Uses = [SP], Defs = [SP] in {
   // Push immediate
   // Stores immediate value imm9 to the top of the stack.
-  def PUSHImm9 : InstImm9<0b0010, (outs), (ins imm9Op:$imm), "push\t$imm", []> {
-    let mayStore = 1;
+  let PostEncoderMethod = "adjustImmOpCode<0, 9>" in {
+    // Push immediate
+    // PUSH retains the original encoding and requires the
+    // post-encoder to handle negative immediate values.
+    def PUSHImm9 : InstImm10<
+        0b001, (outs), (ins imm9Op:$imm),
+        "push\t$imm", []> {
+      let mayStore = 1;
+    }
   }
 
   // Add immediate to SP
   // Adds imm bytes to SP.
-  def ADDSPImm9 : InstImm9<0b0100, (outs), (ins imm9WordOffset:$imm), "addsp\t$imm", []>;
+  // ADDSP uses the dedicated 10-bit signed format.
+  // The sign bit is encoded directly, so no post-encoder is needed.
+  def ADDSPImm9 : InstImm10<0b010, (outs), (ins imm9WordOffset:$imm), "addsp\t$imm", []>;
 }
 
 // Jump to subroutine (imm9 offset)
 // Pushes PC to stack and then does unconditional
 // absolute branch to address PC + (imm * 2) + 2.
-def JSRImm9 : InstImm9<0b0110, (outs), (ins imm9CallTarget:$imm), "jsr\t$imm", []> {
+def JSRImm9 : InstImm10<0b011, (outs), (ins imm9CallTarget:$imm), "jsr\t$imm", []> {
   let isCall = 1;
 }
 
