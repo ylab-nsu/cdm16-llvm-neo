@@ -35,7 +35,7 @@ CDMTargetMachine::CDMTargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, computeDataLayout(), TT, CPU, FS, Options,
                                Reloc::Static, CodeModel::Small, OL),
       TLOF(std::make_unique<CDMTargetObjectFile>()),
-      DataLayout(computeDataLayout()) {
+      DL(computeDataLayout()) {
   initAsmInfo();
 }
 
