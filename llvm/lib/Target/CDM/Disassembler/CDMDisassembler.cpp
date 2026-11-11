@@ -45,50 +45,51 @@ DecodeCPURegsRegisterClass(MCInst &MI, uint64_t RegNo, uint64_t Address,
   return MCDisassembler::Success;
 }
 
-// Decode a 7-bit signed stack offset stored directly in bytes.
-// The generated decoder extracts the raw bits without sign extension.
+// Decode the raw 6-bit byte offset.
+// getInstruction restores the sign from the original opcode.
 static DecodeStatus
 DecodeStackByteOffset(MCInst &MI, uint64_t Imm, uint64_t Address,
                       const MCDisassembler *Decoder) {
-  int64_t Offset = SignExtend64<7>(Imm);
+  int64_t Offset = static_cast<int64_t>(Imm);
   MI.addOperand(MCOperand::createImm(Offset));
   return MCDisassembler::Success;
 }
 
-// Decode a 10-bit signed stack offset.
-// The encoded value is measured in 2-byte words, so the
-// sign-extended value must be multiplied by 2.
+// Decode the raw 9-bit stack offset and convert words to bytes.
+// getInstruction restores the sign from the original opcode.
 static DecodeStatus
 DecodeStackWordOffset(MCInst &MI, uint64_t Imm, uint64_t Address,
                       const MCDisassembler *Decoder) {
-  int64_t Offset = SignExtend64<10>(Imm) * 2;
+  int64_t Offset = static_cast<int64_t>(Imm) * 2;
   MI.addOperand(MCOperand::createImm(Offset));
   return MCDisassembler::Success;
 }
 
-// Decode a signed 7-bit FP-relative word offset.
-// The encoded offset is measured in 2-byte words.
+// Decode the raw 6-bit FP-relative offset and convert words to bytes.
+// getInstruction restores the sign from the original opcode.
 static DecodeStatus
 DecodeFrameWordOffset(MCInst &MI, uint64_t Imm, uint64_t Address,
                       const MCDisassembler *Decoder) {
-  int64_t Offset = SignExtend64<7>(Imm) * 2;
+  int64_t Offset = static_cast<int64_t>(Imm) * 2;
   MI.addOperand(MCOperand::createImm(Offset));
   return MCDisassembler::Success;
 }
 
-// Decode a signed 7-bit immediate used by ALU instructions.
+// Decode the raw 6-bit immediate used by ALU instructions and LDI.
+// getInstruction restores the sign from the original opcode.
 static DecodeStatus
-DecodeSignedImm7(MCInst &MI, uint64_t Imm, uint64_t Address,
+DecodeImm6(MCInst &MI, uint64_t Imm, uint64_t Address,
                  const MCDisassembler *Decoder) {
-  MI.addOperand(MCOperand::createImm(SignExtend64<7>(Imm)));
+  MI.addOperand(MCOperand::createImm(static_cast<int64_t>(Imm)));
   return MCDisassembler::Success;
 }
 
-// Decode a signed 10-bit immediate used by PUSH.
+// Decode the raw 9-bit immediate used by PUSH and JSR.
+// getInstruction restores the sign from the original opcode.
 static DecodeStatus
-DecodeSignedImm10(MCInst &MI, uint64_t Imm, uint64_t Address,
+DecodeImm9(MCInst &MI, uint64_t Imm, uint64_t Address,
                   const MCDisassembler *Decoder) {
-  MI.addOperand(MCOperand::createImm(SignExtend64<10>(Imm)));
+  MI.addOperand(MCOperand::createImm(static_cast<int64_t>(Imm)));
   return MCDisassembler::Success;
 }
 
@@ -192,8 +193,68 @@ DecodeStatus CDMDisassembler::getInstruction(
 
   Size = 2;
 
-  return decodeInstruction(DecoderTable16, MI, FirstWord, Address,
-                           this, getSubtargetInfo());
+  bool IsNegativeADDImm6 = (FirstWord & 0xFE00u) == 0x7A00u;
+  bool IsNegativeLDIImm6 = (FirstWord & 0xFE00u) == 0x7600u;
+  bool IsNegativeLSW = (FirstWord & 0xFE00u) == 0x6200u;
+  bool IsNegativeLSB = (FirstWord & 0xFE00u) == 0x6600u;
+  bool IsNegativeLSSB = (FirstWord & 0xFE00u) == 0x6A00u;
+  bool IsNegativeSSW = (FirstWord & 0xFE00u) == 0x6E00u;
+  bool IsNegativeSSB = (FirstWord & 0xFE00u) == 0x7200u;
+  bool IsNegativeCMPImm6 = (FirstWord & 0xFE00u) == 0x7E00u;
+  bool IsNegativePUSHImm9 = (FirstWord & 0xFE00u) == 0x8600u;
+  bool IsNegativeADDSPImm9 = (FirstWord & 0xFE00u) == 0x8A00u;
+  bool IsNegativeJSRImm9 = (FirstWord & 0xFE00u) == 0x8E00u;
+
+  uint16_t DecodeWord = FirstWord;
+  if (IsNegativeADDImm6 || IsNegativeLDIImm6 || IsNegativeLSW ||
+      IsNegativeLSB || IsNegativeLSSB || IsNegativeSSW || IsNegativeSSB ||
+      IsNegativeCMPImm6 || IsNegativePUSHImm9 || IsNegativeADDSPImm9 ||
+      IsNegativeJSRImm9)
+    DecodeWord &= ~(1u << 9);
+
+  DecodeStatus Result = decodeInstruction(DecoderTable16, MI, DecodeWord,
+                                        Address, this, getSubtargetInfo());
+
+  if (Result != MCDisassembler::Fail) {
+    if (IsNegativeADDImm6 && MI.getOpcode() == CDM::ADDImm6) {
+      MCOperand &Imm = MI.getOperand(2);
+      Imm.setImm(Imm.getImm() - 64);
+    } else if (IsNegativeLDIImm6 && MI.getOpcode() == CDM::LDIImm6) {
+      MCOperand &Imm = MI.getOperand(1);
+      Imm.setImm(Imm.getImm() - 64);
+    } else if (IsNegativeLSW && MI.getOpcode() == CDM::LSW) {
+      // The operand decoder has already converted words to bytes.
+      MCOperand &Imm = MI.getOperand(1);
+      Imm.setImm(Imm.getImm() - 128);
+    } else if (IsNegativeLSB && MI.getOpcode() == CDM::LSB) {
+      MCOperand &Imm = MI.getOperand(1);
+      Imm.setImm(Imm.getImm() - 64);
+    } else if (IsNegativeLSSB && MI.getOpcode() == CDM::LSSB) {
+      MCOperand &Imm = MI.getOperand(1);
+      Imm.setImm(Imm.getImm() - 64);
+    } else if (IsNegativeSSW && MI.getOpcode() == CDM::SSW) {
+      // The operand decoder has already converted words to bytes.
+      MCOperand &Imm = MI.getOperand(1);
+      Imm.setImm(Imm.getImm() - 128);
+    } else if (IsNegativeSSB && MI.getOpcode() == CDM::SSB) {
+      MCOperand &Imm = MI.getOperand(1);
+      Imm.setImm(Imm.getImm() - 64);
+    } else if (IsNegativeCMPImm6 && MI.getOpcode() == CDM::CMPImm6) {
+      MCOperand &Imm = MI.getOperand(1);
+      Imm.setImm(Imm.getImm() - 64);
+    } else if (IsNegativePUSHImm9 && MI.getOpcode() == CDM::PUSHImm9) {
+      MCOperand &Imm = MI.getOperand(0);
+      Imm.setImm(Imm.getImm() - 512);
+    } else if (IsNegativeADDSPImm9 && MI.getOpcode() == CDM::ADDSPImm9) {
+      // The operand decoder has already converted words to bytes.
+      MCOperand &Imm = MI.getOperand(0);
+      Imm.setImm(Imm.getImm() - 1024);
+    } else if (IsNegativeJSRImm9 && MI.getOpcode() == CDM::JSRImm9) {
+      MCOperand &Imm = MI.getOperand(0);
+      Imm.setImm(Imm.getImm() - 512);
+    }
+  }
+  return Result;
 }
 
 static MCDisassembler *

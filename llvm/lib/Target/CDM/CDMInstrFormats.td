@@ -136,22 +136,6 @@ class InstImm6<bits<4> f, dag outs, dag ins, string asmstr,
   let Inst{2 - 0} = rd;
 }
 
-// Stack-relative instructions use a 7-bit signed offset.
-// Bit 9 stores the sign and must be treated as part of the
-// immediate rather than the opcode to allow correct disassembly.
-class InstImm7<bits<3> opcode, dag outs, dag ins,
-                    string asmstr, list<dag> pattern>
-    : CDMInst16<outs, ins, asmstr, pattern> {
-
-  bits<7> imm;
-  bits<3> rd;
-
-  let Inst{15 - 13} = 0b011;
-  let Inst{12 - 10} = opcode;
-  let Inst{9 - 3} = imm;
-  let Inst{2 - 0} = rd;
-}
-
 //===----------------------------------------------------------------------===//
 // Instruction with 1 immediate 9 bit value: <|100f|fffK|KKKK|KKKK|>
 // f = op type (4 bits)
@@ -164,20 +148,6 @@ class InstImm9<bits<4> f, dag outs, dag ins, string asmstr,
   let Inst{15 - 13} = 0b100;
   let Inst{12 - 9} = f;
   let Inst{8 - 0} = imm;
-}
-
-// ADDSP uses a 10-bit signed immediate encoded in word units.
-// Bit 9 is part of the immediate, not the opcode.
-// This allows the disassembler to recognize negative offsets.
-class InstImm10<bits<3> opcode, dag outs, dag ins,
-                    string asmstr, list<dag> pattern>
-    : CDMInst16<outs, ins, asmstr, pattern> {
-
-  bits<10> imm;
-
-  let Inst{15 - 13} = 0b100;
-  let Inst{12 - 10} = opcode;
-  let Inst{9 - 0} = imm;
 }
 
 //===----------------------------------------------------------------------===//
