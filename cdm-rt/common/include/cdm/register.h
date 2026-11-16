@@ -44,4 +44,20 @@ static inline reg_t ldfp(void) {
   return value;
 }
 
+#ifdef __CDM_EXT_E__
+// Read from the shadow stack pointer register (cdm16e only).
+__attribute__((always_inline))
+static inline reg_t ldssp(void) {
+  reg_t value;
+  __asm__ __volatile__("ldssp %[val]" : [val] "=r"(value));
+  return value;
+}
+
+// Write to the shadow stack pointer register (cdm16e only).
+__attribute__((always_inline))
+static inline void stssp(psr_t value) {
+  __asm__ __volatile__("stssp %[val]" : : [val] "r"(value));
+}
+#endif
+
 #endif
