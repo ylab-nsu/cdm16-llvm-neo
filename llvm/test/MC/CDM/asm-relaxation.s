@@ -1,11 +1,9 @@
-# RUN: llvm-mc -triple=cdm-unknown-elf -filetype=obj %s -o %t.o
-# RUN: llvm-objdump -d --stop-address=26 %t.o | FileCheck %s
+# RUN: llvm-mc -triple=cdm -filetype=obj %s -o - | llvm-objdump -d --stop-address=26 - | FileCheck %s
 
 # LDI selects the short form when possible; distant branch targets use absolute forms.
 .text
 relaxation:
 # CHECK-LABEL: <relaxation>:
-
 ldi r0, 63
 # CHECK-NEXT: 0: f8 75 ldi r0, 63
 ldi r1, -64
