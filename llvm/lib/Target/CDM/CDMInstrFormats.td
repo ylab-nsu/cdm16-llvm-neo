@@ -16,8 +16,18 @@ class CDMInst16<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Size = 2;
 }
 
+class CDMInstAlt16<Instruction inst> : AdditionalEncoding<inst> {
+  bits<16> Inst;
+  let Size = 2;
+}
+
 class CDMInst32<dag outs, dag ins, string asmstr, list<dag> pattern>
   : CDMInst<outs, ins, asmstr, pattern> {
+  bits<32> Inst;
+  let Size = 4;
+}
+
+class CDMInstAlt32<Instruction inst> : AdditionalEncoding<inst> {
   bits<32> Inst;
   let Size = 4;
 }
@@ -136,6 +146,16 @@ class InstImm6<bits<4> f, dag outs, dag ins, string asmstr,
   let Inst{2 - 0} = rd;
 }
 
+class InstAltImm6<bits<4> f, Instruction inst> : CDMInstAlt16<inst> {
+  bits<6> imm;
+  bits<3> rd;
+
+  let Inst{15 - 13} = 0b011;
+  let Inst{12 - 9} = f;
+  let Inst{8 - 3} = imm;
+  let Inst{2 - 0} = rd;
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction with 1 immediate 9 bit value: <|100f|fffK|KKKK|KKKK|>
 // f = op type (4 bits)
@@ -143,6 +163,14 @@ class InstImm6<bits<4> f, dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 class InstImm9<bits<4> f, dag outs, dag ins, string asmstr,
             list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
+  bits<9> imm;
+
+  let Inst{15 - 13} = 0b100;
+  let Inst{12 - 9} = f;
+  let Inst{8 - 0} = imm;
+}
+
+class InstAltImm9<bits<4> f, Instruction inst> : CDMInstAlt16<inst> {
   bits<9> imm;
 
   let Inst{15 - 13} = 0b100;
@@ -193,6 +221,15 @@ class InstBrAbs<dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 class InstBrRel<bits<3> opcode, dag outs, dag ins, string asmstr,
             list<dag> pattern> : CDMInst16<outs, ins, asmstr, pattern> {
+  bits<4> cond;
+  bits<9> imm;
+
+  let Inst{15 - 13} = opcode;
+  let Inst{12 - 9} = cond;
+  let Inst{8 - 0} = imm;
+}
+
+class InstAltBrRel<bits<3> opcode, Instruction inst> : CDMInstAlt16<inst> {
   bits<4> cond;
   bits<9> imm;
 

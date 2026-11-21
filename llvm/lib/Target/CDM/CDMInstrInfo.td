@@ -159,19 +159,16 @@ def cdmCondAsmOp : AsmOperandClass {
 def imm16Op : Operand<i16> {
   let EncoderMethod = "encodeImm<FK_Data_2, 2>";
   let ParserMatchClass = immSymAsmOp;
-  let DecoderMethod = "decodeImm16Signed";
 }
 
 // 9-bit immediate operand (value only).
 def imm9Op : Operand<i16> {
   let ParserMatchClass = imm9AsmOp;
-  let DecoderMethod = "decodeImm<1>";
 }
 
 // 6-bit immediate operand (value only).
 def imm6Op : Operand<i16> {
   let ParserMatchClass = imm6AsmOp;
-  let DecoderMethod = "decodeImm<1>";
 }
 
 // 6-bit immediate operand (value only, negated).
@@ -183,7 +180,6 @@ def imm6SubOp : Operand<i16> {
 def imm6LDIOp : Operand<i16> {
   let EncoderMethod = "encodeImm<CDM::fixup_load_imm6, 0, true>";
   let ParserMatchClass = immSymAsmOp;
-  let DecoderMethod = "decodeImm<1>";
 }
 
 // 16-bit absoulute branch target operand (symbol only).
@@ -205,7 +201,6 @@ def imm9CallTarget : Operand<i16> {
   let OperandType = "OPERAND_PCREL";
   let EncoderMethod = "encodeImm<CDM::fixup_call_imm9, 0, true>";
   let ParserMatchClass = immSymAsmOp;
-  let DecoderMethod = "decodeImm<1>";
 }
 
 // Condition code operand used in conditional branch instrcutions.
@@ -217,17 +212,17 @@ def cdmCond : Operand<OtherVT> {
 // Offset operands for frame-relative loads/stores and addsp.
 def imm9WordOffset : Operand<i16> {
   let EncoderMethod = "encodeOffset<2>";
-  let DecoderMethod = "decodeImm<2>";
+  let DecoderMethod = "decodeOffset<2>";
   let ParserMatchClass = imm9EvenAsmOp;
 }
 def imm6WordOffset : Operand<i16> {
   let EncoderMethod = "encodeOffset<2>";
-  let DecoderMethod = "decodeImm<2>";
+  let DecoderMethod = "decodeOffset<2>";
   let ParserMatchClass = imm6EvenAsmOp;
 }
 def imm6ByteOffset : Operand<i16> {
   let EncoderMethod = "encodeOffset<1>";
-  let DecoderMethod = "decodeImm<1>";
+  let DecoderMethod = "decodeOffset<1>";
   let ParserMatchClass = imm6AsmOp;
 }
 
@@ -235,8 +230,8 @@ def imm6ByteOffset : Operand<i16> {
 // Encoded as val - 1.
 def shamt : Operand<i16> {
   let EncoderMethod = "encodeShamt";
-  let ParserMatchClass = shamtAsmOp;
   let DecoderMethod = "decodeShamt";
+  let ParserMatchClass = shamtAsmOp;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -612,41 +607,62 @@ def ST : MnemonicAlias<"st", "stw">;
 // imm6 format
 //===----------------------------------------------------------------------===//
 
-class CDMLoadStack<bits<4> opcode, string mnem, Operand OffOp>
-    : InstImm6<opcode, (outs CPURegs:$rd), (ins OffOp:$imm),
-               !strconcat(mnem, "\t$rd, $imm"), []>;
+multiclass CDMLoadStack<bits<4> opcode, string mnem, Operand OffOp, int opScale> {
+  def "" : InstImm6<opcode, (outs CPURegs:$rd), (ins OffOp:$imm),
+                 !strconcat(mnem, "\t$rd, $imm"), []> {
+    let Uses = [FP];
+    let PostEncoderMethod = "adjustImmOpCode<1, 9>";
+  }
 
-class CDMStoreStack<bits<4> opcode, string mnem, Operand OffOp>
-    : InstImm6<opcode, (outs), (ins CPURegs:$rd, OffOp:$imm),
-               !strconcat(mnem, "\t$rd, $imm"), []>;
-
-let Uses = [FP], PostEncoderMethod = "adjustImmOpCode<1, 9>" in {
-  // Load word relative to fp
-  // Loads a word from memory location fp + off to rd.
-  def LSW : CDMLoadStack<0b0000, "lsw", imm6WordOffset>;
-
-  // Load unsigned byte relative to fp
-  // Loads a byte from memory location fp + off to rd with zero extend.
-  def LSB : CDMLoadStack<0b0010, "lsb", imm6ByteOffset>;
-
-  // Load signed byte relative to fp
-  // Loads a byte from memory location fp + off to rd with sign extend.
-  def LSSB : CDMLoadStack<0b0100, "lssb", imm6ByteOffset>;
-
-  // Store word relative to fp
-  // Stores 2 bytes from rd to memory location fp + off.
-  def SSW : CDMStoreStack<0b0110, "ssw", imm6WordOffset>;
-
-  // Store byte relative to fp
-  // Stores the least significant byte of rd to memory location fp + off.
-  def SSB : CDMStoreStack<0b1000, "ssb", imm6ByteOffset>;
+  // Additional encoding for variant with negative offset.
+  def : InstAltImm6<!add(opcode, 1), !cast<Instruction>(NAME)> {
+    let DecoderMethod = "decodeInstImmNegative<6, " # opScale # ", 1>";
+  }
 }
+
+multiclass CDMStoreStack<bits<4> opcode, string mnem, Operand OffOp, int opScale> {
+  def "" : InstImm6<opcode, (outs), (ins CPURegs:$rd, OffOp:$imm),
+                 !strconcat(mnem, "\t$rd, $imm"), []> {
+    let Uses = [FP];
+    let PostEncoderMethod = "adjustImmOpCode<1, 9>";
+  }
+
+  // Additional encoding for variant with negative offset.
+  def : InstAltImm6<!add(opcode, 1), !cast<Instruction>(NAME)> {
+    let DecoderMethod = "decodeInstImmNegative<6, " # opScale # ", 1>";
+  }
+}
+
+// Load word relative to fp
+// Loads a word from memory location fp + off to rd.
+defm LSW : CDMLoadStack<0b0000, "lsw", imm6WordOffset, 2>;
+
+// Load unsigned byte relative to fp
+// Loads a byte from memory location fp + off to rd with zero extend.
+defm LSB : CDMLoadStack<0b0010, "lsb", imm6ByteOffset, 1>;
+
+// Load signed byte relative to fp
+// Loads a byte from memory location fp + off to rd with sign extend.
+defm LSSB : CDMLoadStack<0b0100, "lssb", imm6ByteOffset, 1>;
+
+// Store word relative to fp
+// Stores 2 bytes from rd to memory location fp + off.
+defm SSW : CDMStoreStack<0b0110, "ssw", imm6WordOffset, 2>;
+
+// Store byte relative to fp
+// Stores the least significant byte of rd to memory location fp + off.
+defm SSB : CDMStoreStack<0b1000, "ssb", imm6ByteOffset, 1>;
 
 // Load small immediate to register
 // Loads immediate value imm6 to rd.
 def LDIImm6 : InstImm6<0b1010, (outs CPURegs:$rd), (ins imm6LDIOp:$imm), "ldi\t$rd, $imm",
                       [(set CPURegs:$rd, imm:$imm)]> {
   let isReMaterializable = 1;
+}
+
+// Additional encoding for LDI with negative operand.
+def LDIImm6Negative : InstAltImm6<0b1011, LDIImm6> {
+  let DecoderMethod = "decodeInstImmNegative<6, 1, 1>";
 }
 
 let Defs = [PSR], isReMaterializable = 1, Constraints = "$rs = $rd" in {
@@ -666,12 +682,22 @@ let Defs = [PSR], isReMaterializable = 1, Constraints = "$rs = $rd" in {
   }
 }
 
+// Additional encoding for ADD with negative operand.
+def ADDImm6Negative : InstAltImm6<0b1101, ADDImm6> {
+  let DecoderMethod = "decodeInstImmNegative<6, 1, 2>";
+}
+
 // Compare with immediate
 // Performs indestructible subtraction, sets flags
 // and thus compares numbers rd and imm6.
 def CMPImm6 : InstImm6<0b1110, (outs), (ins CPURegs:$rd, imm6Op:$imm), "cmp\t$rd, $imm", []> {
   let Defs = [PSR];
   let PostEncoderMethod = "adjustImmOpCode<1, 9>";
+}
+
+// Additional encoding for CMP with negative operand.
+def CMPImm6Negative : InstAltImm6<0b1111, CMPImm6> {
+  let DecoderMethod = "decodeInstImmNegative<6, 1, 1>";
 }
 
 // Increment register
@@ -719,114 +745,27 @@ let Uses = [SP], Defs = [SP], PostEncoderMethod = "adjustImmOpCode<0, 9>" in {
   def ADDSPImm9 : InstImm9<0b0100, (outs), (ins imm9WordOffset:$imm), "addsp\t$imm", []>;
 }
 
+// Additional encoding for PUSH with negative operand.
+def PUSHImm9Negative : InstAltImm9<0b0011, PUSHImm9> {
+  let DecoderMethod = "decodeInstImmNegative<9, 1, 0>";
+}
+
+// Additional encoding for ADDSP with negative operand.
+def ADDSPImm9Negative : InstAltImm9<0b0101, ADDSPImm9> {
+  let DecoderMethod = "decodeInstImmNegative<9, 2, 0>";
+}
+
 // Jump to subroutine (imm9 offset)
 // Pushes PC to stack and then does unconditional
 // absolute branch to address PC + (imm * 2) + 2.
 def JSRImm9 : InstImm9<0b0110, (outs), (ins imm9CallTarget:$imm), "jsr\t$imm", []> {
   let isCall = 1;
+  let DecoderMethod = "decodeInstJSRRelative<Sign::Positive>";
 }
 
-//===----------------------------------------------------------------------===//
-// Additional negative imm6/imm9 encodings
-//===----------------------------------------------------------------------===//
-
-def LSWNegative : AdditionalEncoding<LSW> {
-  bits<16> Inst;
-  bits<16> SoftFail = 0;
-
-  let Size = 2;
-  let Inst{15-9} = 0b0110001;
-  let DecoderMethod = "decodeNegativeImm<6, 2, 1>";
-}
-
-def LSBNegative : AdditionalEncoding<LSB> {
-  bits<16> Inst;
-  bits<16> SoftFail = 0;
-
-  let Size = 2;
-  let Inst{15-9} = 0b0110011;
-  let DecoderMethod = "decodeNegativeImm<6, 1, 1>";
-}
-
-def LSSBNegative : AdditionalEncoding<LSSB> {
-  bits<16> Inst;
-  bits<16> SoftFail = 0;
-
-  let Size = 2;
-  let Inst{15-9} = 0b0110101;
-  let DecoderMethod = "decodeNegativeImm<6, 1, 1>";
-}
-
-def SSWNegative : AdditionalEncoding<SSW> {
-  bits<16> Inst;
-  bits<16> SoftFail = 0;
-
-  let Size = 2;
-  let Inst{15-9} = 0b0110111;
-  let DecoderMethod = "decodeNegativeImm<6, 2, 1>";
-}
-
-def SSBNegative : AdditionalEncoding<SSB> {
-  bits<16> Inst;
-  bits<16> SoftFail = 0;
-
-  let Size = 2;
-  let Inst{15-9} = 0b0111001;
-  let DecoderMethod = "decodeNegativeImm<6, 1, 1>";
-}
-
-def LDIImm6Negative : AdditionalEncoding<LDIImm6> {
-  bits<16> Inst;
-  bits<16> SoftFail = 0;
-
-  let Size = 2;
-  let Inst{15-9} = 0b0111011;
-  let DecoderMethod = "decodeNegativeImm<6, 1, 1>";
-}
-
-def ADDImm6Negative : AdditionalEncoding<ADDImm6> {
-  bits<16> Inst;
-  bits<16> SoftFail = 0;
-
-  let Size = 2;
-  let Inst{15-9} = 0b0111101;
-  let DecoderMethod = "decodeNegativeImm<6, 1, 2>";
-}
-
-def CMPImm6Negative : AdditionalEncoding<CMPImm6> {
-  bits<16> Inst;
-  bits<16> SoftFail = 0;
-
-  let Size = 2;
-  let Inst{15-9} = 0b0111111;
-  let DecoderMethod = "decodeNegativeImm<6, 1, 1>";
-}
-
-def PUSHImm9Negative : AdditionalEncoding<PUSHImm9> {
-  bits<16> Inst;
-  bits<16> SoftFail = 0;
-
-  let Size = 2;
-  let Inst{15-9} = 0b1000011;
-  let DecoderMethod = "decodeNegativeImm<9, 1, 0>";
-}
-
-def ADDSPImm9Negative : AdditionalEncoding<ADDSPImm9> {
-  bits<16> Inst;
-  bits<16> SoftFail = 0;
-
-  let Size = 2;
-  let Inst{15-9} = 0b1000101;
-  let DecoderMethod = "decodeNegativeImm<9, 2, 0>";
-}
-
-def JSRImm9Negative : AdditionalEncoding<JSRImm9> {
-  bits<16> Inst;
-  bits<16> SoftFail = 0;
-
-  let Size = 2;
-  let Inst{15-9} = 0b1000111;
-  let DecoderMethod = "decodeNegativeImm<9, 1, 0>";
+// Additional encoding for JSR with negative operand.
+def JSRImm9Negative : InstAltImm9<0b0111, JSRImm9> {
+  let DecoderMethod = "decodeInstJSRRelative<Sign::Negative>";
 }
 
 //===----------------------------------------------------------------------===//
@@ -850,7 +789,7 @@ def BCondImm16 : InstBrAbs<(outs), (ins cdmCond:$cond, imm16BrTarget:$imm), "b$c
   let isBranch = 1;
   let Uses = [PSR];
   let AsmVariantName = "NonParsable";
-  let DecoderMethod = "decodeBranchAbsolute";
+  let DecoderMethod = "decodeInstBranchAbsolute";
 }
 
 //===----------------------------------------------------------------------===//
@@ -864,7 +803,7 @@ def BRImm9 : InstBrRel<0b110, (outs), (ins imm9BrTarget:$imm), "br\t$imm", [(br 
   let isBranch = 1;
   let isTerminator = 1;
   let isBarrier = 1;
-  let DecoderMethod = "decodeBranchRelative";
+  let DecoderMethod = "decodeInstBranchRelative<Sign::Negative>";
 }
 
 // Relative conditional branch
@@ -875,27 +814,19 @@ def BCondImm9 : InstBrRel<0b110, (outs), (ins cdmCond:$cond, imm9BrTarget:$imm),
   let isTerminator = 1;
   let isBranch = 1;
   let Uses = [PSR];
-  let DecoderMethod = "decodeBranchRelative";
+  let DecoderMethod = "decodeInstBranchRelative<Sign::Negative>";
 }
 
-// The second relative-branch opcode encodes nonnegative offsets.
-def BRImm9Positive : AdditionalEncoding<BRImm9> {
-  bits<16> Inst;
-  bits<16> SoftFail = 0;
-
-  let Size = 2;
-  let Inst{15-13} = 0b111;
-  let Inst{12-9} = 0xE;
-  let DecoderMethod = "decodeBranchRelative";
+// Additional encoding for BR with positive operand.
+// Note that this encoding's "sign bit" is inverted compared to other encodings.
+def BRImm9Positive : InstAltBrRel<0b111, BRImm9> {
+  let cond = 0xE;
+  let DecoderMethod = "decodeInstBranchRelative<Sign::Positive>";
 }
 
-def BCondImm9Positive : AdditionalEncoding<BCondImm9> {
-  bits<16> Inst;
-  bits<16> SoftFail = 0;
-
-  let Size = 2;
-  let Inst{15-13} = 0b111;
-  let DecoderMethod = "decodeBranchRelative";
+// Additional encoding for BCond with positive operand.
+def BCondImm9Positive : InstAltBrRel<0b111, BCondImm9> {
+  let DecoderMethod = "decodeInstBranchRelative<Sign::Positive>";
 }
 
 // No operation
