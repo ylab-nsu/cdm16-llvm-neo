@@ -1,23 +1,14 @@
-# RUN: llvm-mc -triple=cdm -filetype=obj %s -o - | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
+# RUN: llvm-mc -triple=cdm -filetype=obj -o - %s | llvm-objdump -d - | FileCheck %s
 
-# All FALSE branches print as NOP; an absolute FALSE branch still consumes four bytes.
+# NOPs are encoded as bfalse
 
 .text
-false_branches:
-# CHECK-LABEL: <false_branches>:
-.short 0xFFFF
-# CHECK-NEXT: nop
-.short 0xFE00
-# CHECK-NEXT: nop
-.short 0xDE00
-# CHECK-NEXT: nop
-.short 0xDFFF
-# CHECK-NEXT: nop
-.short 0x080F, 0x1234
-# CHECK-NEXT: nop
-.short 0x0004
-# CHECK-NEXT: halt
-.short 0x080F, 0x0004
-# CHECK-NEXT: nop
-.short 0x0005
-# CHECK-NEXT: wait
+nops:                           # CHECK-LABEL: <nops>:
+.byte 0xFF, 0xFF                # CHECK-NEXT:  nop
+.byte 0x00, 0xFE                # CHECK-NEXT:  nop
+.byte 0x00, 0xDE                # CHECK-NEXT:  nop
+.byte 0xFF, 0xDF                # CHECK-NEXT:  nop
+.byte 0x0F, 0x08, 0x12, 0x34    # CHECK-NEXT:  nop
+.byte 0x04, 0x00                # CHECK-NEXT:  halt
+.byte 0x0F, 0x08, 0x04, 0x00    # CHECK-NEXT:  nop
+.byte 0x05, 0x00                # CHECK-NEXT:  wait

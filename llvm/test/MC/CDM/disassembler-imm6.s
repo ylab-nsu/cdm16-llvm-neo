@@ -1,36 +1,20 @@
-# RUN: llvm-mc -triple=cdm -filetype=obj %s -o - | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
-
-# The sign of these immediates is encoded in the opcode, outside the six-bit field.
+# RUN: llvm-mc -triple=cdm -filetype=obj -o - %s | llvm-objdump -d --no-print-imm-hex - | FileCheck %s
 
 .text
-imm6:
-# CHECK-LABEL: <imm6>:
-.short 0x7A00
-# CHECK-NEXT: add r0, -64
-.short 0x7BF8
-# CHECK-NEXT: dec r0
-.short 0x7808
-# CHECK-NEXT: inc r0
-.short 0x79F8
-# CHECK-NEXT: add r0, 63
+imm6:               # CHECK-LABEL:  <imm6>:
+.byte 0x00, 0x7A	# CHECK-NEXT:   add r0, -64
+.byte 0xF8, 0x7B	# CHECK-NEXT:   dec r0
+.byte 0x08, 0x78	# CHECK-NEXT:   inc r0
+.byte 0xF8, 0x79	# CHECK-NEXT:   add r0, 63
 
-.short 0x7E01
-# CHECK-NEXT: cmp r1, -64
-.short 0x7FF9
-# CHECK-NEXT: cmp r1, -1
-.short 0x7C01
-# CHECK-NEXT: cmp r1, 0
-.short 0x7DF9
-# CHECK-NEXT: cmp r1, 63
+.byte 0x01, 0x7E	# CHECK-NEXT:   cmp r1, -64
+.byte 0xF9, 0x7F	# CHECK-NEXT:   cmp r1, -1
+.byte 0x01, 0x7C	# CHECK-NEXT:   cmp r1, 0
+.byte 0xF9, 0x7D	# CHECK-NEXT:   cmp r1, 63
 
-.short 0x7602
-# CHECK-NEXT: ldi r2, -64
-.short 0x77FA
-# CHECK-NEXT: ldi r2, -1
-.short 0x7402
-# CHECK-NEXT: ldi r2, 0
-.short 0x75FA
-# CHECK-NEXT: ldi r2, 63
+.byte 0x02, 0x76	# CHECK-NEXT:   ldi r2, -64
+.byte 0xFA, 0x77	# CHECK-NEXT:   ldi r2, -1
+.byte 0x02, 0x74	# CHECK-NEXT:   ldi r2, 0
+.byte 0xFA, 0x75	# CHECK-NEXT:   ldi r2, 63
 
-.short 0x7A07
-# CHECK-NEXT: add fp, -64
+.byte 0x07, 0x7A	# CHECK-NEXT:   add fp, -64
