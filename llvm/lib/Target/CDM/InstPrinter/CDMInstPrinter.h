@@ -26,6 +26,9 @@ public:
 private:
   void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printMem2RegOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printPCRelBranchOperand(const MCInst *MI, uint64_t Address,
+                               unsigned OpNo, raw_ostream &O);
+  void printBranchOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printCondCode(const MCInst *MI, unsigned int OpNo, raw_ostream &O);
   void printOperand(const MCInst *MI, uint64_t /*Address*/, unsigned OpNum,
                     raw_ostream &O) {

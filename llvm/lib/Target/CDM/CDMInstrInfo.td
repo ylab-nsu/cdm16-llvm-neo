@@ -187,6 +187,7 @@ def imm16BrTarget : Operand<OtherVT> {
   let OperandType = "OPERAND_MEMORY";
   let EncoderMethod = "encodeImm<FK_Data_2, 2>";
   let ParserMatchClass = immSymAsmOp;
+  let PrintMethod = "printBranchOperand";
 }
 
 // 9-bit relative branch target operand (symbol only).
@@ -194,6 +195,7 @@ def imm9BrTarget : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
   let EncoderMethod = "encodeImm<CDM::fixup_branch_imm9, 0, true>";
   let ParserMatchClass = immSymAsmOp;
+  let PrintMethod = "printPCRelBranchOperand";
 }
 
 // 9-bit relative call target operand (symbol only).
@@ -201,6 +203,7 @@ def imm9CallTarget : Operand<i16> {
   let OperandType = "OPERAND_PCREL";
   let EncoderMethod = "encodeImm<CDM::fixup_call_imm9, 0, true>";
   let ParserMatchClass = immSymAsmOp;
+  let PrintMethod = "printPCRelBranchOperand";
 }
 
 // Condition code operand used in conditional branch instrcutions.
