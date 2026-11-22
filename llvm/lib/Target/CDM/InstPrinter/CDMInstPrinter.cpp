@@ -13,6 +13,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <map>
@@ -38,7 +39,7 @@ void CDMInstPrinter::printOperand(const MCInst *MI, unsigned int OpNo,
   }
 
   if (Op.isImm()) {
-    O << Op.getImm();
+    markup(O, Markup::Immediate) << formatImm(Op.getImm());
     return;
   }
   if (Op.isExpr()) {
@@ -57,7 +58,8 @@ void CDMInstPrinter::printCondCode(const MCInst *MI, unsigned int OpNo,
 }
 
 void CDMInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
-  OS << StringRef(const_cast<CDMInstPrinter *>(this)->getRegisterName(Reg));
+  markup(OS, Markup::Register)
+      << StringRef(const_cast<CDMInstPrinter *>(this)->getRegisterName(Reg));
 }
 
 void CDMInstPrinter::printMem2RegOperand(const MCInst *MI, unsigned int OpNo,
@@ -65,4 +67,34 @@ void CDMInstPrinter::printMem2RegOperand(const MCInst *MI, unsigned int OpNo,
   printOperand(MI, OpNo, O);
   O << ", ";
   printOperand(MI, OpNo + 1, O);
+}
+
+void CDMInstPrinter::printPCRelBranchOperand(const MCInst *MI, uint64_t Address,
+                                             unsigned OpNo, raw_ostream &O) {
+  if (SymbolizeOperands) {
+    return;
+  }
+
+  const MCOperand &Op = MI->getOperand(OpNo);
+  if (!Op.isImm()) {
+    return printOperand(MI, OpNo, O);
+  }
+
+  uint64_t Target = static_cast<uint64_t>(Op.getImm()) & 0xFFFF;
+  markup(O, Markup::Target) << formatHex(Target);
+}
+
+void CDMInstPrinter::printBranchOperand(const MCInst *MI, unsigned OpNo,
+                                        raw_ostream &O) {
+  if (SymbolizeOperands) {
+    return;
+  }
+
+  const MCOperand &Op = MI->getOperand(OpNo);
+  if (!Op.isImm()) {
+    return printOperand(MI, OpNo, O);
+  }
+
+  uint64_t Target = static_cast<uint64_t>(Op.getImm()) & 0xFFFF;
+  markup(O, Markup::Target) << formatHex(Target);
 }

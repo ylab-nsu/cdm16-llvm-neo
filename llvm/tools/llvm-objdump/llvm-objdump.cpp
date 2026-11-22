@@ -1554,7 +1554,8 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
   const bool isX86 = STI->getTargetTriple().isX86();
   const bool isAArch64 = STI->getTargetTriple().isAArch64();
   const bool isBPF = STI->getTargetTriple().isBPF();
-  if (!isPPC && !isX86 && !isAArch64 && !isBPF)
+  const bool isCDM = STI->getTargetTriple().isCDM();
+  if (!isPPC && !isX86 && !isAArch64 && !isBPF && !isCDM)
     return;
 
   if (MIA)

@@ -108,6 +108,37 @@ static MCTargetStreamer *createCDMNullTargetStreamer(MCStreamer &S) {
   return new CDMTargetStreamer(S);
 }
 
+namespace {
+
+class CDMMCInstrAnalysis : public MCInstrAnalysis {
+public:
+  explicit CDMMCInstrAnalysis(const MCInstrInfo *Info)
+      : MCInstrAnalysis(Info) {}
+
+  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                      uint64_t &Target) const override {
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case CDM::JSRImm9:
+    case CDM::BRImm9:
+    case CDM::BCondImm9:
+    case CDM::JSRImm16:
+    case CDM::BRImm16:
+    case CDM::BCondImm16: {
+      Target = Inst.getOperand(Inst.getNumOperands() - 1).getImm();
+      return true;
+    }
+    }
+  }
+};
+
+} // end anonymous namespace
+
+static MCInstrAnalysis *createCDMInstrAnalysis(const MCInstrInfo *Info) {
+  return new CDMMCInstrAnalysis(Info);
+}
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCDMTargetMC() {
   RegisterMCAsmInfoFn X(getTheCDMTarget(), createCDMMCAsmInfo);
 
@@ -129,4 +160,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCDMTargetMC() {
   TargetRegistry::RegisterMCCodeEmitter(getTheCDMTarget(),
                                         createCDMMCCodeEmitter);
   TargetRegistry::RegisterMCAsmBackend(getTheCDMTarget(), createCDMAsmBackend);
+
+  TargetRegistry::RegisterMCInstrAnalysis(getTheCDMTarget(),
+                                          createCDMInstrAnalysis);
 }
